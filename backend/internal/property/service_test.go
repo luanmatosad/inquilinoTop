@@ -1,0 +1,139 @@
+package property_test
+
+import (
+	"errors"
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/inquilinotop/api/internal/property"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+type mockRepo struct {
+	properties map[uuid.UUID]*property.Property
+	units      map[uuid.UUID]*property.Unit
+}
+
+func newMockRepo() *mockRepo {
+	return &mockRepo{
+		properties: make(map[uuid.UUID]*property.Property),
+		units:      make(map[uuid.UUID]*property.Unit),
+	}
+}
+
+func (m *mockRepo) Create(ownerID uuid.UUID, in property.CreatePropertyInput) (*property.Property, error) {
+	p := &property.Property{ID: uuid.New(), OwnerID: ownerID, Type: in.Type, Name: in.Name, IsActive: true}
+	m.properties[p.ID] = p
+	return p, nil
+}
+
+func (m *mockRepo) GetByID(id, ownerID uuid.UUID) (*property.Property, error) {
+	p, ok := m.properties[id]
+	if !ok || p.OwnerID != ownerID || !p.IsActive {
+		return nil, errors.New("not found")
+	}
+	return p, nil
+}
+
+func (m *mockRepo) List(ownerID uuid.UUID) ([]property.Property, error) {
+	var list []property.Property
+	for _, p := range m.properties {
+		if p.OwnerID == ownerID && p.IsActive {
+			list = append(list, *p)
+		}
+	}
+	return list, nil
+}
+
+func (m *mockRepo) Update(id, ownerID uuid.UUID, in property.CreatePropertyInput) (*property.Property, error) {
+	p, err := m.GetByID(id, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	p.Name = in.Name
+	return p, nil
+}
+
+func (m *mockRepo) Delete(id, ownerID uuid.UUID) error {
+	p, err := m.GetByID(id, ownerID)
+	if err != nil {
+		return err
+	}
+	p.IsActive = false
+	return nil
+}
+
+func (m *mockRepo) CreateUnit(propertyID uuid.UUID, in property.CreateUnitInput) (*property.Unit, error) {
+	u := &property.Unit{ID: uuid.New(), PropertyID: propertyID, Label: in.Label, IsActive: true}
+	m.units[u.ID] = u
+	return u, nil
+}
+
+func (m *mockRepo) GetUnit(id uuid.UUID) (*property.Unit, error) {
+	u, ok := m.units[id]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	return u, nil
+}
+
+func (m *mockRepo) ListUnits(propertyID uuid.UUID) ([]property.Unit, error) {
+	var list []property.Unit
+	for _, u := range m.units {
+		if u.PropertyID == propertyID && u.IsActive {
+			list = append(list, *u)
+		}
+	}
+	return list, nil
+}
+
+func (m *mockRepo) UpdateUnit(id uuid.UUID, in property.CreateUnitInput) (*property.Unit, error) {
+	u, ok := m.units[id]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	u.Label = in.Label
+	return u, nil
+}
+
+func (m *mockRepo) DeleteUnit(id uuid.UUID) error {
+	u, ok := m.units[id]
+	if !ok {
+		return errors.New("not found")
+	}
+	u.IsActive = false
+	return nil
+}
+
+func TestService_CreateSingleProperty_AutoCreatesUnit(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+
+	p, err := svc.CreateProperty(ownerID, property.CreatePropertyInput{Type: "SINGLE", Name: "Casa"})
+	require.NoError(t, err)
+
+	units, _ := svc.ListUnits(p.ID)
+	assert.Len(t, units, 1)
+	assert.Equal(t, "Unidade 01", units[0].Label)
+}
+
+func TestService_CreateProperty_InvalidType(t *testing.T) {
+	svc := property.NewService(newMockRepo())
+	_, err := svc.CreateProperty(uuid.New(), property.CreatePropertyInput{Type: "INVALID", Name: "X"})
+	assert.Error(t, err)
+}
+
+func TestService_DeleteProperty(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+
+	p, _ := svc.CreateProperty(ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	err := svc.DeleteProperty(p.ID, ownerID)
+	require.NoError(t, err)
+
+	list, _ := svc.ListProperties(ownerID)
+	assert.Len(t, list, 0)
+}
