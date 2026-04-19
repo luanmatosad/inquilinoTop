@@ -24,6 +24,7 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 	r.With(authMW).Get("/api/v1/properties/{id}", h.get)
 	r.With(authMW).Put("/api/v1/properties/{id}", h.update)
 	r.With(authMW).Delete("/api/v1/properties/{id}", h.delete)
+	r.With(authMW).Get("/api/v1/properties/{id}/units", h.listUnits)
 	r.With(authMW).Post("/api/v1/properties/{id}/units", h.createUnit)
 	r.With(authMW).Get("/api/v1/units/{id}", h.getUnit)
 	r.With(authMW).Put("/api/v1/units/{id}", h.updateUnit)
@@ -102,6 +103,23 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.OK(w, map[string]bool{"deleted": true})
+}
+
+func (h *Handler) listUnits(w http.ResponseWriter, r *http.Request) {
+	propertyID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+	list, err := h.svc.ListUnits(propertyID)
+	if err != nil {
+		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
+		return
+	}
+	if list == nil {
+		list = []Unit{}
+	}
+	httputil.OK(w, list)
 }
 
 func (h *Handler) createUnit(w http.ResponseWriter, r *http.Request) {
