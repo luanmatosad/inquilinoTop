@@ -8,8 +8,11 @@ DB       = $(COMPOSE) exec postgres
 # ── Setup ────────────────────────────────────────────────────────────────────
 
 .PHONY: setup
-setup: ## Instala docker compose plugin e cria .env
-	sudo apt-get install -y docker-compose-plugin
+setup: ## Cria .env e verifica pré-requisitos
+	@docker compose version > /dev/null 2>&1 || (echo "ERRO: docker compose não encontrado. Instale o plugin." && exit 1)
+	@if ! getent group docker | grep -q "\b$${USER}\b"; then \
+		echo "AVISO: usuário não está no grupo docker. Execute: sudo usermod -aG docker \$$USER && newgrp docker"; \
+	fi
 	@if [ ! -f .env ]; then cp .env.example .env && echo ".env criado — preencha as variáveis"; fi
 
 .PHONY: keys
