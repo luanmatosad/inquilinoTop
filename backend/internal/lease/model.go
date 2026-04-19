@@ -1,0 +1,46 @@
+package lease
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
+type Lease struct {
+	ID            uuid.UUID  `json:"id"`
+	OwnerID       uuid.UUID  `json:"owner_id"`
+	UnitID        uuid.UUID  `json:"unit_id"`
+	TenantID      uuid.UUID  `json:"tenant_id"`
+	StartDate     time.Time  `json:"start_date"`
+	EndDate       *time.Time `json:"end_date,omitempty"`
+	RentAmount    float64    `json:"rent_amount"`
+	DepositAmount *float64   `json:"deposit_amount,omitempty"`
+	Status        string     `json:"status"`
+	IsActive      bool       `json:"is_active"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+}
+
+type CreateLeaseInput struct {
+	UnitID        uuid.UUID  `json:"unit_id"`
+	TenantID      uuid.UUID  `json:"tenant_id"`
+	StartDate     time.Time  `json:"start_date"`
+	EndDate       *time.Time `json:"end_date,omitempty"`
+	RentAmount    float64    `json:"rent_amount"`
+	DepositAmount *float64   `json:"deposit_amount,omitempty"`
+}
+
+type UpdateLeaseInput struct {
+	EndDate       *time.Time `json:"end_date,omitempty"`
+	RentAmount    float64    `json:"rent_amount"`
+	DepositAmount *float64   `json:"deposit_amount,omitempty"`
+	Status        string     `json:"status"`
+}
+
+type Repository interface {
+	Create(ownerID uuid.UUID, in CreateLeaseInput) (*Lease, error)
+	GetByID(id, ownerID uuid.UUID) (*Lease, error)
+	List(ownerID uuid.UUID) ([]Lease, error)
+	Update(id, ownerID uuid.UUID, in UpdateLeaseInput) (*Lease, error)
+	Delete(id, ownerID uuid.UUID) error
+}
