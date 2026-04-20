@@ -138,3 +138,115 @@ func TestService_DeleteProperty(t *testing.T) {
 	list, _ := svc.ListProperties(context.Background(), ownerID)
 	assert.Len(t, list, 0)
 }
+
+func TestService_GetProperty_Encontrado(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+
+	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa"})
+	found, err := svc.GetProperty(context.Background(), p.ID, ownerID)
+	require.NoError(t, err)
+	assert.Equal(t, p.ID, found.ID)
+}
+
+func TestService_GetProperty_NãoEncontrado(t *testing.T) {
+	svc := property.NewService(newMockRepo())
+	_, err := svc.GetProperty(context.Background(), uuid.New(), uuid.New())
+	assert.Error(t, err)
+}
+
+func TestService_UpdateProperty(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+
+	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Antigo"})
+	updated, err := svc.UpdateProperty(context.Background(), p.ID, ownerID, property.CreatePropertyInput{Name: "Novo"})
+	require.NoError(t, err)
+	assert.Equal(t, "Novo", updated.Name)
+}
+
+func TestService_CreateUnit_Válido(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+
+	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	u, err := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Apto 101"})
+	require.NoError(t, err)
+	assert.Equal(t, "Apto 101", u.Label)
+	assert.Equal(t, p.ID, u.PropertyID)
+}
+
+func TestService_CreateUnit_ImóvelSemPermissão(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+	outroOwner := uuid.New()
+
+	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	_, err := svc.CreateUnit(context.Background(), p.ID, outroOwner, property.CreateUnitInput{Label: "Apto 101"})
+	assert.Error(t, err)
+}
+
+func TestService_GetUnit_Encontrado(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+
+	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	u, _ := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Apto 201"})
+
+	found, err := svc.GetUnit(context.Background(), u.ID)
+	require.NoError(t, err)
+	assert.Equal(t, u.ID, found.ID)
+}
+
+func TestService_GetUnit_NãoEncontrado(t *testing.T) {
+	svc := property.NewService(newMockRepo())
+	_, err := svc.GetUnit(context.Background(), uuid.New())
+	assert.Error(t, err)
+}
+
+func TestService_ListUnits(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+
+	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "A"})
+	svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "B"})
+
+	list, err := svc.ListUnits(context.Background(), p.ID)
+	require.NoError(t, err)
+	assert.Len(t, list, 2)
+}
+
+func TestService_UpdateUnit(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+
+	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	u, _ := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Original"})
+
+	updated, err := svc.UpdateUnit(context.Background(), u.ID, property.CreateUnitInput{Label: "Atualizado"})
+	require.NoError(t, err)
+	assert.Equal(t, "Atualizado", updated.Label)
+}
+
+func TestService_DeleteUnit(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+
+	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	u, _ := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Para deletar"})
+
+	err := svc.DeleteUnit(context.Background(), u.ID)
+	require.NoError(t, err)
+
+	list, _ := svc.ListUnits(context.Background(), p.ID)
+	assert.Len(t, list, 0)
+}
