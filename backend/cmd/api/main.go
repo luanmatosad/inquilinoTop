@@ -12,7 +12,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/inquilinotop/api/internal/expense"
 	"github.com/inquilinotop/api/internal/identity"
+	"github.com/inquilinotop/api/internal/lease"
+	"github.com/inquilinotop/api/internal/payment"
 	"github.com/inquilinotop/api/internal/property"
 	"github.com/inquilinotop/api/internal/tenant"
 	"github.com/inquilinotop/api/pkg/auth"
@@ -54,6 +57,18 @@ func main() {
 	tenantSvc := tenant.NewService(tenantRepo)
 	tenantHandler := tenant.NewHandler(tenantSvc)
 
+	leaseRepo := lease.NewRepository(database)
+	leaseSvc := lease.NewService(leaseRepo)
+	leaseHandler := lease.NewHandler(leaseSvc)
+
+	paymentRepo := payment.NewRepository(database)
+	paymentSvc := payment.NewService(paymentRepo)
+	paymentHandler := payment.NewHandler(paymentSvc)
+
+	expenseRepo := expense.NewRepository(database)
+	expenseSvc := expense.NewService(expenseRepo)
+	expenseHandler := expense.NewHandler(expenseSvc)
+
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -71,6 +86,9 @@ func main() {
 	identityHandler.Register(r)
 	propertyHandler.Register(r, authMW)
 	tenantHandler.Register(r, authMW)
+	leaseHandler.Register(r, authMW)
+	paymentHandler.Register(r, authMW)
+	expenseHandler.Register(r, authMW)
 
 	port := envOr("PORT", "8080")
 	slog.Info("server starting", "port", port)
