@@ -1,4 +1,15 @@
 {
+  "extraKnownMarketplaces": {
+    "local-plugins": {
+      "source": {
+        "source": "directory",
+        "path": "/home/aoki/workspace/inquilinoTop/plugins/doc-updater"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "doc-updater@local-plugins": true
+  },
   "hooks": {
     "SessionStart": [
       {
