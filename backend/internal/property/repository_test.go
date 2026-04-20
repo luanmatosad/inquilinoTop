@@ -45,12 +45,12 @@ func TestRepository_CreateAndListProperties(t *testing.T) {
 	repo := property.NewRepository(database)
 
 	name := "Edificio Central"
-	p, err := repo.Create(ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: name})
+	p, err := repo.Create(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: name})
 	require.NoError(t, err)
 	assert.Equal(t, name, p.Name)
 	assert.Equal(t, ownerID, p.OwnerID)
 
-	list, err := repo.List(ownerID)
+	list, err := repo.List(context.Background(), ownerID)
 	require.NoError(t, err)
 	assert.Len(t, list, 1)
 }
@@ -60,11 +60,11 @@ func TestRepository_DeleteProperty_SoftDelete(t *testing.T) {
 	ownerID := seedUser(t, database)
 	repo := property.NewRepository(database)
 
-	p, _ := repo.Create(ownerID, property.CreatePropertyInput{Type: "SINGLE", Name: "Casa"})
-	err := repo.Delete(p.ID, ownerID)
+	p, _ := repo.Create(context.Background(), ownerID, property.CreatePropertyInput{Type: "SINGLE", Name: "Casa"})
+	err := repo.Delete(context.Background(), p.ID, ownerID)
 	require.NoError(t, err)
 
-	list, _ := repo.List(ownerID)
+	list, _ := repo.List(context.Background(), ownerID)
 	assert.Len(t, list, 0)
 }
 
@@ -73,8 +73,8 @@ func TestRepository_CreateUnit(t *testing.T) {
 	ownerID := seedUser(t, database)
 	repo := property.NewRepository(database)
 
-	p, _ := repo.Create(ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
-	unit, err := repo.CreateUnit(p.ID, property.CreateUnitInput{Label: "Apt 101"})
+	p, _ := repo.Create(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	unit, err := repo.CreateUnit(context.Background(), p.ID, property.CreateUnitInput{Label: "Apt 101"})
 	require.NoError(t, err)
 	assert.Equal(t, "Apt 101", unit.Label)
 }

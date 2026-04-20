@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/db"
 )
 
@@ -14,9 +15,9 @@ func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
 }
 
-func (r *pgRepository) Create(ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error) {
+func (r *pgRepository) Create(ctx context.Context, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error) {
 	var t Tenant
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`INSERT INTO tenants (owner_id, name, email, phone, document)
 		 VALUES ($1,$2,$3,$4,$5)
 		 RETURNING id, owner_id, name, email, phone, document, is_active, created_at, updated_at`,
@@ -28,9 +29,9 @@ func (r *pgRepository) Create(ownerID uuid.UUID, in CreateTenantInput) (*Tenant,
 	return &t, nil
 }
 
-func (r *pgRepository) GetByID(id, ownerID uuid.UUID) (*Tenant, error) {
+func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Tenant, error) {
 	var t Tenant
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`SELECT id, owner_id, name, email, phone, document, is_active, created_at, updated_at
 		 FROM tenants WHERE id=$1 AND owner_id=$2 AND is_active=true`,
 		id, ownerID,
@@ -41,8 +42,8 @@ func (r *pgRepository) GetByID(id, ownerID uuid.UUID) (*Tenant, error) {
 	return &t, nil
 }
 
-func (r *pgRepository) List(ownerID uuid.UUID) ([]Tenant, error) {
-	rows, err := r.db.Pool.Query(context.Background(),
+func (r *pgRepository) List(ctx context.Context, ownerID uuid.UUID) ([]Tenant, error) {
+	rows, err := r.db.Pool.Query(ctx,
 		`SELECT id, owner_id, name, email, phone, document, is_active, created_at, updated_at
 		 FROM tenants WHERE owner_id=$1 AND is_active=true ORDER BY name`,
 		ownerID,
@@ -54,15 +55,20 @@ func (r *pgRepository) List(ownerID uuid.UUID) ([]Tenant, error) {
 	var list []Tenant
 	for rows.Next() {
 		var t Tenant
-		rows.Scan(&t.ID, &t.OwnerID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
+		if err := rows.Scan(&t.ID, &t.OwnerID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.IsActive, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("tenant.repo: list scan: %w", err)
+		}
 		list = append(list, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("tenant.repo: list rows: %w", err)
 	}
 	return list, nil
 }
 
-func (r *pgRepository) Update(id, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error) {
+func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error) {
 	var t Tenant
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`UPDATE tenants SET name=$1, email=$2, phone=$3, document=$4, updated_at=NOW()
 		 WHERE id=$5 AND owner_id=$6 AND is_active=true
 		 RETURNING id, owner_id, name, email, phone, document, is_active, created_at, updated_at`,
@@ -74,10 +80,16 @@ func (r *pgRepository) Update(id, ownerID uuid.UUID, in CreateTenantInput) (*Ten
 	return &t, nil
 }
 
-func (r *pgRepository) Delete(id, ownerID uuid.UUID) error {
-	_, err := r.db.Pool.Exec(context.Background(),
-		`UPDATE tenants SET is_active=false, updated_at=NOW() WHERE id=$1 AND owner_id=$2`,
+func (r *pgRepository) Delete(ctx context.Context, id, ownerID uuid.UUID) error {
+	tag, err := r.db.Pool.Exec(ctx,
+		`UPDATE tenants SET is_active=false, updated_at=NOW() WHERE id=$1 AND owner_id=$2 AND is_active=true`,
 		id, ownerID,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("tenant.repo: delete: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apierr.ErrNotFound
+	}
+	return nil
 }

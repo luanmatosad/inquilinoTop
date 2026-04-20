@@ -81,7 +81,7 @@ func TestLeaseRepository_CreateAndList(t *testing.T) {
 	tenantID := seedTenant(t, database, ownerID)
 	repo := lease.NewRepository(database)
 
-	l, err := repo.Create(ownerID, lease.CreateLeaseInput{
+	l, err := repo.Create(context.Background(), ownerID, lease.CreateLeaseInput{
 		UnitID:     unitID,
 		TenantID:   tenantID,
 		StartDate:  time.Now(),
@@ -91,7 +91,7 @@ func TestLeaseRepository_CreateAndList(t *testing.T) {
 	assert.Equal(t, "ACTIVE", l.Status)
 	assert.Equal(t, 1500.00, l.RentAmount)
 
-	list, err := repo.List(ownerID)
+	list, err := repo.List(context.Background(), ownerID)
 	require.NoError(t, err)
 	assert.Len(t, list, 1)
 }
@@ -104,13 +104,13 @@ func TestLeaseRepository_Delete_SoftDelete(t *testing.T) {
 	tenantID := seedTenant(t, database, ownerID)
 	repo := lease.NewRepository(database)
 
-	l, _ := repo.Create(ownerID, lease.CreateLeaseInput{
+	l, _ := repo.Create(context.Background(), ownerID, lease.CreateLeaseInput{
 		UnitID: unitID, TenantID: tenantID, StartDate: time.Now(), RentAmount: 1000,
 	})
-	err := repo.Delete(l.ID, ownerID)
+	err := repo.Delete(context.Background(), l.ID, ownerID)
 	require.NoError(t, err)
 
-	list, _ := repo.List(ownerID)
+	list, _ := repo.List(context.Background(), ownerID)
 	assert.Len(t, list, 0)
 }
 
@@ -122,11 +122,11 @@ func TestLeaseRepository_Update(t *testing.T) {
 	tenantID := seedTenant(t, database, ownerID)
 	repo := lease.NewRepository(database)
 
-	l, _ := repo.Create(ownerID, lease.CreateLeaseInput{
+	l, _ := repo.Create(context.Background(), ownerID, lease.CreateLeaseInput{
 		UnitID: unitID, TenantID: tenantID, StartDate: time.Now(), RentAmount: 1000,
 	})
 
-	updated, err := repo.Update(l.ID, ownerID, lease.UpdateLeaseInput{
+	updated, err := repo.Update(context.Background(), l.ID, ownerID, lease.UpdateLeaseInput{
 		RentAmount: 1200,
 		Status:     "ENDED",
 	})

@@ -1,6 +1,7 @@
 package expense
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,9 +29,9 @@ type CreateExpenseInput struct {
 }
 
 type Repository interface {
-	Create(ownerID uuid.UUID, in CreateExpenseInput) (*Expense, error)
-	GetByID(id, ownerID uuid.UUID) (*Expense, error)
-	ListByUnit(unitID, ownerID uuid.UUID) ([]Expense, error)
-	Update(id, ownerID uuid.UUID, in CreateExpenseInput) (*Expense, error)
-	Delete(id, ownerID uuid.UUID) error
+	Create(ctx context.Context, ownerID uuid.UUID, in CreateExpenseInput) (*Expense, error)
+	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Expense, error)
+	ListByUnit(ctx context.Context, unitID, ownerID uuid.UUID) ([]Expense, error)
+	Update(ctx context.Context, id, ownerID uuid.UUID, in CreateExpenseInput) (*Expense, error)
+	Delete(ctx context.Context, id, ownerID uuid.UUID) error
 }

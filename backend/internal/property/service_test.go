@@ -1,6 +1,7 @@
 package property_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -22,13 +23,13 @@ func newMockRepo() *mockRepo {
 	}
 }
 
-func (m *mockRepo) Create(ownerID uuid.UUID, in property.CreatePropertyInput) (*property.Property, error) {
+func (m *mockRepo) Create(_ context.Context, ownerID uuid.UUID, in property.CreatePropertyInput) (*property.Property, error) {
 	p := &property.Property{ID: uuid.New(), OwnerID: ownerID, Type: in.Type, Name: in.Name, IsActive: true}
 	m.properties[p.ID] = p
 	return p, nil
 }
 
-func (m *mockRepo) GetByID(id, ownerID uuid.UUID) (*property.Property, error) {
+func (m *mockRepo) GetByID(_ context.Context, id, ownerID uuid.UUID) (*property.Property, error) {
 	p, ok := m.properties[id]
 	if !ok || p.OwnerID != ownerID || !p.IsActive {
 		return nil, errors.New("not found")
@@ -36,7 +37,7 @@ func (m *mockRepo) GetByID(id, ownerID uuid.UUID) (*property.Property, error) {
 	return p, nil
 }
 
-func (m *mockRepo) List(ownerID uuid.UUID) ([]property.Property, error) {
+func (m *mockRepo) List(_ context.Context, ownerID uuid.UUID) ([]property.Property, error) {
 	var list []property.Property
 	for _, p := range m.properties {
 		if p.OwnerID == ownerID && p.IsActive {
@@ -46,8 +47,8 @@ func (m *mockRepo) List(ownerID uuid.UUID) ([]property.Property, error) {
 	return list, nil
 }
 
-func (m *mockRepo) Update(id, ownerID uuid.UUID, in property.CreatePropertyInput) (*property.Property, error) {
-	p, err := m.GetByID(id, ownerID)
+func (m *mockRepo) Update(_ context.Context, id, ownerID uuid.UUID, in property.CreatePropertyInput) (*property.Property, error) {
+	p, err := m.GetByID(context.Background(), id, ownerID)
 	if err != nil {
 		return nil, err
 	}
@@ -55,8 +56,8 @@ func (m *mockRepo) Update(id, ownerID uuid.UUID, in property.CreatePropertyInput
 	return p, nil
 }
 
-func (m *mockRepo) Delete(id, ownerID uuid.UUID) error {
-	p, err := m.GetByID(id, ownerID)
+func (m *mockRepo) Delete(_ context.Context, id, ownerID uuid.UUID) error {
+	p, err := m.GetByID(context.Background(), id, ownerID)
 	if err != nil {
 		return err
 	}
@@ -64,13 +65,13 @@ func (m *mockRepo) Delete(id, ownerID uuid.UUID) error {
 	return nil
 }
 
-func (m *mockRepo) CreateUnit(propertyID uuid.UUID, in property.CreateUnitInput) (*property.Unit, error) {
+func (m *mockRepo) CreateUnit(_ context.Context, propertyID uuid.UUID, in property.CreateUnitInput) (*property.Unit, error) {
 	u := &property.Unit{ID: uuid.New(), PropertyID: propertyID, Label: in.Label, IsActive: true}
 	m.units[u.ID] = u
 	return u, nil
 }
 
-func (m *mockRepo) GetUnit(id uuid.UUID) (*property.Unit, error) {
+func (m *mockRepo) GetUnit(_ context.Context, id uuid.UUID) (*property.Unit, error) {
 	u, ok := m.units[id]
 	if !ok {
 		return nil, errors.New("not found")
@@ -78,7 +79,7 @@ func (m *mockRepo) GetUnit(id uuid.UUID) (*property.Unit, error) {
 	return u, nil
 }
 
-func (m *mockRepo) ListUnits(propertyID uuid.UUID) ([]property.Unit, error) {
+func (m *mockRepo) ListUnits(_ context.Context, propertyID uuid.UUID) ([]property.Unit, error) {
 	var list []property.Unit
 	for _, u := range m.units {
 		if u.PropertyID == propertyID && u.IsActive {
@@ -88,7 +89,7 @@ func (m *mockRepo) ListUnits(propertyID uuid.UUID) ([]property.Unit, error) {
 	return list, nil
 }
 
-func (m *mockRepo) UpdateUnit(id uuid.UUID, in property.CreateUnitInput) (*property.Unit, error) {
+func (m *mockRepo) UpdateUnit(_ context.Context, id uuid.UUID, in property.CreateUnitInput) (*property.Unit, error) {
 	u, ok := m.units[id]
 	if !ok {
 		return nil, errors.New("not found")
@@ -97,7 +98,7 @@ func (m *mockRepo) UpdateUnit(id uuid.UUID, in property.CreateUnitInput) (*prope
 	return u, nil
 }
 
-func (m *mockRepo) DeleteUnit(id uuid.UUID) error {
+func (m *mockRepo) DeleteUnit(_ context.Context, id uuid.UUID) error {
 	u, ok := m.units[id]
 	if !ok {
 		return errors.New("not found")
@@ -111,17 +112,17 @@ func TestService_CreateSingleProperty_AutoCreatesUnit(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	p, err := svc.CreateProperty(ownerID, property.CreatePropertyInput{Type: "SINGLE", Name: "Casa"})
+	p, err := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "SINGLE", Name: "Casa"})
 	require.NoError(t, err)
 
-	units, _ := svc.ListUnits(p.ID)
+	units, _ := svc.ListUnits(context.Background(), p.ID)
 	assert.Len(t, units, 1)
 	assert.Equal(t, "Unidade 01", units[0].Label)
 }
 
 func TestService_CreateProperty_InvalidType(t *testing.T) {
 	svc := property.NewService(newMockRepo())
-	_, err := svc.CreateProperty(uuid.New(), property.CreatePropertyInput{Type: "INVALID", Name: "X"})
+	_, err := svc.CreateProperty(context.Background(), uuid.New(), property.CreatePropertyInput{Type: "INVALID", Name: "X"})
 	assert.Error(t, err)
 }
 
@@ -130,10 +131,10 @@ func TestService_DeleteProperty(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	p, _ := svc.CreateProperty(ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
-	err := svc.DeleteProperty(p.ID, ownerID)
+	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	err := svc.DeleteProperty(context.Background(), p.ID, ownerID)
 	require.NoError(t, err)
 
-	list, _ := svc.ListProperties(ownerID)
+	list, _ := svc.ListProperties(context.Background(), ownerID)
 	assert.Len(t, list, 0)
 }

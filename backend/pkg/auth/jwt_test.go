@@ -1,12 +1,10 @@
 package auth_test
 
 import (
+	"crypto/rand"
 	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -18,10 +16,7 @@ import (
 
 func loadKeys(t *testing.T) (*rsa.PrivateKey, *rsa.PublicKey) {
 	t.Helper()
-	privBytes, err := os.ReadFile("../../keys/private.pem")
-	require.NoError(t, err)
-	block, _ := pem.Decode(privBytes)
-	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 	return privKey, &privKey.PublicKey
 }

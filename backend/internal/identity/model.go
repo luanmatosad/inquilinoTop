@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,10 +26,10 @@ type RefreshToken struct {
 }
 
 type Repository interface {
-	CreateUser(email, passwordHash string) (*User, error)
-	GetUserByEmail(email string) (*User, error)
-	GetUserByID(id uuid.UUID) (*User, error)
-	CreateRefreshToken(userID uuid.UUID, tokenHash string, expiresAt time.Time) (*RefreshToken, error)
-	GetRefreshToken(tokenHash string) (*RefreshToken, error)
-	RevokeRefreshToken(tokenHash string) error
+	CreateUser(ctx context.Context, email, passwordHash string) (*User, error)
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
+	CreateRefreshToken(ctx context.Context, userID uuid.UUID, tokenHash string, expiresAt time.Time) (*RefreshToken, error)
+	GetRefreshToken(ctx context.Context, tokenHash string) (*RefreshToken, error)
+	RevokeRefreshToken(ctx context.Context, tokenHash string) error
 }

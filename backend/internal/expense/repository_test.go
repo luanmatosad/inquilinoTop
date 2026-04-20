@@ -58,7 +58,7 @@ func TestExpenseRepository_CreateAndList(t *testing.T) {
 	ownerID, unitID := seedUnit(t, database)
 	repo := expense.NewRepository(database)
 
-	e, err := repo.Create(ownerID, expense.CreateExpenseInput{
+	e, err := repo.Create(context.Background(), ownerID, expense.CreateExpenseInput{
 		UnitID:      unitID,
 		Description: "Conta de água",
 		Amount:      150.00,
@@ -69,7 +69,7 @@ func TestExpenseRepository_CreateAndList(t *testing.T) {
 	assert.Equal(t, "WATER", e.Category)
 	assert.Equal(t, 150.00, e.Amount)
 
-	list, err := repo.ListByUnit(unitID, ownerID)
+	list, err := repo.ListByUnit(context.Background(), unitID, ownerID)
 	require.NoError(t, err)
 	assert.Len(t, list, 1)
 }
@@ -79,12 +79,12 @@ func TestExpenseRepository_Delete_SoftDelete(t *testing.T) {
 	ownerID, unitID := seedUnit(t, database)
 	repo := expense.NewRepository(database)
 
-	e, _ := repo.Create(ownerID, expense.CreateExpenseInput{
+	e, _ := repo.Create(context.Background(), ownerID, expense.CreateExpenseInput{
 		UnitID: unitID, Description: "Energia", Amount: 200, DueDate: time.Now(), Category: "ELECTRICITY",
 	})
-	err := repo.Delete(e.ID, ownerID)
+	err := repo.Delete(context.Background(), e.ID, ownerID)
 	require.NoError(t, err)
 
-	list, _ := repo.ListByUnit(unitID, ownerID)
+	list, _ := repo.ListByUnit(context.Background(), unitID, ownerID)
 	assert.Len(t, list, 0)
 }

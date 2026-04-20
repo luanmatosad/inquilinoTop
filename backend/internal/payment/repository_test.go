@@ -73,7 +73,7 @@ func TestPaymentRepository_CreateAndList(t *testing.T) {
 	ownerID, leaseID := seedLease(t, database)
 	repo := payment.NewRepository(database)
 
-	p, err := repo.Create(ownerID, payment.CreatePaymentInput{
+	p, err := repo.Create(context.Background(), ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID,
 		DueDate: time.Now(),
 		Amount:  1000.00,
@@ -83,7 +83,7 @@ func TestPaymentRepository_CreateAndList(t *testing.T) {
 	assert.Equal(t, "PENDING", p.Status)
 	assert.Equal(t, "RENT", p.Type)
 
-	list, err := repo.ListByLease(leaseID, ownerID)
+	list, err := repo.ListByLease(context.Background(), leaseID, ownerID)
 	require.NoError(t, err)
 	assert.Len(t, list, 1)
 }
@@ -93,12 +93,12 @@ func TestPaymentRepository_Update_MarkAsPaid(t *testing.T) {
 	ownerID, leaseID := seedLease(t, database)
 	repo := payment.NewRepository(database)
 
-	p, _ := repo.Create(ownerID, payment.CreatePaymentInput{
+	p, _ := repo.Create(context.Background(), ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), Amount: 1000, Type: "RENT",
 	})
 
 	now := time.Now()
-	updated, err := repo.Update(p.ID, ownerID, payment.UpdatePaymentInput{
+	updated, err := repo.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
 		PaidDate: &now,
 		Status:   "PAID",
 		Amount:   1000,

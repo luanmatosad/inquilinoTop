@@ -1,6 +1,7 @@
 package identity_test
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"errors"
@@ -26,7 +27,7 @@ func newMockRepo() *mockRepo {
 	}
 }
 
-func (m *mockRepo) CreateUser(email, passwordHash string) (*identity.User, error) {
+func (m *mockRepo) CreateUser(_ context.Context, email, passwordHash string) (*identity.User, error) {
 	if _, exists := m.users[email]; exists {
 		return nil, errors.New("email já cadastrado")
 	}
@@ -35,7 +36,7 @@ func (m *mockRepo) CreateUser(email, passwordHash string) (*identity.User, error
 	return u, nil
 }
 
-func (m *mockRepo) GetUserByEmail(email string) (*identity.User, error) {
+func (m *mockRepo) GetUserByEmail(_ context.Context, email string) (*identity.User, error) {
 	u, ok := m.users[email]
 	if !ok {
 		return nil, errors.New("not found")
@@ -43,7 +44,7 @@ func (m *mockRepo) GetUserByEmail(email string) (*identity.User, error) {
 	return u, nil
 }
 
-func (m *mockRepo) GetUserByID(id uuid.UUID) (*identity.User, error) {
+func (m *mockRepo) GetUserByID(_ context.Context, id uuid.UUID) (*identity.User, error) {
 	for _, u := range m.users {
 		if u.ID == id {
 			return u, nil
@@ -52,13 +53,13 @@ func (m *mockRepo) GetUserByID(id uuid.UUID) (*identity.User, error) {
 	return nil, errors.New("not found")
 }
 
-func (m *mockRepo) CreateRefreshToken(userID uuid.UUID, tokenHash string, expiresAt time.Time) (*identity.RefreshToken, error) {
+func (m *mockRepo) CreateRefreshToken(_ context.Context, userID uuid.UUID, tokenHash string, expiresAt time.Time) (*identity.RefreshToken, error) {
 	rt := &identity.RefreshToken{ID: uuid.New(), UserID: userID, TokenHash: tokenHash, ExpiresAt: expiresAt}
 	m.refreshTokens[tokenHash] = rt
 	return rt, nil
 }
 
-func (m *mockRepo) GetRefreshToken(tokenHash string) (*identity.RefreshToken, error) {
+func (m *mockRepo) GetRefreshToken(_ context.Context, tokenHash string) (*identity.RefreshToken, error) {
 	rt, ok := m.refreshTokens[tokenHash]
 	if !ok {
 		return nil, errors.New("not found")
@@ -66,7 +67,7 @@ func (m *mockRepo) GetRefreshToken(tokenHash string) (*identity.RefreshToken, er
 	return rt, nil
 }
 
-func (m *mockRepo) RevokeRefreshToken(tokenHash string) error {
+func (m *mockRepo) RevokeRefreshToken(_ context.Context, tokenHash string) error {
 	rt, ok := m.refreshTokens[tokenHash]
 	if !ok {
 		return errors.New("not found")
@@ -86,7 +87,7 @@ func newTestService(t *testing.T) *identity.Service {
 
 func TestService_Register(t *testing.T) {
 	svc := newTestService(t)
-	result, err := svc.Register("user@test.com", "senha123")
+	result, err := svc.Register(context.Background(), "user@test.com", "senha123")
 	require.NoError(t, err)
 	assert.NotEmpty(t, result.AccessToken)
 	assert.NotEmpty(t, result.RefreshToken)
@@ -95,30 +96,30 @@ func TestService_Register(t *testing.T) {
 
 func TestService_Register_DuplicateEmail(t *testing.T) {
 	svc := newTestService(t)
-	svc.Register("dup@test.com", "senha123")
-	_, err := svc.Register("dup@test.com", "outrasenha")
+	svc.Register(context.Background(), "dup@test.com", "senha123")
+	_, err := svc.Register(context.Background(), "dup@test.com", "outrasenha")
 	assert.Error(t, err)
 }
 
 func TestService_Login(t *testing.T) {
 	svc := newTestService(t)
-	svc.Register("login@test.com", "minhasenha")
-	result, err := svc.Login("login@test.com", "minhasenha")
+	svc.Register(context.Background(), "login@test.com", "minhasenha")
+	result, err := svc.Login(context.Background(), "login@test.com", "minhasenha")
 	require.NoError(t, err)
 	assert.NotEmpty(t, result.AccessToken)
 }
 
 func TestService_Login_WrongPassword(t *testing.T) {
 	svc := newTestService(t)
-	svc.Register("wp@test.com", "correta")
-	_, err := svc.Login("wp@test.com", "errada")
+	svc.Register(context.Background(), "wp@test.com", "correta")
+	_, err := svc.Login(context.Background(), "wp@test.com", "errada")
 	assert.Error(t, err)
 }
 
 func TestService_Refresh(t *testing.T) {
 	svc := newTestService(t)
-	reg, _ := svc.Register("refresh@test.com", "senha")
-	result, err := svc.Refresh(reg.RefreshToken)
+	reg, _ := svc.Register(context.Background(), "refresh@test.com", "senha123")
+	result, err := svc.Refresh(context.Background(), reg.RefreshToken)
 	require.NoError(t, err)
 	assert.NotEmpty(t, result.AccessToken)
 }

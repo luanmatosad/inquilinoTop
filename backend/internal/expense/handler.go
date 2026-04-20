@@ -2,10 +2,12 @@ package expense
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/httputil"
 )
@@ -39,7 +41,7 @@ func (h *Handler) listByUnit(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "unitId inválido")
 		return
 	}
-	list, err := h.svc.ListByUnit(unitID, ownerID)
+	list, err := h.svc.ListByUnit(r.Context(), unitID, ownerID)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
@@ -72,7 +74,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.UnitID = unitID
-	e, err := h.svc.Create(ownerID, in)
+	e, err := h.svc.Create(r.Context(), ownerID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "CREATE_FAILED", err.Error())
 		return
@@ -97,8 +99,11 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in CreateExpenseInput
-	json.NewDecoder(r.Body).Decode(&in)
-	e, err := h.svc.Update(id, ownerID, in)
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+	e, err := h.svc.Update(r.Context(), id, ownerID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "UPDATE_FAILED", err.Error())
 		return
@@ -120,8 +125,12 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	if err := h.svc.Delete(id, ownerID); err != nil {
-		httputil.Err(w, http.StatusBadRequest, "DELETE_FAILED", err.Error())
+	if err := h.svc.Delete(r.Context(), id, ownerID); err != nil {
+		if errors.Is(err, apierr.ErrNotFound) {
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "despesa não encontrada")
+			return
+		}
+		httputil.Err(w, http.StatusInternalServerError, "DELETE_FAILED", err.Error())
 		return
 	}
 	httputil.OK(w, map[string]bool{"deleted": true})

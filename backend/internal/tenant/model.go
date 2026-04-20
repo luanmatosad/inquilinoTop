@@ -1,6 +1,7 @@
 package tenant
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -26,9 +27,9 @@ type CreateTenantInput struct {
 }
 
 type Repository interface {
-	Create(ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error)
-	GetByID(id, ownerID uuid.UUID) (*Tenant, error)
-	List(ownerID uuid.UUID) ([]Tenant, error)
-	Update(id, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error)
-	Delete(id, ownerID uuid.UUID) error
+	Create(ctx context.Context, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error)
+	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Tenant, error)
+	List(ctx context.Context, ownerID uuid.UUID) ([]Tenant, error)
+	Update(ctx context.Context, id, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error)
+	Delete(ctx context.Context, id, ownerID uuid.UUID) error
 }

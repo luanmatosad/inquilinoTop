@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,8 +34,8 @@ type UpdatePaymentInput struct {
 }
 
 type Repository interface {
-	Create(ownerID uuid.UUID, in CreatePaymentInput) (*Payment, error)
-	GetByID(id, ownerID uuid.UUID) (*Payment, error)
-	ListByLease(leaseID, ownerID uuid.UUID) ([]Payment, error)
-	Update(id, ownerID uuid.UUID, in UpdatePaymentInput) (*Payment, error)
+	Create(ctx context.Context, ownerID uuid.UUID, in CreatePaymentInput) (*Payment, error)
+	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Payment, error)
+	ListByLease(ctx context.Context, leaseID, ownerID uuid.UUID) ([]Payment, error)
+	Update(ctx context.Context, id, ownerID uuid.UUID, in UpdatePaymentInput) (*Payment, error)
 }

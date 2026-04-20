@@ -45,11 +45,11 @@ func TestTenantRepository_CreateAndList(t *testing.T) {
 	repo := tenant.NewRepository(database)
 
 	email := "joao@example.com"
-	ten, err := repo.Create(ownerID, tenant.CreateTenantInput{Name: "João Silva", Email: &email})
+	ten, err := repo.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "João Silva", Email: &email})
 	require.NoError(t, err)
 	assert.Equal(t, "João Silva", ten.Name)
 
-	list, err := repo.List(ownerID)
+	list, err := repo.List(context.Background(), ownerID)
 	require.NoError(t, err)
 	assert.Len(t, list, 1)
 }
@@ -59,10 +59,10 @@ func TestTenantRepository_Delete_SoftDelete(t *testing.T) {
 	ownerID := seedUser(t, database)
 	repo := tenant.NewRepository(database)
 
-	ten, _ := repo.Create(ownerID, tenant.CreateTenantInput{Name: "Maria"})
-	err := repo.Delete(ten.ID, ownerID)
+	ten, _ := repo.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "Maria"})
+	err := repo.Delete(context.Background(), ten.ID, ownerID)
 	require.NoError(t, err)
 
-	list, _ := repo.List(ownerID)
+	list, _ := repo.List(context.Background(), ownerID)
 	assert.Len(t, list, 0)
 }

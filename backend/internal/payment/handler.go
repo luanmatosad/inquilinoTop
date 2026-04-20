@@ -21,6 +21,7 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
 	r.With(authMW).Get("/api/v1/leases/{leaseId}/payments", h.listByLease)
 	r.With(authMW).Post("/api/v1/leases/{leaseId}/payments", h.create)
+	r.With(authMW).Get("/api/v1/payments/{id}", h.get)
 	r.With(authMW).Put("/api/v1/payments/{id}", h.update)
 }
 
@@ -38,7 +39,7 @@ func (h *Handler) listByLease(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "leaseId inválido")
 		return
 	}
-	list, err := h.svc.ListByLease(leaseID, ownerID)
+	list, err := h.svc.ListByLease(r.Context(), leaseID, ownerID)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
@@ -47,6 +48,28 @@ func (h *Handler) listByLease(w http.ResponseWriter, r *http.Request) {
 		list = []Payment{}
 	}
 	httputil.OK(w, list)
+}
+
+// @Summary Busca pagamento por ID
+// @Tags payments
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do pagamento"
+// @Success 200 {object} map[string]interface{}
+// @Router /payments/{id} [get]
+func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+	p, err := h.svc.Get(r.Context(), id, ownerID)
+	if err != nil {
+		httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "pagamento não encontrado")
+		return
+	}
+	httputil.OK(w, p)
 }
 
 // @Summary Registra pagamento
@@ -71,7 +94,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.LeaseID = leaseID
-	p, err := h.svc.Create(ownerID, in)
+	p, err := h.svc.Create(r.Context(), ownerID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "CREATE_FAILED", err.Error())
 		return
@@ -96,8 +119,11 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in UpdatePaymentInput
-	json.NewDecoder(r.Body).Decode(&in)
-	p, err := h.svc.Update(id, ownerID, in)
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+	p, err := h.svc.Update(r.Context(), id, ownerID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "UPDATE_FAILED", err.Error())
 		return

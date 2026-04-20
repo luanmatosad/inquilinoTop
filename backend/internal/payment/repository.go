@@ -14,9 +14,9 @@ func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
 }
 
-func (r *pgRepository) Create(ownerID uuid.UUID, in CreatePaymentInput) (*Payment, error) {
+func (r *pgRepository) Create(ctx context.Context, ownerID uuid.UUID, in CreatePaymentInput) (*Payment, error) {
 	var p Payment
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`INSERT INTO payments (owner_id, lease_id, due_date, amount, type)
 		 VALUES ($1,$2,$3,$4,$5)
 		 RETURNING id, owner_id, lease_id, due_date, paid_date, amount, status, type, created_at, updated_at`,
@@ -28,9 +28,9 @@ func (r *pgRepository) Create(ownerID uuid.UUID, in CreatePaymentInput) (*Paymen
 	return &p, nil
 }
 
-func (r *pgRepository) GetByID(id, ownerID uuid.UUID) (*Payment, error) {
+func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Payment, error) {
 	var p Payment
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`SELECT id, owner_id, lease_id, due_date, paid_date, amount, status, type, created_at, updated_at
 		 FROM payments WHERE id=$1 AND owner_id=$2`,
 		id, ownerID,
@@ -41,8 +41,8 @@ func (r *pgRepository) GetByID(id, ownerID uuid.UUID) (*Payment, error) {
 	return &p, nil
 }
 
-func (r *pgRepository) ListByLease(leaseID, ownerID uuid.UUID) ([]Payment, error) {
-	rows, err := r.db.Pool.Query(context.Background(),
+func (r *pgRepository) ListByLease(ctx context.Context, leaseID, ownerID uuid.UUID) ([]Payment, error) {
+	rows, err := r.db.Pool.Query(ctx,
 		`SELECT id, owner_id, lease_id, due_date, paid_date, amount, status, type, created_at, updated_at
 		 FROM payments WHERE lease_id=$1 AND owner_id=$2 ORDER BY due_date`,
 		leaseID, ownerID,
@@ -54,15 +54,20 @@ func (r *pgRepository) ListByLease(leaseID, ownerID uuid.UUID) ([]Payment, error
 	var list []Payment
 	for rows.Next() {
 		var p Payment
-		rows.Scan(&p.ID, &p.OwnerID, &p.LeaseID, &p.DueDate, &p.PaidDate, &p.Amount, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt)
+		if err := rows.Scan(&p.ID, &p.OwnerID, &p.LeaseID, &p.DueDate, &p.PaidDate, &p.Amount, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("payment.repo: list scan: %w", err)
+		}
 		list = append(list, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("payment.repo: list rows: %w", err)
 	}
 	return list, nil
 }
 
-func (r *pgRepository) Update(id, ownerID uuid.UUID, in UpdatePaymentInput) (*Payment, error) {
+func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in UpdatePaymentInput) (*Payment, error) {
 	var p Payment
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`UPDATE payments SET paid_date=$1, status=$2, amount=$3, updated_at=NOW()
 		 WHERE id=$4 AND owner_id=$5
 		 RETURNING id, owner_id, lease_id, due_date, paid_date, amount, status, type, created_at, updated_at`,

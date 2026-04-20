@@ -87,6 +87,7 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(corsMiddleware)
 
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
@@ -107,10 +108,30 @@ func main() {
 
 	port := envOr("PORT", "8080")
 	slog.Info("server starting", "port", port)
-	if err := http.ListenAndServe(":"+port, r); err != nil {
+	srv := &http.Server{
+		Addr:         ":" + port,
+		Handler:      r,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	if err := srv.ListenAndServe(); err != nil {
 		slog.Error("server error", "error", err)
 		os.Exit(1)
 	}
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func mustEnv(key string) string {
@@ -136,6 +157,10 @@ func mustLoadPrivateKey(path string) *rsa.PrivateKey {
 		os.Exit(1)
 	}
 	block, _ := pem.Decode(data)
+	if block == nil {
+		slog.Error("failed to decode PEM block", "path", path)
+		os.Exit(1)
+	}
 	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
 		slog.Error("failed to parse private key", "error", err)

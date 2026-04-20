@@ -1,1 +1,3 @@
 keys/*.pem
+api
+tmp/

@@ -3,6 +3,7 @@ package identity
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/inquilinotop/api/pkg/httputil"
@@ -46,7 +47,15 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "MISSING_FIELDS", "email e senha são obrigatórios")
 		return
 	}
-	result, err := h.svc.Register(in.Email, in.Password)
+	if !strings.Contains(in.Email, "@") {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_EMAIL", "email inválido")
+		return
+	}
+	if len(in.Password) < 8 {
+		httputil.Err(w, http.StatusBadRequest, "WEAK_PASSWORD", "senha deve ter no mínimo 8 caracteres")
+		return
+	}
+	result, err := h.svc.Register(r.Context(), in.Email, in.Password)
 	if err != nil {
 		httputil.Err(w, http.StatusConflict, "REGISTER_FAILED", err.Error())
 		return
@@ -68,7 +77,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
 		return
 	}
-	result, err := h.svc.Login(in.Email, in.Password)
+	result, err := h.svc.Login(r.Context(), in.Email, in.Password)
 	if err != nil {
 		httputil.Err(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "credenciais inválidas")
 		return
@@ -94,7 +103,7 @@ func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "MISSING_REFRESH_TOKEN", "refresh_token é obrigatório")
 		return
 	}
-	result, err := h.svc.Refresh(in.RefreshToken)
+	result, err := h.svc.Refresh(r.Context(), in.RefreshToken)
 	if err != nil {
 		httputil.Err(w, http.StatusUnauthorized, "INVALID_REFRESH_TOKEN", err.Error())
 		return
@@ -115,6 +124,6 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "MISSING_REFRESH_TOKEN", "refresh_token é obrigatório")
 		return
 	}
-	h.svc.Logout(in.RefreshToken)
+	h.svc.Logout(r.Context(), in.RefreshToken)
 	httputil.OK(w, map[string]bool{"logged_out": true})
 }

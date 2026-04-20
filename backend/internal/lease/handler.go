@@ -2,10 +2,12 @@ package lease
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/httputil"
 )
@@ -24,6 +26,8 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 	r.With(authMW).Get("/api/v1/leases/{id}", h.get)
 	r.With(authMW).Put("/api/v1/leases/{id}", h.update)
 	r.With(authMW).Delete("/api/v1/leases/{id}", h.delete)
+	r.With(authMW).Post("/api/v1/leases/{id}/end", h.end)
+	r.With(authMW).Post("/api/v1/leases/{id}/renew", h.renew)
 }
 
 // @Summary Lista contratos
@@ -34,7 +38,7 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 // @Router /leases [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
-	list, err := h.svc.List(ownerID)
+	list, err := h.svc.List(r.Context(), ownerID)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
@@ -60,7 +64,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
 		return
 	}
-	l, err := h.svc.Create(ownerID, in)
+	l, err := h.svc.Create(r.Context(), ownerID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "CREATE_FAILED", err.Error())
 		return
@@ -82,7 +86,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	l, err := h.svc.Get(id, ownerID)
+	l, err := h.svc.Get(r.Context(), id, ownerID)
 	if err != nil {
 		httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "contrato não encontrado")
 		return
@@ -107,8 +111,11 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in UpdateLeaseInput
-	json.NewDecoder(r.Body).Decode(&in)
-	l, err := h.svc.Update(id, ownerID, in)
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+	l, err := h.svc.Update(r.Context(), id, ownerID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "UPDATE_FAILED", err.Error())
 		return
@@ -130,9 +137,64 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	if err := h.svc.Delete(id, ownerID); err != nil {
-		httputil.Err(w, http.StatusBadRequest, "DELETE_FAILED", err.Error())
+	if err := h.svc.Delete(r.Context(), id, ownerID); err != nil {
+		if errors.Is(err, apierr.ErrNotFound) {
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "contrato não encontrado")
+			return
+		}
+		httputil.Err(w, http.StatusInternalServerError, "DELETE_FAILED", err.Error())
 		return
 	}
 	httputil.OK(w, map[string]bool{"deleted": true})
+}
+
+// @Summary Encerra contrato
+// @Tags leases
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do contrato"
+// @Success 200 {object} map[string]interface{}
+// @Router /leases/{id}/end [post]
+func (h *Handler) end(w http.ResponseWriter, r *http.Request) {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+	l, err := h.svc.End(r.Context(), id, ownerID)
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "END_FAILED", err.Error())
+		return
+	}
+	httputil.OK(w, l)
+}
+
+// @Summary Renova contrato
+// @Tags leases
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "ID do contrato"
+// @Param body body RenewLeaseInput true "Dados de renovação"
+// @Success 200 {object} map[string]interface{}
+// @Router /leases/{id}/renew [post]
+func (h *Handler) renew(w http.ResponseWriter, r *http.Request) {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+	var in RenewLeaseInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+	l, err := h.svc.Renew(r.Context(), id, ownerID, in)
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "RENEW_FAILED", err.Error())
+		return
+	}
+	httputil.OK(w, l)
 }

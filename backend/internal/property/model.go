@@ -1,6 +1,7 @@
 package property
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -45,14 +46,14 @@ type CreateUnitInput struct {
 }
 
 type Repository interface {
-	Create(ownerID uuid.UUID, in CreatePropertyInput) (*Property, error)
-	GetByID(id, ownerID uuid.UUID) (*Property, error)
-	List(ownerID uuid.UUID) ([]Property, error)
-	Update(id, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error)
-	Delete(id, ownerID uuid.UUID) error
-	CreateUnit(propertyID uuid.UUID, in CreateUnitInput) (*Unit, error)
-	GetUnit(id uuid.UUID) (*Unit, error)
-	ListUnits(propertyID uuid.UUID) ([]Unit, error)
-	UpdateUnit(id uuid.UUID, in CreateUnitInput) (*Unit, error)
-	DeleteUnit(id uuid.UUID) error
+	Create(ctx context.Context, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error)
+	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Property, error)
+	List(ctx context.Context, ownerID uuid.UUID) ([]Property, error)
+	Update(ctx context.Context, id, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error)
+	Delete(ctx context.Context, id, ownerID uuid.UUID) error
+	CreateUnit(ctx context.Context, propertyID uuid.UUID, in CreateUnitInput) (*Unit, error)
+	GetUnit(ctx context.Context, id uuid.UUID) (*Unit, error)
+	ListUnits(ctx context.Context, propertyID uuid.UUID) ([]Unit, error)
+	UpdateUnit(ctx context.Context, id uuid.UUID, in CreateUnitInput) (*Unit, error)
+	DeleteUnit(ctx context.Context, id uuid.UUID) error
 }

@@ -32,12 +32,12 @@ func TestRepository_CreateAndGetUser(t *testing.T) {
 	database := testDB(t)
 	repo := identity.NewRepository(database)
 
-	user, err := repo.CreateUser("test@example.com", "hash123")
+	user, err := repo.CreateUser(context.Background(), "test@example.com", "hash123")
 	require.NoError(t, err)
 	assert.NotEmpty(t, user.ID)
 	assert.Equal(t, "test@example.com", user.Email)
 
-	found, err := repo.GetUserByEmail("test@example.com")
+	found, err := repo.GetUserByEmail(context.Background(), "test@example.com")
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, found.ID)
 }
@@ -46,12 +46,12 @@ func TestRepository_CreateRefreshToken(t *testing.T) {
 	database := testDB(t)
 	repo := identity.NewRepository(database)
 
-	user, _ := repo.CreateUser("rt@example.com", "hash")
-	rt, err := repo.CreateRefreshToken(user.ID, "tokenHash123", time.Now().Add(30*24*time.Hour))
+	user, _ := repo.CreateUser(context.Background(), "rt@example.com", "hash")
+	rt, err := repo.CreateRefreshToken(context.Background(), user.ID, "tokenHash123", time.Now().Add(30*24*time.Hour))
 	require.NoError(t, err)
 	assert.NotEmpty(t, rt.ID)
 
-	found, err := repo.GetRefreshToken("tokenHash123")
+	found, err := repo.GetRefreshToken(context.Background(), "tokenHash123")
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, found.UserID)
 }
@@ -60,12 +60,12 @@ func TestRepository_RevokeRefreshToken(t *testing.T) {
 	database := testDB(t)
 	repo := identity.NewRepository(database)
 
-	user, _ := repo.CreateUser("rev@example.com", "hash")
-	repo.CreateRefreshToken(user.ID, "revokeMe", time.Now().Add(time.Hour))
+	user, _ := repo.CreateUser(context.Background(), "rev@example.com", "hash")
+	repo.CreateRefreshToken(context.Background(), user.ID, "revokeMe", time.Now().Add(time.Hour))
 
-	err := repo.RevokeRefreshToken("revokeMe")
+	err := repo.RevokeRefreshToken(context.Background(), "revokeMe")
 	require.NoError(t, err)
 
-	rt, _ := repo.GetRefreshToken("revokeMe")
+	rt, _ := repo.GetRefreshToken(context.Background(), "revokeMe")
 	assert.NotNil(t, rt.RevokedAt)
 }

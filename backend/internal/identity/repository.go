@@ -17,9 +17,9 @@ func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
 }
 
-func (r *pgRepository) CreateUser(email, passwordHash string) (*User, error) {
+func (r *pgRepository) CreateUser(ctx context.Context, email, passwordHash string) (*User, error) {
 	var u User
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`INSERT INTO users (email, password_hash) VALUES ($1, $2)
 		 RETURNING id, email, password_hash, plan, created_at, updated_at`,
 		email, passwordHash,
@@ -30,9 +30,9 @@ func (r *pgRepository) CreateUser(email, passwordHash string) (*User, error) {
 	return &u, nil
 }
 
-func (r *pgRepository) GetUserByEmail(email string) (*User, error) {
+func (r *pgRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	var u User
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`SELECT id, email, password_hash, plan, created_at, updated_at FROM users WHERE email = $1`,
 		email,
 	).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Plan, &u.CreatedAt, &u.UpdatedAt)
@@ -42,9 +42,9 @@ func (r *pgRepository) GetUserByEmail(email string) (*User, error) {
 	return &u, nil
 }
 
-func (r *pgRepository) GetUserByID(id uuid.UUID) (*User, error) {
+func (r *pgRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	var u User
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`SELECT id, email, password_hash, plan, created_at, updated_at FROM users WHERE id = $1`,
 		id,
 	).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Plan, &u.CreatedAt, &u.UpdatedAt)
@@ -54,9 +54,9 @@ func (r *pgRepository) GetUserByID(id uuid.UUID) (*User, error) {
 	return &u, nil
 }
 
-func (r *pgRepository) CreateRefreshToken(userID uuid.UUID, tokenHash string, expiresAt time.Time) (*RefreshToken, error) {
+func (r *pgRepository) CreateRefreshToken(ctx context.Context, userID uuid.UUID, tokenHash string, expiresAt time.Time) (*RefreshToken, error) {
 	var rt RefreshToken
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
 		 VALUES ($1, $2, $3)
 		 RETURNING id, user_id, token_hash, expires_at, revoked_at, created_at`,
@@ -68,9 +68,9 @@ func (r *pgRepository) CreateRefreshToken(userID uuid.UUID, tokenHash string, ex
 	return &rt, nil
 }
 
-func (r *pgRepository) GetRefreshToken(tokenHash string) (*RefreshToken, error) {
+func (r *pgRepository) GetRefreshToken(ctx context.Context, tokenHash string) (*RefreshToken, error) {
 	var rt RefreshToken
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`SELECT id, user_id, token_hash, expires_at, revoked_at, created_at
 		 FROM refresh_tokens WHERE token_hash = $1`,
 		tokenHash,
@@ -81,9 +81,9 @@ func (r *pgRepository) GetRefreshToken(tokenHash string) (*RefreshToken, error) 
 	return &rt, nil
 }
 
-func (r *pgRepository) RevokeRefreshToken(tokenHash string) error {
+func (r *pgRepository) RevokeRefreshToken(ctx context.Context, tokenHash string) error {
 	now := time.Now()
-	_, err := r.db.Pool.Exec(context.Background(),
+	_, err := r.db.Pool.Exec(ctx,
 		`UPDATE refresh_tokens SET revoked_at = $1 WHERE token_hash = $2`,
 		now, tokenHash,
 	)

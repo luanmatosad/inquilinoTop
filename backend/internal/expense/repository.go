@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/db"
 )
 
@@ -14,9 +15,9 @@ func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
 }
 
-func (r *pgRepository) Create(ownerID uuid.UUID, in CreateExpenseInput) (*Expense, error) {
+func (r *pgRepository) Create(ctx context.Context, ownerID uuid.UUID, in CreateExpenseInput) (*Expense, error) {
 	var e Expense
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`INSERT INTO expenses (owner_id, unit_id, description, amount, due_date, category)
 		 VALUES ($1,$2,$3,$4,$5,$6)
 		 RETURNING id, owner_id, unit_id, description, amount, due_date, category, is_active, created_at, updated_at`,
@@ -28,9 +29,9 @@ func (r *pgRepository) Create(ownerID uuid.UUID, in CreateExpenseInput) (*Expens
 	return &e, nil
 }
 
-func (r *pgRepository) GetByID(id, ownerID uuid.UUID) (*Expense, error) {
+func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Expense, error) {
 	var e Expense
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`SELECT id, owner_id, unit_id, description, amount, due_date, category, is_active, created_at, updated_at
 		 FROM expenses WHERE id=$1 AND owner_id=$2 AND is_active=true`,
 		id, ownerID,
@@ -41,8 +42,8 @@ func (r *pgRepository) GetByID(id, ownerID uuid.UUID) (*Expense, error) {
 	return &e, nil
 }
 
-func (r *pgRepository) ListByUnit(unitID, ownerID uuid.UUID) ([]Expense, error) {
-	rows, err := r.db.Pool.Query(context.Background(),
+func (r *pgRepository) ListByUnit(ctx context.Context, unitID, ownerID uuid.UUID) ([]Expense, error) {
+	rows, err := r.db.Pool.Query(ctx,
 		`SELECT id, owner_id, unit_id, description, amount, due_date, category, is_active, created_at, updated_at
 		 FROM expenses WHERE unit_id=$1 AND owner_id=$2 AND is_active=true ORDER BY due_date DESC`,
 		unitID, ownerID,
@@ -54,15 +55,20 @@ func (r *pgRepository) ListByUnit(unitID, ownerID uuid.UUID) ([]Expense, error) 
 	var list []Expense
 	for rows.Next() {
 		var e Expense
-		rows.Scan(&e.ID, &e.OwnerID, &e.UnitID, &e.Description, &e.Amount, &e.DueDate, &e.Category, &e.IsActive, &e.CreatedAt, &e.UpdatedAt)
+		if err := rows.Scan(&e.ID, &e.OwnerID, &e.UnitID, &e.Description, &e.Amount, &e.DueDate, &e.Category, &e.IsActive, &e.CreatedAt, &e.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("expense.repo: list scan: %w", err)
+		}
 		list = append(list, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("expense.repo: list rows: %w", err)
 	}
 	return list, nil
 }
 
-func (r *pgRepository) Update(id, ownerID uuid.UUID, in CreateExpenseInput) (*Expense, error) {
+func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in CreateExpenseInput) (*Expense, error) {
 	var e Expense
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`UPDATE expenses SET description=$1, amount=$2, due_date=$3, category=$4, updated_at=NOW()
 		 WHERE id=$5 AND owner_id=$6 AND is_active=true
 		 RETURNING id, owner_id, unit_id, description, amount, due_date, category, is_active, created_at, updated_at`,
@@ -74,10 +80,16 @@ func (r *pgRepository) Update(id, ownerID uuid.UUID, in CreateExpenseInput) (*Ex
 	return &e, nil
 }
 
-func (r *pgRepository) Delete(id, ownerID uuid.UUID) error {
-	_, err := r.db.Pool.Exec(context.Background(),
-		`UPDATE expenses SET is_active=false, updated_at=NOW() WHERE id=$1 AND owner_id=$2`,
+func (r *pgRepository) Delete(ctx context.Context, id, ownerID uuid.UUID) error {
+	tag, err := r.db.Pool.Exec(ctx,
+		`UPDATE expenses SET is_active=false, updated_at=NOW() WHERE id=$1 AND owner_id=$2 AND is_active=true`,
 		id, ownerID,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("expense.repo: delete: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apierr.ErrNotFound
+	}
+	return nil
 }

@@ -2,6 +2,7 @@ package identity_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
@@ -48,9 +49,9 @@ func TestHandler_Register(t *testing.T) {
 
 func TestHandler_Login(t *testing.T) {
 	router, svc := newTestHandler(t)
-	svc.Register("login@test.com", "senha")
+	svc.Register(context.Background(), "login@test.com", "senha1234")
 
-	body, _ := json.Marshal(map[string]string{"email": "login@test.com", "password": "senha"})
+	body, _ := json.Marshal(map[string]string{"email": "login@test.com", "password": "senha1234"})
 	req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

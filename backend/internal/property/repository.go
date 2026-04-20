@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/db"
 )
 
@@ -14,9 +15,9 @@ func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
 }
 
-func (r *pgRepository) Create(ownerID uuid.UUID, in CreatePropertyInput) (*Property, error) {
+func (r *pgRepository) Create(ctx context.Context, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error) {
 	var p Property
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`INSERT INTO properties (owner_id, type, name, address_line, city, state)
 		 VALUES ($1,$2,$3,$4,$5,$6)
 		 RETURNING id, owner_id, type, name, address_line, city, state, is_active, created_at, updated_at`,
@@ -28,9 +29,9 @@ func (r *pgRepository) Create(ownerID uuid.UUID, in CreatePropertyInput) (*Prope
 	return &p, nil
 }
 
-func (r *pgRepository) GetByID(id, ownerID uuid.UUID) (*Property, error) {
+func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Property, error) {
 	var p Property
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`SELECT id, owner_id, type, name, address_line, city, state, is_active, created_at, updated_at
 		 FROM properties WHERE id=$1 AND owner_id=$2 AND is_active=true`,
 		id, ownerID,
@@ -41,8 +42,8 @@ func (r *pgRepository) GetByID(id, ownerID uuid.UUID) (*Property, error) {
 	return &p, nil
 }
 
-func (r *pgRepository) List(ownerID uuid.UUID) ([]Property, error) {
-	rows, err := r.db.Pool.Query(context.Background(),
+func (r *pgRepository) List(ctx context.Context, ownerID uuid.UUID) ([]Property, error) {
+	rows, err := r.db.Pool.Query(ctx,
 		`SELECT id, owner_id, type, name, address_line, city, state, is_active, created_at, updated_at
 		 FROM properties WHERE owner_id=$1 AND is_active=true ORDER BY created_at DESC`,
 		ownerID,
@@ -54,15 +55,20 @@ func (r *pgRepository) List(ownerID uuid.UUID) ([]Property, error) {
 	var list []Property
 	for rows.Next() {
 		var p Property
-		rows.Scan(&p.ID, &p.OwnerID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+		if err := rows.Scan(&p.ID, &p.OwnerID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("property.repo: list scan: %w", err)
+		}
 		list = append(list, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("property.repo: list rows: %w", err)
 	}
 	return list, nil
 }
 
-func (r *pgRepository) Update(id, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error) {
+func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error) {
 	var p Property
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`UPDATE properties SET type=$1, name=$2, address_line=$3, city=$4, state=$5, updated_at=NOW()
 		 WHERE id=$6 AND owner_id=$7 AND is_active=true
 		 RETURNING id, owner_id, type, name, address_line, city, state, is_active, created_at, updated_at`,
@@ -74,17 +80,23 @@ func (r *pgRepository) Update(id, ownerID uuid.UUID, in CreatePropertyInput) (*P
 	return &p, nil
 }
 
-func (r *pgRepository) Delete(id, ownerID uuid.UUID) error {
-	_, err := r.db.Pool.Exec(context.Background(),
-		`UPDATE properties SET is_active=false, updated_at=NOW() WHERE id=$1 AND owner_id=$2`,
+func (r *pgRepository) Delete(ctx context.Context, id, ownerID uuid.UUID) error {
+	tag, err := r.db.Pool.Exec(ctx,
+		`UPDATE properties SET is_active=false, updated_at=NOW() WHERE id=$1 AND owner_id=$2 AND is_active=true`,
 		id, ownerID,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("property.repo: delete: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apierr.ErrNotFound
+	}
+	return nil
 }
 
-func (r *pgRepository) CreateUnit(propertyID uuid.UUID, in CreateUnitInput) (*Unit, error) {
+func (r *pgRepository) CreateUnit(ctx context.Context, propertyID uuid.UUID, in CreateUnitInput) (*Unit, error) {
 	var u Unit
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`INSERT INTO units (property_id, label, floor, notes) VALUES ($1,$2,$3,$4)
 		 RETURNING id, property_id, label, floor, notes, is_active, created_at, updated_at`,
 		propertyID, in.Label, in.Floor, in.Notes,
@@ -95,9 +107,9 @@ func (r *pgRepository) CreateUnit(propertyID uuid.UUID, in CreateUnitInput) (*Un
 	return &u, nil
 }
 
-func (r *pgRepository) GetUnit(id uuid.UUID) (*Unit, error) {
+func (r *pgRepository) GetUnit(ctx context.Context, id uuid.UUID) (*Unit, error) {
 	var u Unit
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`SELECT id, property_id, label, floor, notes, is_active, created_at, updated_at
 		 FROM units WHERE id=$1 AND is_active=true`,
 		id,
@@ -108,8 +120,8 @@ func (r *pgRepository) GetUnit(id uuid.UUID) (*Unit, error) {
 	return &u, nil
 }
 
-func (r *pgRepository) ListUnits(propertyID uuid.UUID) ([]Unit, error) {
-	rows, err := r.db.Pool.Query(context.Background(),
+func (r *pgRepository) ListUnits(ctx context.Context, propertyID uuid.UUID) ([]Unit, error) {
+	rows, err := r.db.Pool.Query(ctx,
 		`SELECT id, property_id, label, floor, notes, is_active, created_at, updated_at
 		 FROM units WHERE property_id=$1 AND is_active=true ORDER BY label`,
 		propertyID,
@@ -121,15 +133,20 @@ func (r *pgRepository) ListUnits(propertyID uuid.UUID) ([]Unit, error) {
 	var list []Unit
 	for rows.Next() {
 		var u Unit
-		rows.Scan(&u.ID, &u.PropertyID, &u.Label, &u.Floor, &u.Notes, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
+		if err := rows.Scan(&u.ID, &u.PropertyID, &u.Label, &u.Floor, &u.Notes, &u.IsActive, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("property.repo: list units scan: %w", err)
+		}
 		list = append(list, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("property.repo: list units rows: %w", err)
 	}
 	return list, nil
 }
 
-func (r *pgRepository) UpdateUnit(id uuid.UUID, in CreateUnitInput) (*Unit, error) {
+func (r *pgRepository) UpdateUnit(ctx context.Context, id uuid.UUID, in CreateUnitInput) (*Unit, error) {
 	var u Unit
-	err := r.db.Pool.QueryRow(context.Background(),
+	err := r.db.Pool.QueryRow(ctx,
 		`UPDATE units SET label=$1, floor=$2, notes=$3, updated_at=NOW()
 		 WHERE id=$4 AND is_active=true
 		 RETURNING id, property_id, label, floor, notes, is_active, created_at, updated_at`,
@@ -141,9 +158,15 @@ func (r *pgRepository) UpdateUnit(id uuid.UUID, in CreateUnitInput) (*Unit, erro
 	return &u, nil
 }
 
-func (r *pgRepository) DeleteUnit(id uuid.UUID) error {
-	_, err := r.db.Pool.Exec(context.Background(),
-		`UPDATE units SET is_active=false, updated_at=NOW() WHERE id=$1`, id,
+func (r *pgRepository) DeleteUnit(ctx context.Context, id uuid.UUID) error {
+	tag, err := r.db.Pool.Exec(ctx,
+		`UPDATE units SET is_active=false, updated_at=NOW() WHERE id=$1 AND is_active=true`, id,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("property.repo: delete unit: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apierr.ErrNotFound
+	}
+	return nil
 }

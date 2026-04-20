@@ -1,6 +1,7 @@
 package lease
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -37,10 +38,17 @@ type UpdateLeaseInput struct {
 	Status        string     `json:"status"`
 }
 
+type RenewLeaseInput struct {
+	NewEndDate time.Time `json:"new_end_date"`
+	RentAmount float64   `json:"rent_amount,omitempty"`
+}
+
 type Repository interface {
-	Create(ownerID uuid.UUID, in CreateLeaseInput) (*Lease, error)
-	GetByID(id, ownerID uuid.UUID) (*Lease, error)
-	List(ownerID uuid.UUID) ([]Lease, error)
-	Update(id, ownerID uuid.UUID, in UpdateLeaseInput) (*Lease, error)
-	Delete(id, ownerID uuid.UUID) error
+	Create(ctx context.Context, ownerID uuid.UUID, in CreateLeaseInput) (*Lease, error)
+	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Lease, error)
+	List(ctx context.Context, ownerID uuid.UUID) ([]Lease, error)
+	Update(ctx context.Context, id, ownerID uuid.UUID, in UpdateLeaseInput) (*Lease, error)
+	Delete(ctx context.Context, id, ownerID uuid.UUID) error
+	End(ctx context.Context, id, ownerID uuid.UUID) (*Lease, error)
+	Renew(ctx context.Context, id, ownerID uuid.UUID, in RenewLeaseInput) (*Lease, error)
 }
