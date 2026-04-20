@@ -26,6 +26,12 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 	r.With(authMW).Delete("/api/v1/tenants/{id}", h.delete)
 }
 
+// @Summary Lista inquilinos
+// @Tags tenants
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /tenants [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	list, err := h.svc.List(ownerID)
@@ -39,6 +45,14 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, list)
 }
 
+// @Summary Cria inquilino
+// @Tags tenants
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body CreateTenantInput true "Dados do inquilino"
+// @Success 201 {object} map[string]interface{}
+// @Router /tenants [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	var in CreateTenantInput
@@ -54,6 +68,13 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	httputil.Created(w, t)
 }
 
+// @Summary Busca inquilino por ID
+// @Tags tenants
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do inquilino"
+// @Success 200 {object} map[string]interface{}
+// @Router /tenants/{id} [get]
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -69,6 +90,15 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, t)
 }
 
+// @Summary Atualiza inquilino
+// @Tags tenants
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "ID do inquilino"
+// @Param body body CreateTenantInput true "Dados do inquilino"
+// @Success 200 {object} map[string]interface{}
+// @Router /tenants/{id} [put]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -86,6 +116,13 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, t)
 }
 
+// @Summary Remove inquilino (soft-delete)
+// @Tags tenants
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do inquilino"
+// @Success 200 {object} map[string]interface{}
+// @Router /tenants/{id} [delete]
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))

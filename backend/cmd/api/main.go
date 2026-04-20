@@ -12,7 +12,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/inquilinotop/api/internal/expense"
+	_ "github.com/inquilinotop/api/docs"
 	"github.com/inquilinotop/api/internal/identity"
 	"github.com/inquilinotop/api/internal/lease"
 	"github.com/inquilinotop/api/internal/payment"
@@ -22,6 +24,17 @@ import (
 	"github.com/inquilinotop/api/pkg/db"
 	"github.com/inquilinotop/api/pkg/httputil"
 )
+
+//	@title			InquilinoTop API
+//	@version		1.0
+//	@description	API de gestão de imóveis para locação
+//	@host			localhost:8080
+//	@BasePath		/api/v1
+
+//	@securityDefinitions.apikey	BearerAuth
+//	@in							header
+//	@name						Authorization
+//	@description				JWT token no formato: Bearer <token>
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -74,6 +87,8 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		if err := database.Pool.Ping(r.Context()); err != nil {

@@ -26,6 +26,12 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 	r.With(authMW).Delete("/api/v1/leases/{id}", h.delete)
 }
 
+// @Summary Lista contratos
+// @Tags leases
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /leases [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	list, err := h.svc.List(ownerID)
@@ -39,6 +45,14 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, list)
 }
 
+// @Summary Cria contrato
+// @Tags leases
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body CreateLeaseInput true "Dados do contrato"
+// @Success 201 {object} map[string]interface{}
+// @Router /leases [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	var in CreateLeaseInput
@@ -54,6 +68,13 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	httputil.Created(w, l)
 }
 
+// @Summary Busca contrato por ID
+// @Tags leases
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do contrato"
+// @Success 200 {object} map[string]interface{}
+// @Router /leases/{id} [get]
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -69,6 +90,15 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, l)
 }
 
+// @Summary Atualiza contrato
+// @Tags leases
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "ID do contrato"
+// @Param body body UpdateLeaseInput true "Dados do contrato"
+// @Success 200 {object} map[string]interface{}
+// @Router /leases/{id} [put]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -86,6 +116,13 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, l)
 }
 
+// @Summary Remove contrato (soft-delete)
+// @Tags leases
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do contrato"
+// @Success 200 {object} map[string]interface{}
+// @Router /leases/{id} [delete]
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))

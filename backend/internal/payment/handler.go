@@ -24,6 +24,13 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 	r.With(authMW).Put("/api/v1/payments/{id}", h.update)
 }
 
+// @Summary Lista pagamentos de um contrato
+// @Tags payments
+// @Security BearerAuth
+// @Produce json
+// @Param leaseId path string true "ID do contrato"
+// @Success 200 {object} map[string]interface{}
+// @Router /leases/{leaseId}/payments [get]
 func (h *Handler) listByLease(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	leaseID, err := uuid.Parse(chi.URLParam(r, "leaseId"))
@@ -42,6 +49,15 @@ func (h *Handler) listByLease(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, list)
 }
 
+// @Summary Registra pagamento
+// @Tags payments
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param leaseId path string true "ID do contrato"
+// @Param body body CreatePaymentInput true "Dados do pagamento"
+// @Success 201 {object} map[string]interface{}
+// @Router /leases/{leaseId}/payments [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	leaseID, err := uuid.Parse(chi.URLParam(r, "leaseId"))
@@ -63,6 +79,15 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	httputil.Created(w, p)
 }
 
+// @Summary Atualiza pagamento (ex: marcar como pago)
+// @Tags payments
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "ID do pagamento"
+// @Param body body UpdatePaymentInput true "Dados do pagamento"
+// @Success 200 {object} map[string]interface{}
+// @Router /payments/{id} [put]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))

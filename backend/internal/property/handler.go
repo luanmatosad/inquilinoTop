@@ -31,6 +31,13 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 	r.With(authMW).Delete("/api/v1/units/{id}", h.deleteUnit)
 }
 
+// @Summary Lista imóveis
+// @Tags properties
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /properties [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	list, err := h.svc.ListProperties(ownerID)
@@ -44,6 +51,14 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, list)
 }
 
+// @Summary Cria imóvel
+// @Tags properties
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body CreatePropertyInput true "Dados do imóvel"
+// @Success 201 {object} map[string]interface{}
+// @Router /properties [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	var in CreatePropertyInput
@@ -59,6 +74,14 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	httputil.Created(w, p)
 }
 
+// @Summary Busca imóvel por ID
+// @Tags properties
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do imóvel"
+// @Success 200 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Router /properties/{id} [get]
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -74,6 +97,15 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, p)
 }
 
+// @Summary Atualiza imóvel
+// @Tags properties
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "ID do imóvel"
+// @Param body body CreatePropertyInput true "Dados do imóvel"
+// @Success 200 {object} map[string]interface{}
+// @Router /properties/{id} [put]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -91,6 +123,13 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, p)
 }
 
+// @Summary Remove imóvel (soft-delete)
+// @Tags properties
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do imóvel"
+// @Success 200 {object} map[string]interface{}
+// @Router /properties/{id} [delete]
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -105,6 +144,13 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, map[string]bool{"deleted": true})
 }
 
+// @Summary Lista unidades de um imóvel
+// @Tags units
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do imóvel"
+// @Success 200 {object} map[string]interface{}
+// @Router /properties/{id}/units [get]
 func (h *Handler) listUnits(w http.ResponseWriter, r *http.Request) {
 	propertyID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
@@ -122,6 +168,15 @@ func (h *Handler) listUnits(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, list)
 }
 
+// @Summary Cria unidade em um imóvel
+// @Tags units
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "ID do imóvel"
+// @Param body body CreateUnitInput true "Dados da unidade"
+// @Success 201 {object} map[string]interface{}
+// @Router /properties/{id}/units [post]
 func (h *Handler) createUnit(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	propertyID, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -139,6 +194,13 @@ func (h *Handler) createUnit(w http.ResponseWriter, r *http.Request) {
 	httputil.Created(w, u)
 }
 
+// @Summary Busca unidade por ID
+// @Tags units
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID da unidade"
+// @Success 200 {object} map[string]interface{}
+// @Router /units/{id} [get]
 func (h *Handler) getUnit(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
@@ -153,6 +215,15 @@ func (h *Handler) getUnit(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, u)
 }
 
+// @Summary Atualiza unidade
+// @Tags units
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "ID da unidade"
+// @Param body body CreateUnitInput true "Dados da unidade"
+// @Success 200 {object} map[string]interface{}
+// @Router /units/{id} [put]
 func (h *Handler) updateUnit(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
@@ -169,6 +240,13 @@ func (h *Handler) updateUnit(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, u)
 }
 
+// @Summary Remove unidade (soft-delete)
+// @Tags units
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID da unidade"
+// @Success 200 {object} map[string]interface{}
+// @Router /units/{id} [delete]
 func (h *Handler) deleteUnit(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
