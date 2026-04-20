@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -110,6 +111,78 @@ func seedLease(t *testing.T, mock *mockLeaseRepo) *lease.Lease {
 	})
 	require.NoError(t, err)
 	return l
+}
+
+func TestHandler_Create_BodyInválido(t *testing.T) {
+	svc := lease.NewService(newMockLeaseRepo())
+	h := lease.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/leases", strings.NewReader("not-json"))
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestHandler_Create_Válido(t *testing.T) {
+	svc := lease.NewService(newMockLeaseRepo())
+	h := lease.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+
+	body, _ := json.Marshal(lease.CreateLeaseInput{
+		UnitID:     uuid.New(),
+		TenantID:   uuid.New(),
+		StartDate:  time.Now(),
+		RentAmount: 1500,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/leases", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusCreated, rr.Code)
+}
+
+func TestHandler_Get_IDInválido(t *testing.T) {
+	svc := lease.NewService(newMockLeaseRepo())
+	h := lease.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/leases/nao-e-uuid", nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestHandler_Update_IDInválido(t *testing.T) {
+	svc := lease.NewService(newMockLeaseRepo())
+	h := lease.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/leases/nao-e-uuid", nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestHandler_Delete_IDInválido(t *testing.T) {
+	svc := lease.NewService(newMockLeaseRepo())
+	h := lease.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/leases/nao-e-uuid", nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestHandler_EndLease_RouteExists(t *testing.T) {
