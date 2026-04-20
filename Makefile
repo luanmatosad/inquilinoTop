@@ -83,7 +83,7 @@ backend-shell: ## Abre shell no container do backend
 
 .PHONY: test-backend
 test-backend: ## Roda testes unitários do backend (sem DB)
-	$(BACKEND) go test ./pkg/... ./internal/identity/... -run "TestService|TestHandler|TestSign|TestVerify|TestMiddleware|TestOK|TestErr" -v
+	$(BACKEND) go test ./pkg/... ./internal/... -run "TestService|TestHandler|TestSign|TestVerify|TestMiddleware|TestOK|TestErr" -v
 
 .PHONY: test-backend-integration
 test-backend-integration: ## Roda todos os testes do backend (requer DB)
