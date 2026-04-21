@@ -66,3 +66,21 @@ func TestTenantRepository_Delete_SoftDelete(t *testing.T) {
 	list, _ := repo.List(context.Background(), ownerID)
 	assert.Len(t, list, 0)
 }
+
+func TestRepository_Create_PersonTypePJ(t *testing.T) {
+	d := testDB(t)
+	repo := tenant.NewRepository(d)
+	ownerID := seedUser(t, d)
+
+	pt := "PJ"
+	tn, err := repo.Create(context.Background(), ownerID, tenant.CreateTenantInput{
+		Name:       "Empresa X",
+		PersonType: &pt,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "PJ", tn.PersonType)
+
+	got, err := repo.GetByID(context.Background(), tn.ID, ownerID)
+	require.NoError(t, err)
+	assert.Equal(t, "PJ", got.PersonType)
+}
