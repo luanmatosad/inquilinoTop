@@ -15,6 +15,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/inquilinotop/api/internal/expense"
 	_ "github.com/inquilinotop/api/docs"
+	"github.com/inquilinotop/api/internal/fiscal"
 	"github.com/inquilinotop/api/internal/identity"
 	"github.com/inquilinotop/api/internal/lease"
 	"github.com/inquilinotop/api/internal/payment"
@@ -75,13 +76,23 @@ func main() {
 	leaseSvc := lease.NewService(leaseRepo, leaseReadjRepo)
 	leaseHandler := lease.NewHandler(leaseSvc)
 
+	identityRepoForPayment := identity.NewRepository(database)
+	irrTable := fiscal.NewIRRFTable(fiscal.NewBracketsRepository(database))
+
+	unitReader := &payment.UnitReaderAdapter{Repo: propertyRepo}
+	ownerReader := &payment.OwnerReaderAdapter{Repo: identityRepoForPayment}
+
 	paymentRepo := payment.NewRepository(database)
-	paymentSvc := payment.NewService(paymentRepo)
+	paymentSvc := payment.NewService(paymentRepo, leaseRepo, tenantRepo, unitReader, ownerReader, irrTable)
 	paymentHandler := payment.NewHandler(paymentSvc)
 
 	expenseRepo := expense.NewRepository(database)
 	expenseSvc := expense.NewService(expenseRepo)
 	expenseHandler := expense.NewHandler(expenseSvc)
+
+	fiscalAggRepo := fiscal.NewAggregateRepository(database)
+	fiscalSvc := fiscal.NewService(fiscalAggRepo)
+	fiscalHandler := fiscal.NewHandler(fiscalSvc)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -106,6 +117,7 @@ func main() {
 	leaseHandler.Register(r, authMW)
 	paymentHandler.Register(r, authMW)
 	expenseHandler.Register(r, authMW)
+	fiscalHandler.Register(r, authMW)
 
 	port := envOr("PORT", "8080")
 	slog.Info("server starting", "port", port)

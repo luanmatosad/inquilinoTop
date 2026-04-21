@@ -42,5 +42,6 @@ npm run dev                    # frontend dev em :3000
 | lease | [backend/internal/lease/CLAUDE.md](backend/internal/lease/CLAUDE.md) | Supabase (TODO migrar) |
 | payment | [backend/internal/payment/CLAUDE.md](backend/internal/payment/CLAUDE.md) | Supabase (TODO migrar) |
 | expense | [backend/internal/expense/CLAUDE.md](backend/internal/expense/CLAUDE.md) | Supabase (TODO migrar) |
+| fiscal | [backend/internal/fiscal/CLAUDE.md](backend/internal/fiscal/CLAUDE.md) | — |
 | pkg/ | [backend/pkg/CLAUDE.md](backend/pkg/CLAUDE.md) | — |
 | Frontend | [frontend/CLAUDE.md](frontend/CLAUDE.md) | Next.js 15 App Router |

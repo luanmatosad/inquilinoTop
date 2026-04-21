@@ -69,4 +69,5 @@ Numeradas `000001_..._name.up.sql` / `.down.sql`. Rodam automaticamente na start
 | lease | [internal/lease/CLAUDE.md](internal/lease/CLAUDE.md) |
 | payment | [internal/payment/CLAUDE.md](internal/payment/CLAUDE.md) |
 | expense | [internal/expense/CLAUDE.md](internal/expense/CLAUDE.md) |
+| fiscal | [internal/fiscal/CLAUDE.md](internal/fiscal/CLAUDE.md) |
 | pkg/ | [pkg/CLAUDE.md](pkg/CLAUDE.md) |

@@ -37,3 +37,7 @@ func OwnerIDFromCtx(ctx context.Context) uuid.UUID {
 	id, _ := ctx.Value(ownerIDKey).(uuid.UUID)
 	return id
 }
+
+func WithOwnerID(ctx context.Context, ownerID uuid.UUID) context.Context {
+	return context.WithValue(ctx, ownerIDKey, ownerID)
+}
