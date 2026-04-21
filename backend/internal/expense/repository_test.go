@@ -17,7 +17,7 @@ func testDB(t *testing.T) *db.DB {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {
-		url = "postgres://postgres:postgres@postgres_test:5432/inquilinotop_test?sslmode=disable"
+		url = "postgres://postgres:postgres@localhost:5433/inquilinotop_test?sslmode=disable"
 	}
 	d, err := db.New(context.Background(), url)
 	require.NoError(t, err)

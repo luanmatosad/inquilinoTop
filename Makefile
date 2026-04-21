@@ -87,7 +87,7 @@ test-backend: ## Roda testes unitários do backend (sem DB)
 
 .PHONY: test-backend-integration
 test-backend-integration: ## Roda todos os testes do backend (requer DB)
-	$(BACKEND) go test ./... -v
+	$(BACKEND) go test -p 1 ./... -v
 
 .PHONY: build-backend
 build-backend: ## Compila o binário do backend

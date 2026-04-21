@@ -17,7 +17,7 @@ func testDB(t *testing.T) *db.DB {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {
-		url = "postgres://postgres:postgres@postgres_test:5432/inquilinotop_test?sslmode=disable"
+		url = "postgres://postgres:postgres@localhost:5433/inquilinotop_test?sslmode=disable"
 	}
 	d, err := db.New(context.Background(), url)
 	require.NoError(t, err)
@@ -74,10 +74,10 @@ func TestPaymentRepository_CreateAndList(t *testing.T) {
 	repo := payment.NewRepository(database)
 
 	p, err := repo.Create(context.Background(), ownerID, payment.CreatePaymentInput{
-		LeaseID: leaseID,
-		DueDate: time.Now(),
-		GrossAmount:  1000.00,
-		Type:    "RENT",
+		LeaseID:     leaseID,
+		DueDate:     time.Now(),
+		GrossAmount: 1000.00,
+		Type:        "RENT",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "PENDING", p.Status)
@@ -99,9 +99,9 @@ func TestPaymentRepository_Update_MarkAsPaid(t *testing.T) {
 
 	now := time.Now()
 	updated, err := repo.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
-		PaidDate: &now,
-		Status:   "PAID",
-		GrossAmount:   1000,
+		PaidDate:    &now,
+		Status:      "PAID",
+		GrossAmount: 1000,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "PAID", updated.Status)
@@ -143,7 +143,7 @@ func TestRepository_MarkPaid_PersisteCamposDerivados(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "PAID", paid.Status)
 	assert.InDelta(t, 200, paid.LateFeeAmount, 0.01)
-	assert.InDelta(t, 30,  paid.InterestAmount, 0.01)
+	assert.InDelta(t, 30, paid.InterestAmount, 0.01)
 	assert.InDelta(t, 150, paid.IRRFAmount, 0.01)
 	require.NotNil(t, paid.NetAmount)
 	assert.InDelta(t, 2080, *paid.NetAmount, 0.01)

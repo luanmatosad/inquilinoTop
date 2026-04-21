@@ -267,7 +267,7 @@ func TestHandler_Readjust_RouteExists(t *testing.T) {
 	h.Register(r, noopAuthMW)
 
 	body, _ := json.Marshal(map[string]interface{}{
-		"percentage":  0.0523,
+		"percentage": 0.0523,
 		"applied_at": time.Now(),
 		"index_name": "IGPM",
 	})
