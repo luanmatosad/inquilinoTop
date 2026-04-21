@@ -8,22 +8,24 @@ import (
 )
 
 type Tenant struct {
-	ID        uuid.UUID `json:"id"`
-	OwnerID   uuid.UUID `json:"owner_id"`
-	Name      string    `json:"name"`
-	Email     *string   `json:"email,omitempty"`
-	Phone     *string   `json:"phone,omitempty"`
-	Document  *string   `json:"document,omitempty"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         uuid.UUID `json:"id"`
+	OwnerID    uuid.UUID `json:"owner_id"`
+	Name       string    `json:"name"`
+	Email      *string   `json:"email,omitempty"`
+	Phone      *string   `json:"phone,omitempty"`
+	Document   *string   `json:"document,omitempty"`
+	PersonType string    `json:"person_type"`
+	IsActive   bool      `json:"is_active"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type CreateTenantInput struct {
-	Name     string  `json:"name"`
-	Email    *string `json:"email,omitempty"`
-	Phone    *string `json:"phone,omitempty"`
-	Document *string `json:"document,omitempty"`
+	Name       string  `json:"name"`
+	Email      *string `json:"email,omitempty"`
+	Phone      *string `json:"phone,omitempty"`
+	Document   *string `json:"document,omitempty"`
+	PersonType *string `json:"person_type,omitempty"`
 }
 
 type Repository interface {

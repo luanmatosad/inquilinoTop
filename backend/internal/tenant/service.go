@@ -2,6 +2,7 @@ package tenant
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 )
@@ -15,6 +16,15 @@ func NewService(repo Repository) *Service {
 }
 
 func (s *Service) Create(ctx context.Context, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error) {
+	if in.Name == "" {
+		return nil, fmt.Errorf("tenant.svc: name é obrigatório")
+	}
+	if in.PersonType == nil {
+		return nil, fmt.Errorf("tenant.svc: person_type é obrigatório")
+	}
+	if *in.PersonType != "PF" && *in.PersonType != "PJ" {
+		return nil, fmt.Errorf("tenant.svc: person_type inválido")
+	}
 	return s.repo.Create(ctx, ownerID, in)
 }
 
@@ -27,6 +37,12 @@ func (s *Service) List(ctx context.Context, ownerID uuid.UUID) ([]Tenant, error)
 }
 
 func (s *Service) Update(ctx context.Context, id, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error) {
+	if in.PersonType == nil {
+		return nil, fmt.Errorf("tenant.svc: person_type é obrigatório")
+	}
+	if *in.PersonType != "PF" && *in.PersonType != "PJ" {
+		return nil, fmt.Errorf("tenant.svc: person_type inválido")
+	}
 	return s.repo.Update(ctx, id, ownerID, in)
 }
 
