@@ -76,7 +76,7 @@ func TestPaymentRepository_CreateAndList(t *testing.T) {
 	p, err := repo.Create(context.Background(), ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID,
 		DueDate: time.Now(),
-		Amount:  1000.00,
+		GrossAmount:  1000.00,
 		Type:    "RENT",
 	})
 	require.NoError(t, err)
@@ -94,16 +94,57 @@ func TestPaymentRepository_Update_MarkAsPaid(t *testing.T) {
 	repo := payment.NewRepository(database)
 
 	p, _ := repo.Create(context.Background(), ownerID, payment.CreatePaymentInput{
-		LeaseID: leaseID, DueDate: time.Now(), Amount: 1000, Type: "RENT",
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
 	})
 
 	now := time.Now()
 	updated, err := repo.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
 		PaidDate: &now,
 		Status:   "PAID",
-		Amount:   1000,
+		GrossAmount:   1000,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "PAID", updated.Status)
 	assert.NotNil(t, updated.PaidDate)
+}
+
+func TestRepository_CreateIfAbsent_Idempotente(t *testing.T) {
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	ownerID, leaseID := seedLease(t, d)
+
+	comp := "2026-04"
+	in := payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
+		Competency: &comp,
+	}
+	p1, created, err := repo.CreateIfAbsent(context.Background(), ownerID, in)
+	require.NoError(t, err)
+	require.True(t, created)
+	require.NotNil(t, p1)
+
+	p2, created, err := repo.CreateIfAbsent(context.Background(), ownerID, in)
+	require.NoError(t, err)
+	assert.False(t, created)
+	assert.Equal(t, p1.ID, p2.ID)
+}
+
+func TestRepository_MarkPaid_PersisteCamposDerivados(t *testing.T) {
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	ownerID, leaseID := seedLease(t, d)
+	p, err := repo.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
+	})
+	require.NoError(t, err)
+
+	paid, err := repo.MarkPaid(context.Background(), p.ID, ownerID, time.Now(),
+		200, 30, 150, 2080)
+	require.NoError(t, err)
+	assert.Equal(t, "PAID", paid.Status)
+	assert.InDelta(t, 200, paid.LateFeeAmount, 0.01)
+	assert.InDelta(t, 30,  paid.InterestAmount, 0.01)
+	assert.InDelta(t, 150, paid.IRRFAmount, 0.01)
+	require.NotNil(t, paid.NetAmount)
+	assert.InDelta(t, 2080, *paid.NetAmount, 0.01)
 }

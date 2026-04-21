@@ -2,9 +2,12 @@ package payment
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/inquilinotop/api/pkg/db"
 )
 
@@ -14,27 +17,73 @@ func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
 }
 
+const paymentCols = `id, owner_id, lease_id, due_date, paid_date,
+  gross_amount, late_fee_amount, interest_amount, irrf_amount, net_amount,
+  competency, description, status, type, created_at, updated_at`
+
+func scanPayment(row pgx.Row, p *Payment) error {
+	return row.Scan(&p.ID, &p.OwnerID, &p.LeaseID, &p.DueDate, &p.PaidDate,
+		&p.GrossAmount, &p.LateFeeAmount, &p.InterestAmount, &p.IRRFAmount, &p.NetAmount,
+		&p.Competency, &p.Description, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt)
+}
+
+func scanPaymentRows(rows pgx.Rows, p *Payment) error {
+	return rows.Scan(&p.ID, &p.OwnerID, &p.LeaseID, &p.DueDate, &p.PaidDate,
+		&p.GrossAmount, &p.LateFeeAmount, &p.InterestAmount, &p.IRRFAmount, &p.NetAmount,
+		&p.Competency, &p.Description, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt)
+}
+
 func (r *pgRepository) Create(ctx context.Context, ownerID uuid.UUID, in CreatePaymentInput) (*Payment, error) {
 	var p Payment
-	err := r.db.Pool.QueryRow(ctx,
-		`INSERT INTO payments (owner_id, lease_id, due_date, amount, type)
-		 VALUES ($1,$2,$3,$4,$5)
-		 RETURNING id, owner_id, lease_id, due_date, paid_date, amount, status, type, created_at, updated_at`,
-		ownerID, in.LeaseID, in.DueDate, in.Amount, in.Type,
-	).Scan(&p.ID, &p.OwnerID, &p.LeaseID, &p.DueDate, &p.PaidDate, &p.Amount, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt)
+	err := scanPayment(r.db.Pool.QueryRow(ctx,
+		`INSERT INTO payments (owner_id, lease_id, due_date, gross_amount, type, competency, description)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7)
+		 RETURNING `+paymentCols,
+		ownerID, in.LeaseID, in.DueDate, in.GrossAmount, in.Type, in.Competency, in.Description,
+	), &p)
 	if err != nil {
 		return nil, fmt.Errorf("payment.repo: create: %w", err)
 	}
 	return &p, nil
 }
 
+func (r *pgRepository) CreateIfAbsent(ctx context.Context, ownerID uuid.UUID, in CreatePaymentInput) (*Payment, bool, error) {
+	var p Payment
+	err := scanPayment(r.db.Pool.QueryRow(ctx,
+		`INSERT INTO payments (owner_id, lease_id, due_date, gross_amount, type, competency, description)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7)
+		 ON CONFLICT (lease_id, competency, type) WHERE competency IS NOT NULL DO NOTHING
+		 RETURNING `+paymentCols,
+		ownerID, in.LeaseID, in.DueDate, in.GrossAmount, in.Type, in.Competency, in.Description,
+	), &p)
+	if err == nil {
+		return &p, true, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, fmt.Errorf("payment.repo: create-if-absent: %w", err)
+	}
+	if in.Competency == nil {
+		return nil, false, fmt.Errorf("payment.repo: create-if-absent: insert silently skipped without competency")
+	}
+	var existing Payment
+	err = scanPayment(r.db.Pool.QueryRow(ctx,
+		`SELECT `+paymentCols+`
+		 FROM payments
+		 WHERE lease_id=$1 AND competency=$2 AND type=$3 AND owner_id=$4`,
+		in.LeaseID, *in.Competency, in.Type, ownerID,
+	), &existing)
+	if err != nil {
+		return nil, false, fmt.Errorf("payment.repo: create-if-absent lookup: %w", err)
+	}
+	return &existing, false, nil
+}
+
 func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Payment, error) {
 	var p Payment
-	err := r.db.Pool.QueryRow(ctx,
-		`SELECT id, owner_id, lease_id, due_date, paid_date, amount, status, type, created_at, updated_at
-		 FROM payments WHERE id=$1 AND owner_id=$2`,
+	err := scanPayment(r.db.Pool.QueryRow(ctx,
+		`SELECT `+paymentCols+` FROM payments WHERE id=$1 AND owner_id=$2`,
 		id, ownerID,
-	).Scan(&p.ID, &p.OwnerID, &p.LeaseID, &p.DueDate, &p.PaidDate, &p.Amount, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt)
+	), &p)
 	if err != nil {
 		return nil, fmt.Errorf("payment.repo: get by id: %w", err)
 	}
@@ -43,8 +92,7 @@ func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Pay
 
 func (r *pgRepository) ListByLease(ctx context.Context, leaseID, ownerID uuid.UUID) ([]Payment, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		`SELECT id, owner_id, lease_id, due_date, paid_date, amount, status, type, created_at, updated_at
-		 FROM payments WHERE lease_id=$1 AND owner_id=$2 ORDER BY due_date`,
+		`SELECT `+paymentCols+` FROM payments WHERE lease_id=$1 AND owner_id=$2 ORDER BY due_date`,
 		leaseID, ownerID,
 	)
 	if err != nil {
@@ -54,7 +102,7 @@ func (r *pgRepository) ListByLease(ctx context.Context, leaseID, ownerID uuid.UU
 	var list []Payment
 	for rows.Next() {
 		var p Payment
-		if err := rows.Scan(&p.ID, &p.OwnerID, &p.LeaseID, &p.DueDate, &p.PaidDate, &p.Amount, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := scanPaymentRows(rows, &p); err != nil {
 			return nil, fmt.Errorf("payment.repo: list scan: %w", err)
 		}
 		list = append(list, p)
@@ -67,14 +115,32 @@ func (r *pgRepository) ListByLease(ctx context.Context, leaseID, ownerID uuid.UU
 
 func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in UpdatePaymentInput) (*Payment, error) {
 	var p Payment
-	err := r.db.Pool.QueryRow(ctx,
-		`UPDATE payments SET paid_date=$1, status=$2, amount=$3, updated_at=NOW()
+	err := scanPayment(r.db.Pool.QueryRow(ctx,
+		`UPDATE payments SET paid_date=$1, status=$2, gross_amount=$3, updated_at=NOW()
 		 WHERE id=$4 AND owner_id=$5
-		 RETURNING id, owner_id, lease_id, due_date, paid_date, amount, status, type, created_at, updated_at`,
-		in.PaidDate, in.Status, in.Amount, id, ownerID,
-	).Scan(&p.ID, &p.OwnerID, &p.LeaseID, &p.DueDate, &p.PaidDate, &p.Amount, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt)
+		 RETURNING `+paymentCols,
+		in.PaidDate, in.Status, in.GrossAmount, id, ownerID,
+	), &p)
 	if err != nil {
 		return nil, fmt.Errorf("payment.repo: update: %w", err)
+	}
+	return &p, nil
+}
+
+func (r *pgRepository) MarkPaid(ctx context.Context, id, ownerID uuid.UUID, paidDate time.Time,
+	lateFee, interest, irrf, netAmount float64) (*Payment, error) {
+	var p Payment
+	err := scanPayment(r.db.Pool.QueryRow(ctx,
+		`UPDATE payments
+		 SET paid_date=$1, status='PAID',
+		     late_fee_amount=$2, interest_amount=$3, irrf_amount=$4, net_amount=$5,
+		     updated_at=NOW()
+		 WHERE id=$6 AND owner_id=$7
+		 RETURNING `+paymentCols,
+		paidDate, lateFee, interest, irrf, netAmount, id, ownerID,
+	), &p)
+	if err != nil {
+		return nil, fmt.Errorf("payment.repo: mark paid: %w", err)
 	}
 	return &p, nil
 }

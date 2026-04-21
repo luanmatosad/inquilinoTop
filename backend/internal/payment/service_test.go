@@ -22,16 +22,24 @@ func newMockPaymentRepo() *mockPaymentRepo {
 
 func (m *mockPaymentRepo) Create(_ context.Context, ownerID uuid.UUID, in payment.CreatePaymentInput) (*payment.Payment, error) {
 	p := &payment.Payment{
-		ID:      uuid.New(),
-		OwnerID: ownerID,
-		LeaseID: in.LeaseID,
-		DueDate: in.DueDate,
-		Amount:  in.Amount,
-		Type:    in.Type,
-		Status:  "PENDING",
+		ID:         uuid.New(),
+		OwnerID:    ownerID,
+		LeaseID:    in.LeaseID,
+		DueDate:    in.DueDate,
+		GrossAmount: in.GrossAmount,
+		Type:       in.Type,
+		Status:     "PENDING",
 	}
 	m.payments[p.ID] = p
 	return p, nil
+}
+
+func (m *mockPaymentRepo) CreateIfAbsent(_ context.Context, ownerID uuid.UUID, in payment.CreatePaymentInput) (*payment.Payment, bool, error) {
+	p, err := m.Create(context.Background(), ownerID, in)
+	if err != nil {
+		return nil, false, err
+	}
+	return p, true, nil
 }
 
 func (m *mockPaymentRepo) GetByID(_ context.Context, id, ownerID uuid.UUID) (*payment.Payment, error) {
@@ -58,8 +66,23 @@ func (m *mockPaymentRepo) Update(_ context.Context, id, ownerID uuid.UUID, in pa
 		return nil, err
 	}
 	p.Status = in.Status
-	p.Amount = in.Amount
+	p.GrossAmount = in.GrossAmount
 	p.PaidDate = in.PaidDate
+	return p, nil
+}
+
+func (m *mockPaymentRepo) MarkPaid(_ context.Context, id, ownerID uuid.UUID, paidDate time.Time,
+	lateFee, interest, irrf, netAmount float64) (*payment.Payment, error) {
+	p, err := m.GetByID(context.Background(), id, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	p.Status = "PAID"
+	p.PaidDate = &paidDate
+	p.LateFeeAmount = lateFee
+	p.InterestAmount = interest
+	p.IRRFAmount = irrf
+	p.NetAmount = &netAmount
 	return p, nil
 }
 
@@ -72,7 +95,7 @@ func TestService_Create_Válido(t *testing.T) {
 	p, err := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID,
 		DueDate: time.Now(),
-		Amount:  1500,
+		GrossAmount:  1500,
 		Type:    "RENT",
 	})
 	require.NoError(t, err)
@@ -84,7 +107,7 @@ func TestService_Create_LeaseIDNil(t *testing.T) {
 	svc := payment.NewService(newMockPaymentRepo())
 	_, err := svc.Create(context.Background(), uuid.New(), payment.CreatePaymentInput{
 		DueDate: time.Now(),
-		Amount:  1000,
+		GrossAmount:  1000,
 		Type:    "RENT",
 	})
 	assert.Error(t, err)
@@ -105,7 +128,7 @@ func TestService_Create_TypeInválido(t *testing.T) {
 	_, err := svc.Create(context.Background(), uuid.New(), payment.CreatePaymentInput{
 		LeaseID: uuid.New(),
 		DueDate: time.Now(),
-		Amount:  1000,
+		GrossAmount:  1000,
 		Type:    "INVALIDO",
 	})
 	assert.Error(t, err)
@@ -117,7 +140,7 @@ func TestService_Get_Encontrado(t *testing.T) {
 	ownerID := uuid.New()
 
 	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
-		LeaseID: uuid.New(), DueDate: time.Now(), Amount: 1000, Type: "RENT",
+		LeaseID: uuid.New(), DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
 	})
 	found, err := svc.Get(context.Background(), p.ID, ownerID)
 	require.NoError(t, err)
@@ -131,10 +154,10 @@ func TestService_ListByLease(t *testing.T) {
 	leaseID := uuid.New()
 
 	svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
-		LeaseID: leaseID, DueDate: time.Now(), Amount: 1000, Type: "RENT",
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
 	})
 	svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
-		LeaseID: leaseID, DueDate: time.Now(), Amount: 500, Type: "DEPOSIT",
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 500, Type: "DEPOSIT",
 	})
 
 	list, err := svc.ListByLease(context.Background(), leaseID, ownerID)
@@ -148,10 +171,10 @@ func TestService_Update_StatusInválido(t *testing.T) {
 	ownerID := uuid.New()
 
 	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
-		LeaseID: uuid.New(), DueDate: time.Now(), Amount: 1000, Type: "RENT",
+		LeaseID: uuid.New(), DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
 	})
 	_, err := svc.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
-		Status: "INVALIDO", Amount: 1000,
+		Status: "INVALIDO", GrossAmount: 1000,
 	})
 	assert.Error(t, err)
 }
@@ -162,11 +185,11 @@ func TestService_Update_MarcarPago(t *testing.T) {
 	ownerID := uuid.New()
 
 	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
-		LeaseID: uuid.New(), DueDate: time.Now(), Amount: 1000, Type: "RENT",
+		LeaseID: uuid.New(), DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
 	})
 	now := time.Now()
 	updated, err := svc.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
-		Status: "PAID", Amount: 1000, PaidDate: &now,
+		Status: "PAID", GrossAmount: 1000, PaidDate: &now,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "PAID", updated.Status)

@@ -104,7 +104,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 	leaseID := uuid.New()
 	body, _ := json.Marshal(map[string]interface{}{
 		"due_date": time.Now(),
-		"amount":   1500.0,
+		"gross_amount": 1500.0,
 		"type":     "RENT",
 	})
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/leases/"+leaseID.String()+"/payments", bytes.NewReader(body))
