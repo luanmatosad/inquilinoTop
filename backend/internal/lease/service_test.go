@@ -13,7 +13,7 @@ import (
 
 func TestService_Create_Válido(t *testing.T) {
 	mock := newMockLeaseRepo()
-	svc := lease.NewService(mock)
+	svc := lease.NewService(mock, newMockReadjustmentRepo())
 	ownerID := uuid.New()
 
 	l, err := svc.Create(context.Background(), ownerID, lease.CreateLeaseInput{
@@ -28,7 +28,7 @@ func TestService_Create_Válido(t *testing.T) {
 }
 
 func TestService_Create_UnitIDNil(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
 	_, err := svc.Create(context.Background(), uuid.New(), lease.CreateLeaseInput{
 		TenantID:   uuid.New(),
 		StartDate:  time.Now(),
@@ -38,7 +38,7 @@ func TestService_Create_UnitIDNil(t *testing.T) {
 }
 
 func TestService_Create_TenantIDNil(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
 	_, err := svc.Create(context.Background(), uuid.New(), lease.CreateLeaseInput{
 		UnitID:     uuid.New(),
 		StartDate:  time.Now(),
@@ -48,7 +48,7 @@ func TestService_Create_TenantIDNil(t *testing.T) {
 }
 
 func TestService_Create_RentAmountZero(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
 	_, err := svc.Create(context.Background(), uuid.New(), lease.CreateLeaseInput{
 		UnitID:    uuid.New(),
 		TenantID:  uuid.New(),
@@ -59,7 +59,7 @@ func TestService_Create_RentAmountZero(t *testing.T) {
 
 func TestService_Get_Encontrado(t *testing.T) {
 	mock := newMockLeaseRepo()
-	svc := lease.NewService(mock)
+	svc := lease.NewService(mock, newMockReadjustmentRepo())
 	ownerID := uuid.New()
 
 	l, _ := svc.Create(context.Background(), ownerID, lease.CreateLeaseInput{
@@ -71,14 +71,14 @@ func TestService_Get_Encontrado(t *testing.T) {
 }
 
 func TestService_Get_NãoEncontrado(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
 	_, err := svc.Get(context.Background(), uuid.New(), uuid.New())
 	assert.Error(t, err)
 }
 
 func TestService_List(t *testing.T) {
 	mock := newMockLeaseRepo()
-	svc := lease.NewService(mock)
+	svc := lease.NewService(mock, newMockReadjustmentRepo())
 	ownerID := uuid.New()
 
 	svc.Create(context.Background(), ownerID, lease.CreateLeaseInput{
@@ -95,7 +95,7 @@ func TestService_List(t *testing.T) {
 
 func TestService_Update_StatusInválido(t *testing.T) {
 	mock := newMockLeaseRepo()
-	svc := lease.NewService(mock)
+	svc := lease.NewService(mock, newMockReadjustmentRepo())
 	ownerID := uuid.New()
 
 	l, _ := svc.Create(context.Background(), ownerID, lease.CreateLeaseInput{
@@ -109,7 +109,7 @@ func TestService_Update_StatusInválido(t *testing.T) {
 
 func TestService_Update_Válido(t *testing.T) {
 	mock := newMockLeaseRepo()
-	svc := lease.NewService(mock)
+	svc := lease.NewService(mock, newMockReadjustmentRepo())
 	ownerID := uuid.New()
 
 	l, _ := svc.Create(context.Background(), ownerID, lease.CreateLeaseInput{
@@ -124,7 +124,7 @@ func TestService_Update_Válido(t *testing.T) {
 
 func TestService_Delete(t *testing.T) {
 	mock := newMockLeaseRepo()
-	svc := lease.NewService(mock)
+	svc := lease.NewService(mock, newMockReadjustmentRepo())
 	ownerID := uuid.New()
 
 	l, _ := svc.Create(context.Background(), ownerID, lease.CreateLeaseInput{
@@ -139,7 +139,7 @@ func TestService_Delete(t *testing.T) {
 
 func TestService_End(t *testing.T) {
 	mock := newMockLeaseRepo()
-	svc := lease.NewService(mock)
+	svc := lease.NewService(mock, newMockReadjustmentRepo())
 	ownerID := uuid.New()
 
 	l, _ := svc.Create(context.Background(), ownerID, lease.CreateLeaseInput{
@@ -152,7 +152,7 @@ func TestService_End(t *testing.T) {
 
 func TestService_Renew_Válido(t *testing.T) {
 	mock := newMockLeaseRepo()
-	svc := lease.NewService(mock)
+	svc := lease.NewService(mock, newMockReadjustmentRepo())
 	ownerID := uuid.New()
 
 	l, _ := svc.Create(context.Background(), ownerID, lease.CreateLeaseInput{
@@ -167,7 +167,22 @@ func TestService_Renew_Válido(t *testing.T) {
 }
 
 func TestService_Renew_DataZero(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
 	_, err := svc.Renew(context.Background(), uuid.New(), uuid.New(), lease.RenewLeaseInput{})
 	assert.Error(t, err)
+}
+
+func TestService_Readjust_PercentagemInválida(t *testing.T) {
+	mock := newMockLeaseRepo()
+	svc := lease.NewService(mock, newMockReadjustmentRepo())
+	ownerID, leaseID := uuid.New(), uuid.New()
+	mock.leases[leaseID] = &lease.Lease{
+		ID: leaseID, OwnerID: ownerID, Status: "ACTIVE", RentAmount: 2000,
+	}
+
+	_, err := svc.Readjust(context.Background(), leaseID, ownerID, lease.ReadjustInput{
+		Percentage: 0, AppliedAt: time.Now(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "percentage")
 }

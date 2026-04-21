@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -28,6 +29,8 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 	r.With(authMW).Delete("/api/v1/leases/{id}", h.delete)
 	r.With(authMW).Post("/api/v1/leases/{id}/end", h.end)
 	r.With(authMW).Post("/api/v1/leases/{id}/renew", h.renew)
+	r.With(authMW).Post("/api/v1/leases/{id}/readjust", h.readjust)
+	r.With(authMW).Get("/api/v1/leases/{id}/readjustments", h.listReadjustments)
 }
 
 // @Summary Lista contratos
@@ -197,4 +200,69 @@ func (h *Handler) renew(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.OK(w, l)
+}
+
+// @Summary Aplica reajuste manual ao aluguel
+// @Tags leases
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "ID do contrato"
+// @Param body body ReadjustInput true "Dados do reajuste"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{}
+// @Router /leases/{id}/readjust [post]
+func (h *Handler) readjust(w http.ResponseWriter, r *http.Request) {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+	var in ReadjustInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+	out, err := h.svc.Readjust(r.Context(), id, ownerID, in)
+	if err != nil {
+		switch {
+		case strings.Contains(err.Error(), "percentage"):
+			httputil.Err(w, http.StatusBadRequest, "INVALID_PERCENTAGE", err.Error())
+		case strings.Contains(err.Error(), "not active"):
+			httputil.Err(w, http.StatusConflict, "LEASE_NOT_ACTIVE", err.Error())
+		case errors.Is(err, apierr.ErrNotFound):
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "contrato não encontrado")
+		default:
+			httputil.Err(w, http.StatusInternalServerError, "READJUST_FAILED", err.Error())
+		}
+		return
+	}
+	httputil.OK(w, out)
+}
+
+// @Summary Lista reajustes de um contrato
+// @Tags leases
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do contrato"
+// @Success 200 {object} map[string]interface{}
+// @Router /leases/{id}/readjustments [get]
+func (h *Handler) listReadjustments(w http.ResponseWriter, r *http.Request) {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+	list, err := h.svc.ListReadjustments(r.Context(), id, ownerID)
+	if err != nil {
+		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
+		return
+	}
+	if list == nil {
+		list = []Readjustment{}
+	}
+	httputil.OK(w, list)
 }

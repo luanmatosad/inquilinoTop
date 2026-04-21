@@ -103,6 +103,41 @@ func (m *mockLeaseRepo) Renew(_ context.Context, id, ownerID uuid.UUID, in lease
 	return l, nil
 }
 
+func (m *mockLeaseRepo) UpdateRentAmount(_ context.Context, id, ownerID uuid.UUID, amount float64) (*lease.Lease, error) {
+	l, ok := m.leases[id]
+	if !ok || l.OwnerID != ownerID {
+		return nil, errors.New("not found")
+	}
+	l.RentAmount = amount
+	return l, nil
+}
+
+type mockReadjustmentRepo struct {
+	items []lease.Readjustment
+}
+
+func newMockReadjustmentRepo() *mockReadjustmentRepo {
+	return &mockReadjustmentRepo{}
+}
+
+func (m *mockReadjustmentRepo) Create(_ context.Context, in *lease.Readjustment) (*lease.Readjustment, error) {
+	in.ID = uuid.New()
+	in.CreatedAt = time.Now()
+	m.items = append(m.items, *in)
+	out := *in
+	return &out, nil
+}
+
+func (m *mockReadjustmentRepo) ListByLease(_ context.Context, leaseID, ownerID uuid.UUID) ([]lease.Readjustment, error) {
+	var out []lease.Readjustment
+	for _, r := range m.items {
+		if r.LeaseID == leaseID && r.OwnerID == ownerID {
+			out = append(out, r)
+		}
+	}
+	return out, nil
+}
+
 func seedLease(t *testing.T, mock *mockLeaseRepo) *lease.Lease {
 	t.Helper()
 	l, err := mock.Create(context.Background(), uuid.Nil, lease.CreateLeaseInput{
@@ -114,7 +149,7 @@ func seedLease(t *testing.T, mock *mockLeaseRepo) *lease.Lease {
 }
 
 func TestHandler_Create_BodyInválido(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
@@ -127,7 +162,7 @@ func TestHandler_Create_BodyInválido(t *testing.T) {
 }
 
 func TestHandler_Create_Válido(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
@@ -147,7 +182,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 }
 
 func TestHandler_Get_IDInválido(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
@@ -160,7 +195,7 @@ func TestHandler_Get_IDInválido(t *testing.T) {
 }
 
 func TestHandler_Update_IDInválido(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
@@ -173,7 +208,7 @@ func TestHandler_Update_IDInválido(t *testing.T) {
 }
 
 func TestHandler_Delete_IDInválido(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
@@ -188,7 +223,7 @@ func TestHandler_Delete_IDInválido(t *testing.T) {
 func TestHandler_EndLease_RouteExists(t *testing.T) {
 	mock := newMockLeaseRepo()
 	l := seedLease(t, mock)
-	svc := lease.NewService(mock)
+	svc := lease.NewService(mock, newMockReadjustmentRepo())
 	h := lease.NewHandler(svc)
 
 	r := chi.NewRouter()
@@ -204,7 +239,7 @@ func TestHandler_EndLease_RouteExists(t *testing.T) {
 func TestHandler_RenewLease_RouteExists(t *testing.T) {
 	mock := newMockLeaseRepo()
 	l := seedLease(t, mock)
-	svc := lease.NewService(mock)
+	svc := lease.NewService(mock, newMockReadjustmentRepo())
 	h := lease.NewHandler(svc)
 
 	r := chi.NewRouter()
@@ -220,4 +255,47 @@ func TestHandler_RenewLease_RouteExists(t *testing.T) {
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestHandler_Readjust_RouteExists(t *testing.T) {
+	mock := newMockLeaseRepo()
+	l := seedLease(t, mock)
+	svc := lease.NewService(mock, newMockReadjustmentRepo())
+	h := lease.NewHandler(svc)
+
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"percentage":  0.0523,
+		"applied_at": time.Now(),
+		"index_name": "IGPM",
+	})
+	req := httptest.NewRequest("POST", "/api/v1/leases/"+l.ID.String()+"/readjust", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestHandler_Readjust_PercentagemInválida(t *testing.T) {
+	leaseMock := newMockLeaseRepo()
+	readjMock := newMockReadjustmentRepo()
+	ownerID, leaseID := uuid.New(), uuid.New()
+	leaseMock.leases[leaseID] = &lease.Lease{ID: leaseID, OwnerID: ownerID, Status: "ACTIVE", RentAmount: 2000, IsActive: true}
+	svc := lease.NewService(leaseMock, readjMock)
+	h := lease.NewHandler(svc)
+
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+
+	body := `{"percentage":0.0,"applied_at":"2026-04-01T00:00:00Z"}`
+	req := httptest.NewRequest("POST", "/api/v1/leases/"+leaseID.String()+"/readjust", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "INVALID_PERCENTAGE")
 }

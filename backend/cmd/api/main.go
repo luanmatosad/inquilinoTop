@@ -71,7 +71,8 @@ func main() {
 	tenantHandler := tenant.NewHandler(tenantSvc)
 
 	leaseRepo := lease.NewRepository(database)
-	leaseSvc := lease.NewService(leaseRepo)
+	leaseReadjRepo := lease.NewReadjustmentRepository(database)
+	leaseSvc := lease.NewService(leaseRepo, leaseReadjRepo)
 	leaseHandler := lease.NewHandler(leaseSvc)
 
 	paymentRepo := payment.NewRepository(database)
