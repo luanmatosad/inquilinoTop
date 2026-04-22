@@ -42,13 +42,13 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 // @Router /properties [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
-	list, err := h.svc.ListProperties(r.Context(), ownerID)
+	list, err := h.svc.ListPropertiesWithUnits(r.Context(), ownerID)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
 	}
 	if list == nil {
-		list = []Property{}
+		list = []PropertyWithUnits{}
 	}
 	httputil.OK(w, list)
 }
@@ -96,7 +96,16 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "imóvel não encontrado")
 		return
 	}
-	httputil.OK(w, p)
+	units, err := h.svc.ListUnits(r.Context(), id)
+	if err != nil {
+		httputil.Err(w, http.StatusInternalServerError, "LIST_UNITS_FAILED", err.Error())
+		return
+	}
+	resp := PropertyWithUnits{
+		Property: *p,
+		Units:    units,
+	}
+	httputil.OK(w, resp)
 }
 
 // @Summary Atualiza imóvel

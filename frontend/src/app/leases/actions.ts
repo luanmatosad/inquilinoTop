@@ -35,6 +35,7 @@ interface Lease {
   end_date?: string
   rent_amount: number
   deposit_amount?: number
+  payment_day: number
   status: string
   is_active: boolean
   created_at: string
@@ -75,6 +76,7 @@ export async function createLease(prevState: LeaseActionState, formData: FormDat
         end_date: validatedFields.data.end_date || null,
         rent_amount: validatedFields.data.rent_amount,
         deposit_amount: validatedFields.data.deposit_amount || null,
+        payment_day: validatedFields.data.payment_day,
         late_fee_percent: validatedFields.data.late_fee_percent || 0,
         daily_interest_percent: validatedFields.data.daily_interest_percent || 0,
         iptu_reimbursable: validatedFields.data.iptu_reimbursable || false,

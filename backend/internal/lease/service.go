@@ -27,6 +27,9 @@ func (s *Service) Create(ctx context.Context, ownerID uuid.UUID, in CreateLeaseI
 	if in.RentAmount <= 0 {
 		return nil, fmt.Errorf("lease.svc: rent_amount deve ser positivo")
 	}
+	if in.PaymentDay < 1 || in.PaymentDay > 31 {
+		return nil, fmt.Errorf("lease.svc: payment_day deve estar entre 1 e 31")
+	}
 	return s.repo.Create(ctx, ownerID, in)
 }
 
@@ -42,6 +45,9 @@ func (s *Service) Update(ctx context.Context, id, ownerID uuid.UUID, in UpdateLe
 	if in.Status != "ACTIVE" && in.Status != "ENDED" && in.Status != "CANCELED" {
 		return nil, fmt.Errorf("lease.svc: status inválido")
 	}
+	if in.PaymentDay != nil && (*in.PaymentDay < 1 || *in.PaymentDay > 31) {
+		return nil, fmt.Errorf("lease.svc: payment_day deve estar entre 1 e 31")
+	}
 	return s.repo.Update(ctx, id, ownerID, in)
 }
 
@@ -56,6 +62,9 @@ func (s *Service) End(ctx context.Context, id, ownerID uuid.UUID) (*Lease, error
 func (s *Service) Renew(ctx context.Context, id, ownerID uuid.UUID, in RenewLeaseInput) (*Lease, error) {
 	if in.NewEndDate.IsZero() {
 		return nil, fmt.Errorf("lease.svc: new_end_date é obrigatório")
+	}
+	if in.PaymentDay != nil && (*in.PaymentDay < 1 || *in.PaymentDay > 31) {
+		return nil, fmt.Errorf("lease.svc: payment_day deve estar entre 1 e 31")
 	}
 	return s.repo.Renew(ctx, id, ownerID, in)
 }

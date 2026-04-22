@@ -170,3 +170,30 @@ func (r *pgRepository) DeleteUnit(ctx context.Context, id uuid.UUID) error {
 	}
 	return nil
 }
+
+func (r *pgRepository) ListUnitsByPropertyIDs(ctx context.Context, propertyIDs []uuid.UUID) ([]Unit, error) {
+	if len(propertyIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT id, property_id, label, floor, notes, is_active, created_at, updated_at
+		 FROM units WHERE property_id = ANY($1) AND is_active=true ORDER BY property_id, label`,
+		propertyIDs,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("property.repo: list units by property ids: %w", err)
+	}
+	defer rows.Close()
+	var list []Unit
+	for rows.Next() {
+		var u Unit
+		if err := rows.Scan(&u.ID, &u.PropertyID, &u.Label, &u.Floor, &u.Notes, &u.IsActive, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("property.repo: list units by property ids scan: %w", err)
+		}
+		list = append(list, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("property.repo: list units by property ids rows: %w", err)
+	}
+	return list, nil
+}

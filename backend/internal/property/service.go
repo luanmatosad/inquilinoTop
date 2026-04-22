@@ -41,6 +41,40 @@ func (s *Service) ListProperties(ctx context.Context, ownerID uuid.UUID) ([]Prop
 	return s.repo.List(ctx, ownerID)
 }
 
+func (s *Service) ListPropertiesWithUnits(ctx context.Context, ownerID uuid.UUID) ([]PropertyWithUnits, error) {
+	properties, err := s.repo.List(ctx, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	if len(properties) == 0 {
+		return nil, nil
+	}
+
+	propertyIDs := make([]uuid.UUID, len(properties))
+	for i, p := range properties {
+		propertyIDs[i] = p.ID
+	}
+
+	allUnits, err := s.repo.ListUnitsByPropertyIDs(ctx, propertyIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	unitsByProperty := make(map[uuid.UUID][]Unit)
+	for _, u := range allUnits {
+		unitsByProperty[u.PropertyID] = append(unitsByProperty[u.PropertyID], u)
+	}
+
+	result := make([]PropertyWithUnits, len(properties))
+	for i, p := range properties {
+		result[i] = PropertyWithUnits{
+			Property: p,
+			Units:    unitsByProperty[p.ID],
+		}
+	}
+	return result, nil
+}
+
 func (s *Service) UpdateProperty(ctx context.Context, id, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error) {
 	return s.repo.Update(ctx, id, ownerID, in)
 }

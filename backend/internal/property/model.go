@@ -45,6 +45,11 @@ type CreateUnitInput struct {
 	Notes *string `json:"notes,omitempty"`
 }
 
+type PropertyWithUnits struct {
+	Property
+	Units []Unit `json:"units"`
+}
+
 type Repository interface {
 	Create(ctx context.Context, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error)
 	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Property, error)
@@ -54,6 +59,7 @@ type Repository interface {
 	CreateUnit(ctx context.Context, propertyID uuid.UUID, in CreateUnitInput) (*Unit, error)
 	GetUnit(ctx context.Context, id uuid.UUID) (*Unit, error)
 	ListUnits(ctx context.Context, propertyID uuid.UUID) ([]Unit, error)
+	ListUnitsByPropertyIDs(ctx context.Context, propertyIDs []uuid.UUID) ([]Unit, error)
 	UpdateUnit(ctx context.Context, id uuid.UUID, in CreateUnitInput) (*Unit, error)
 	DeleteUnit(ctx context.Context, id uuid.UUID) error
 }

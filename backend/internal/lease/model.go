@@ -16,6 +16,7 @@ type Lease struct {
 	EndDate              *time.Time `json:"end_date,omitempty"`
 	RentAmount           float64    `json:"rent_amount"`
 	DepositAmount        *float64   `json:"deposit_amount,omitempty"`
+	PaymentDay          int        `json:"payment_day"`
 	Status               string     `json:"status"`
 	IsActive             bool       `json:"is_active"`
 	LateFeePercent       float64    `json:"late_fee_percent"`
@@ -34,6 +35,7 @@ type CreateLeaseInput struct {
 	EndDate              *time.Time `json:"end_date,omitempty"`
 	RentAmount           float64    `json:"rent_amount"`
 	DepositAmount        *float64   `json:"deposit_amount,omitempty"`
+	PaymentDay           int        `json:"payment_day"`
 	LateFeePercent       float64    `json:"late_fee_percent,omitempty"`
 	DailyInterestPercent float64    `json:"daily_interest_percent,omitempty"`
 	IPTUReimbursable     bool       `json:"iptu_reimbursable,omitempty"`
@@ -45,6 +47,7 @@ type UpdateLeaseInput struct {
 	EndDate              *time.Time `json:"end_date,omitempty"`
 	RentAmount           float64    `json:"rent_amount"`
 	DepositAmount        *float64   `json:"deposit_amount,omitempty"`
+	PaymentDay          *int       `json:"payment_day,omitempty"`
 	Status               string     `json:"status"`
 	LateFeePercent       float64    `json:"late_fee_percent,omitempty"`
 	DailyInterestPercent float64    `json:"daily_interest_percent,omitempty"`
@@ -55,6 +58,7 @@ type UpdateLeaseInput struct {
 
 type RenewLeaseInput struct {
 	NewEndDate time.Time `json:"new_end_date"`
+	PaymentDay *int    `json:"payment_day,omitempty"`
 	RentAmount float64   `json:"rent_amount,omitempty"`
 }
 
