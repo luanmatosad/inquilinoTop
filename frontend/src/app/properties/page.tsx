@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { Plus, Search } from "lucide-react"
-import { createClient } from '@/lib/supabase/server'
+import { goFetch } from "@/lib/go/client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,23 +15,31 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-async function PropertiesList({ search }: { search?: string }) {
-  const supabase = await createClient()
-  
-  let query = supabase
-    .from("properties")
-    .select("*, units(count)")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
+interface PropertyWithUnits {
+  id: string
+  name: string
+  type: string
+  address_line?: string
+  city?: string
+  state?: string
+  is_active: boolean
+  created_at: string
+  units: { id: string }[]
+}
 
-  if (search) {
-    query = query.ilike("name", `%${search}%`)
+async function PropertiesList({ search }: { search?: string }) {
+  let properties: PropertyWithUnits[] = []
+
+  try {
+    properties = await goFetch<PropertyWithUnits[]>("/api/v1/properties", {})
+  } catch (error) {
+    console.error("Erro ao buscar propriedades:", error)
   }
 
-  const { data: properties, error } = await query
-
-  if (error) {
-    return <div className="text-red-500">Erro ao carregar imóveis: {error.message}</div>
+  if (search) {
+    properties = properties.filter(p => 
+      p.name.toLowerCase().includes(search.toLowerCase())
+    )
   }
 
   if (!properties || properties.length === 0) {
@@ -67,7 +75,7 @@ async function PropertiesList({ search }: { search?: string }) {
               </p>
             </CardContent>
             <CardFooter className="text-sm text-muted-foreground">
-              {property.units?.[0]?.count || 0} unidade(s)
+              {property.units?.length || 0} unidade(s)
             </CardFooter>
           </Card>
         </Link>

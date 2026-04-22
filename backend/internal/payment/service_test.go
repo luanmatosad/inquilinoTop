@@ -95,6 +95,42 @@ func (m *mockPaymentRepo) MarkPaid(_ context.Context, id, ownerID uuid.UUID, pai
 	return p, nil
 }
 
+func (m *mockPaymentRepo) UpdateChargeInfo(_ context.Context, id, ownerID uuid.UUID, in payment.UpdateChargeInfoInput) error {
+	p, err := m.GetByID(context.Background(), id, ownerID)
+	if err != nil {
+		return err
+	}
+	p.ChargeID = &in.ChargeID
+	p.ChargeMethod = &in.ChargeMethod
+	p.ChargeQRCode = &in.QRCode
+	p.ChargeLink = &in.Link
+	p.ChargeBarcode = &in.BarCode
+	return nil
+}
+
+func (m *mockPaymentRepo) UpdatePayoutInfo(_ context.Context, id, ownerID uuid.UUID, payoutID, status string) error {
+	p, err := m.GetByID(context.Background(), id, ownerID)
+	if err != nil {
+		return err
+	}
+	p.PayoutID = &payoutID
+	p.PayoutStatus = &status
+	return nil
+}
+
+func (m *mockPaymentRepo) GetActiveFinancialConfig(_ context.Context, ownerID uuid.UUID) (*payment.FinancialConfig, error) {
+	return nil, errors.New("not configured")
+}
+
+func (m *mockPaymentRepo) GetByChargeID(_ context.Context, chargeID string) (*payment.Payment, error) {
+	for _, p := range m.payments {
+		if p.ChargeID != nil && *p.ChargeID == chargeID {
+			return p, nil
+		}
+	}
+	return nil, errors.New("not found")
+}
+
 type mockLeaseReader struct {
 	leases map[uuid.UUID]*lease.Lease
 }

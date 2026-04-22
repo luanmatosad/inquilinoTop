@@ -1,13 +1,11 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 import { Button } from '@/components/ui/button'
 import { logout } from '@/app/auth/actions'
 
 export default async function Header() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const cookieStore = await cookies()
+  const accessToken = cookieStore.get('access_token')?.value
 
   return (
     <header className="border-b p-4 bg-white shadow-sm">
@@ -17,7 +15,7 @@ export default async function Header() {
         </Link>
         
         <nav className="flex items-center gap-4">
-          {user ? (
+          {accessToken ? (
             <>
               <Link href="/properties">
                 <Button variant="ghost" size="sm">
@@ -30,9 +28,6 @@ export default async function Header() {
                 </Button>
               </Link>
               <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-600 hidden md:inline-block">
-                  {user.email}
-                </span>
                 <form action={logout}>
                   <Button variant="outline" size="sm">
                     Sair

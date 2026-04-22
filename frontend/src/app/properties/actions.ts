@@ -1,7 +1,7 @@
 "use server"
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from "next/cache"
+import { goFetch } from "@/lib/go/client"
 import { propertySchema, unitSchema, PropertyFormValues, UnitFormValues } from "@/lib/schemas"
 
 type ActionResponse<T = void> = {
@@ -11,50 +11,47 @@ type ActionResponse<T = void> = {
   details?: Record<string, string[]>
 }
 
-export async function createProperty(data: PropertyFormValues): Promise<ActionResponse<any>> {
-  const supabase = await createClient()
-  
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
-  if (userError || !user) {
-    return { error: "Usuário não autenticado" }
-  }
+interface Property {
+  id: string
+  owner_id: string
+  type: string
+  name: string
+  address_line?: string
+  city?: string
+  state?: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
 
+interface Unit {
+  id: string
+  property_id: string
+  label: string
+  floor?: string
+  notes?: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export async function createProperty(data: PropertyFormValues): Promise<ActionResponse<any>> {
   const validated = propertySchema.safeParse(data)
   if (!validated.success) {
     return { error: "Dados inválidos", details: validated.error.flatten().fieldErrors }
   }
 
-  const { type, name, address_line, city, state } = validated.data
-
   try {
-    const { data: property, error } = await supabase
-      .from("properties")
-      .insert({
-        owner_id: user.id,
-        type,
-        name,
-        address_line,
-        city,
-        state,
+    const property = await goFetch<Property>("/api/v1/properties", {
+      method: "POST",
+      body: JSON.stringify(validated.data),
+    })
+
+    if (validated.data.type === "SINGLE") {
+      await goFetch<Unit>("/api/v1/properties/" + property.id + "/units", {
+        method: "POST",
+        body: JSON.stringify({ label: "Unidade 01", notes: "Unidade criada automaticamente" }),
       })
-      .select()
-      .single()
-
-    if (error) throw error
-
-    // Lógica específica para SINGLE: criar unidade automaticamente
-    if (type === "SINGLE") {
-      const { error: unitError } = await supabase
-        .from("units")
-        .insert({
-          property_id: property.id,
-          label: "Unidade 01",
-          notes: "Unidade criada automaticamente",
-        })
-
-      if (unitError) {
-        console.error("Erro ao criar unidade automática:", unitError)
-      }
     }
 
     revalidatePath("/properties")
@@ -66,26 +63,19 @@ export async function createProperty(data: PropertyFormValues): Promise<ActionRe
 }
 
 export async function updateProperty(id: string, data: PropertyFormValues): Promise<ActionResponse> {
-  const supabase = await createClient()
-  
   const validated = propertySchema.safeParse(data)
   if (!validated.success) {
     return { error: "Dados inválidos", details: validated.error.flatten().fieldErrors }
   }
 
   try {
-    const { error } = await supabase
-      .from("properties")
-      .update({
-        ...validated.data,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-
-    if (error) throw error
+    await goFetch<Property>("/api/v1/properties/" + id, {
+      method: "PUT",
+      body: JSON.stringify(validated.data),
+    })
 
     revalidatePath("/properties")
-    revalidatePath(`/properties/${id}`)
+    revalidatePath("/properties/" + id)
     return { success: true }
   } catch (error) {
     console.error("Erro ao atualizar propriedade:", error)
@@ -94,16 +84,10 @@ export async function updateProperty(id: string, data: PropertyFormValues): Prom
 }
 
 export async function deleteProperty(id: string): Promise<ActionResponse> {
-  const supabase = await createClient()
-
   try {
-    // Soft delete
-    const { error } = await supabase
-      .from("properties")
-      .update({ is_active: false })
-      .eq("id", id)
-
-    if (error) throw error
+    await goFetch<{ deleted: boolean }>("/api/v1/properties/" + id, {
+      method: "DELETE",
+    })
 
     revalidatePath("/properties")
     return { success: true }
@@ -114,24 +98,18 @@ export async function deleteProperty(id: string): Promise<ActionResponse> {
 }
 
 export async function createUnit(propertyId: string, data: UnitFormValues): Promise<ActionResponse> {
-  const supabase = await createClient()
-
   const validated = unitSchema.safeParse(data)
   if (!validated.success) {
     return { error: "Dados inválidos", details: validated.error.flatten().fieldErrors }
   }
 
   try {
-    const { error } = await supabase
-      .from("units")
-      .insert({
-        property_id: propertyId,
-        ...validated.data,
-      })
+    await goFetch<Unit>("/api/v1/properties/" + propertyId + "/units", {
+      method: "POST",
+      body: JSON.stringify(validated.data),
+    })
 
-    if (error) throw error
-
-    revalidatePath(`/properties/${propertyId}`)
+    revalidatePath("/properties/" + propertyId)
     return { success: true }
   } catch (error) {
     console.error("Erro ao criar unidade:", error)
@@ -140,22 +118,18 @@ export async function createUnit(propertyId: string, data: UnitFormValues): Prom
 }
 
 export async function updateUnit(id: string, propertyId: string, data: UnitFormValues): Promise<ActionResponse> {
-  const supabase = await createClient()
-
   const validated = unitSchema.safeParse(data)
   if (!validated.success) {
     return { error: "Dados inválidos", details: validated.error.flatten().fieldErrors }
   }
 
   try {
-    const { error } = await supabase
-      .from("units")
-      .update(validated.data)
-      .eq("id", id)
+    await goFetch<Unit>("/api/v1/units/" + id, {
+      method: "PUT",
+      body: JSON.stringify(validated.data),
+    })
 
-    if (error) throw error
-
-    revalidatePath(`/properties/${propertyId}`)
+    revalidatePath("/properties/" + propertyId)
     return { success: true }
   } catch (error) {
     console.error("Erro ao atualizar unidade:", error)
@@ -164,18 +138,12 @@ export async function updateUnit(id: string, propertyId: string, data: UnitFormV
 }
 
 export async function deleteUnit(id: string, propertyId: string): Promise<ActionResponse> {
-  const supabase = await createClient()
-
   try {
-    // Soft delete
-    const { error } = await supabase
-      .from("units")
-      .update({ is_active: false })
-      .eq("id", id)
+    await goFetch<{ deleted: boolean }>("/api/v1/units/" + id, {
+      method: "DELETE",
+    })
 
-    if (error) throw error
-
-    revalidatePath(`/properties/${propertyId}`)
+    revalidatePath("/properties/" + propertyId)
     return { success: true }
   } catch (error) {
     console.error("Erro ao desativar unidade:", error)

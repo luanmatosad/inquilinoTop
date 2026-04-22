@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Building2, MapPin } from 'lucide-react'
@@ -8,8 +7,8 @@ import { CreateLeaseDialog } from '@/components/leases/CreateLeaseDialog'
 import { PaymentList } from '@/components/payments/PaymentList'
 import { ExpenseDialog } from '@/components/expenses/ExpenseDialog'
 import { ExpenseList } from '@/components/expenses/ExpenseList'
-
 import { getActiveTenants } from '@/app/leases/actions'
+import { goFetch } from '@/lib/go/client'
 
 export default async function UnitPage({ 
   params,
@@ -17,66 +16,36 @@ export default async function UnitPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
 
-  // 1. Buscar Unidade e Propriedade
-  const { data: unit, error } = await supabase
-    .from('units')
-    .select(`
-      *,
-      property:properties(id, name, address_line, city, state)
-    `)
-    .eq('id', id)
-    .single()
+  let unit: any = null
+  let property: any = null
+  let activeLease: any = null
+  let payments: any[] = []
+  let expenses: any[] = []
 
-  if (error || !unit) {
+  try {
+    unit = await goFetch<any>("/api/v1/units/" + id, {})
+    if (unit?.property_id) {
+      property = await goFetch<any>("/api/v1/properties/" + unit.property_id, {})
+    }
+  } catch {
     notFound()
   }
 
-  // 2. Buscar Contrato Ativo
-  const { data: activeLease } = await supabase
-    .from('leases')
-    .select(`
-      *,
-      tenant:tenants(name, email, phone)
-    `)
-    .eq('unit_id', id)
-    .eq('status', 'ACTIVE')
-    .maybeSingle()
-
-  // 3. Buscar Pagamentos do Contrato Ativo (se existir)
-  let payments = []
-  if (activeLease) {
-    const { data } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('lease_id', activeLease.id)
-      .order('due_date', { ascending: true })
-    payments = data || []
+  if (!unit) {
+    notFound()
   }
 
-  // 4. Buscar inquilinos para o formulário (se necessário)
   const tenants = !activeLease ? await getActiveTenants() : []
-
-  // 5. Buscar Despesas da Unidade
-  const { data: expenses } = await supabase
-    .from('expenses')
-    .select('*')
-    .eq('unit_id', id)
-    .order('due_date', { ascending: true })
-
-  // Cast para garantir que o tipo do property está correto no TS (embora venha do banco)
-  const property = unit.property as unknown as { id: string, name: string, address_line: string, city: string, state: string }
 
   return (
     <div className="container py-8 space-y-8">
-      {/* Breadcrumb / Header */}
       <div className="space-y-4">
         <Link 
-          href={`/properties/${property.id}`} 
+          href={`/properties/${property?.id}`} 
           className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm"
         >
-          <ArrowLeft className="h-4 w-4" /> Voltar para {property.name}
+          <ArrowLeft className="h-4 w-4" /> Voltar para {property?.name || 'imóvel'}
         </Link>
 
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -88,9 +57,9 @@ export default async function UnitPage({
             <div className="mt-2 text-muted-foreground flex items-center gap-2">
               <MapPin className="h-4 w-4" />
               <span>
-                {property.address_line 
+                {property?.address_line 
                   ? `${property.address_line}, ${property.city}/${property.state}`
-                  : "Endereço da propriedade não informado"}
+                  : "Endereço não informado"}
               </span>
             </div>
             {unit.floor && (
@@ -103,7 +72,6 @@ export default async function UnitPage({
         </div>
       </div>
 
-      {/* Seção de Contrato */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold border-b pb-2">Situação Atual</h2>
         
@@ -137,7 +105,6 @@ export default async function UnitPage({
               <CreateLeaseDialog unitId={unit.id} tenants={tenants || []} />
             </div>
 
-            {/* Despesas mesmo sem contrato (manutenção, etc) */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium">Despesas da Unidade</h3>
@@ -149,7 +116,6 @@ export default async function UnitPage({
         )}
       </div>
 
-      {/* Seção de Histórico (Placeholder) */}
       <div className="space-y-4 pt-8 opacity-50">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Histórico de Contratos</h2>

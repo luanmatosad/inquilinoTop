@@ -1,21 +1,18 @@
 import { notFound } from "next/navigation"
-import { createClient } from '@/lib/supabase/server'
+import { goFetch } from "@/lib/go/client"
 import { PropertyForm } from "@/components/properties/PropertyForm"
 
 async function EditPropertyFormWrapper({ id }: { id: string }) {
-  const supabase = await createClient()
+  let property
 
-  const { data: property, error } = await supabase
-    .from("properties")
-    .select("*")
-    .eq("id", id)
-    .single()
+  try {
+    property = await goFetch<any>("/api/v1/properties/" + id, {})
+  } catch {
+    notFound()
+  }
 
-  if (error || !property) {
-    if (error?.code === "PGRST116") {
-      notFound()
-    }
-    throw error
+  if (!property) {
+    notFound()
   }
 
   return <PropertyForm initialData={property} />

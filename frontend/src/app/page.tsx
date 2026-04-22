@@ -1,20 +1,18 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getDashboardMetrics } from '@/data/dashboard/dal'
 import { StatsCards } from '@/components/dashboard/StatsCards'
 import { FinancialSummary } from '@/components/dashboard/FinancialSummary'
 import { RecentActivity } from '@/components/dashboard/RecentActivity'
+import { cookies } from 'next/headers'
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
+  const cookieStore = await cookies()
+  const accessToken = cookieStore.get('access_token')?.value
 
-  if (!user) {
+  if (!accessToken) {
     redirect('/login')
   }
 
-  // Buscar métricas usando a camada de acesso a dados (DAL)
   const metrics = await getDashboardMetrics()
 
   return (
@@ -30,7 +28,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
          <div className="col-span-4 lg:col-span-4">
-             <FinancialSummary revenue={metrics.monthlyRevenue} />
+            <FinancialSummary revenue={metrics.monthlyRevenue} />
          </div>
          <div className="col-span-4 lg:col-span-3">
             <RecentActivity 

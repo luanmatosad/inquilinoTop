@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -11,6 +12,7 @@ import (
 	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/httputil"
+	"github.com/inquilinotop/api/internal/payment/provider"
 )
 
 type Handler struct {
@@ -28,6 +30,10 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 	r.With(authMW).Put("/api/v1/payments/{id}", h.update)
 	r.With(authMW).Post("/api/v1/leases/{leaseId}/payments/generate", h.Generate)
 	r.With(authMW).Get("/api/v1/payments/{id}/receipt", h.Receipt)
+	r.With(authMW).Post("/api/v1/payments/{id}/charge", h.handleCreateCharge)
+	r.With(authMW).Get("/api/v1/payments/{id}/charge", h.handleGetChargeStatus)
+	r.With(authMW).Post("/api/v1/payments/{id}/payout", h.handleCreatePayout)
+	r.Post("/webhook/{provider}", h.handleWebhook)
 }
 
 // @Summary Lista pagamentos de um contrato
@@ -210,4 +216,127 @@ func (h *Handler) Receipt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.OK(w, rec)
+}
+
+type CreateChargeRequest struct {
+	Method string `json:"method"`
+}
+
+func (h *Handler) handleCreateCharge(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+
+	var req CreateChargeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+
+	if req.Method != "PIX" && req.Method != "BOLETO" {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_METHOD", "method deve ser PIX ou BOLETO")
+		return
+	}
+
+	resp, err := h.svc.CreateCharge(r.Context(), id, ownerID, req.Method)
+	if err != nil {
+		httputil.Err(w, http.StatusInternalServerError, "CREATE_CHARGE_FAILED", err.Error())
+		return
+	}
+
+	httputil.OK(w, resp)
+}
+
+func (h *Handler) handleGetChargeStatus(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+
+	status, err := h.svc.GetChargeStatus(r.Context(), id, ownerID)
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "GET_STATUS_FAILED", err.Error())
+		return
+	}
+
+	httputil.OK(w, status)
+}
+
+type CreatePayoutRequest struct {
+	Destination struct {
+		Type        string `json:"type"`
+		PixKey     string `json:"pix_key,omitempty"`
+		PixKeyType string `json:"pix_key_type,omitempty"`
+		OwnerName string `json:"owner_name"`
+		Document  string `json:"document"`
+	} `json:"destination"`
+}
+
+func (h *Handler) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+
+	var req CreatePayoutRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+
+	dest := provider.Destination{
+		Type:        req.Destination.Type,
+		PixKey:     req.Destination.PixKey,
+		PixKeyType: req.Destination.PixKeyType,
+		OwnerName: req.Destination.OwnerName,
+		Document:  req.Destination.Document,
+	}
+
+	resp, err := h.svc.CreatePayout(r.Context(), id, ownerID, dest)
+	if err != nil {
+		httputil.Err(w, http.StatusInternalServerError, "CREATE_PAYOUT_FAILED", err.Error())
+		return
+	}
+
+	httputil.OK(w, resp)
+}
+
+func (h *Handler) handleWebhook(w http.ResponseWriter, r *http.Request) {
+	providerName := chi.URLParam(r, "provider")
+
+	webhookSecret := r.Header.Get("X-Webhook-Secret")
+	if webhookSecret == "" {
+		httputil.Err(w, http.StatusUnauthorized, "MISSING_SECRET", "X-Webhook-Secret header required")
+		return
+	}
+
+	expectedSecret := os.Getenv("WEBHOOK_SECRET")
+	if expectedSecret != "" && webhookSecret != expectedSecret {
+		httputil.Err(w, http.StatusUnauthorized, "INVALID_SECRET", "invalid webhook secret")
+		return
+	}
+
+	var event map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+
+	err := h.svc.ProcessWebhook(r.Context(), providerName, event)
+	if err != nil {
+		httputil.Err(w, http.StatusInternalServerError, "WEBHOOK_FAILED", err.Error())
+		return
+	}
+
+	httputil.OK(w, map[string]string{"status": "ok"})
 }

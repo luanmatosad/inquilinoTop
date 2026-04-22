@@ -22,22 +22,29 @@ type IRRFCalculator interface {
 }
 
 type Payment struct {
-	ID             uuid.UUID  `json:"id"`
-	OwnerID        uuid.UUID  `json:"owner_id"`
-	LeaseID        uuid.UUID  `json:"lease_id"`
-	DueDate        time.Time  `json:"due_date"`
-	PaidDate       *time.Time `json:"paid_date,omitempty"`
-	GrossAmount    float64    `json:"gross_amount"`
-	LateFeeAmount  float64    `json:"late_fee_amount"`
+	ID               uuid.UUID  `json:"id"`
+	OwnerID          uuid.UUID  `json:"owner_id"`
+	LeaseID          uuid.UUID  `json:"lease_id"`
+	DueDate          time.Time  `json:"due_date"`
+	PaidDate         *time.Time `json:"paid_date,omitempty"`
+	GrossAmount     float64    `json:"gross_amount"`
+	LateFeeAmount   float64    `json:"late_fee_amount"`
 	InterestAmount float64    `json:"interest_amount"`
-	IRRFAmount     float64    `json:"irrf_amount"`
+	IRRFAmount    float64    `json:"irrf_amount"`
 	NetAmount      *float64   `json:"net_amount,omitempty"`
-	Competency     *string    `json:"competency,omitempty"`
-	Description    *string    `json:"description,omitempty"`
-	Status         string     `json:"status"`
-	Type           string     `json:"type"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	Competency     *string   `json:"competency,omitempty"`
+	Description    *string   `json:"description,omitempty"`
+	Status         string    `json:"status"`
+	Type           string    `json:"type"`
+	ChargeID       *string   `json:"charge_id,omitempty"`
+	ChargeMethod   *string   `json:"charge_method,omitempty"`
+	ChargeQRCode   *string   `json:"charge_qrcode,omitempty"`
+	ChargeLink    *string   `json:"charge_link,omitempty"`
+	ChargeBarcode *string   `json:"charge_barcode,omitempty"`
+	PayoutID      *string   `json:"payout_id,omitempty"`
+	PayoutStatus *string   `json:"payout_status,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type CreatePaymentInput struct {
@@ -59,10 +66,14 @@ type Repository interface {
 	Create(ctx context.Context, ownerID uuid.UUID, in CreatePaymentInput) (*Payment, error)
 	CreateIfAbsent(ctx context.Context, ownerID uuid.UUID, in CreatePaymentInput) (*Payment, bool, error)
 	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Payment, error)
+	GetByChargeID(ctx context.Context, chargeID string) (*Payment, error)
 	ListByLease(ctx context.Context, leaseID, ownerID uuid.UUID) ([]Payment, error)
 	Update(ctx context.Context, id, ownerID uuid.UUID, in UpdatePaymentInput) (*Payment, error)
 	MarkPaid(ctx context.Context, id, ownerID uuid.UUID, paidDate time.Time,
 		lateFee, interest, irrf, netAmount float64) (*Payment, error)
+	UpdateChargeInfo(ctx context.Context, id, ownerID uuid.UUID, in UpdateChargeInfoInput) error
+	UpdatePayoutInfo(ctx context.Context, id, ownerID uuid.UUID, payoutID, status string) error
+	GetActiveFinancialConfig(ctx context.Context, ownerID uuid.UUID) (*FinancialConfig, error)
 }
 
 type OwnerReader interface {
@@ -114,4 +125,40 @@ type Amounts struct {
 	Interest     float64 `json:"interest"`
 	IRRFWithheld float64 `json:"irrf_withheld"`
 	NetPaid      float64 `json:"net_paid"`
+}
+
+type FinancialConfig struct {
+	ID         uuid.UUID            `json:"id"`
+	OwnerID    uuid.UUID           `json:"owner_id"`
+	Provider  string              `json:"provider"`
+	Config    map[string]string   `json:"config,omitempty"`
+	PixKey    *string             `json:"pix_key,omitempty"`
+	BankInfo  *BankInfo           `json:"bank_info,omitempty"`
+	IsActive  bool                `json:"is_active"`
+	CreatedAt time.Time           `json:"created_at"`
+	UpdatedAt time.Time           `json:"updated_at"`
+}
+
+type BankInfo struct {
+	BankCode    string `json:"bank_code"`
+	Agency      string `json:"agency"`
+	Account    string `json:"account"`
+	AccountType string `json:"account_type"`
+	OwnerName  string `json:"owner_name"`
+	Document   string `json:"document"`
+}
+
+type CreateFinancialConfigInput struct {
+	Provider string              `json:"provider"`
+	Config   map[string]string  `json:"config"`
+	PixKey   *string             `json:"pix_key,omitempty"`
+	BankInfo *BankInfo            `json:"bank_info,omitempty"`
+}
+
+type UpdateChargeInfoInput struct {
+	ChargeID     string
+	ChargeMethod string
+	QRCode       string
+	Link          string
+	BarCode       string
 }

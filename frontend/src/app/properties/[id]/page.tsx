@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { ArrowLeft, Pencil, Building, MapPin } from "lucide-react"
-import { createClient } from '@/lib/supabase/server'
+import { goFetch } from "@/lib/go/client"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,34 +11,40 @@ import { Badge } from "@/components/ui/badge"
 
 import { DeletePropertyButton } from "@/components/properties/DeletePropertyButton"
 
+interface Property {
+  id: string
+  name: string
+  type: string
+  address_line?: string
+  city?: string
+  state?: string
+  is_active: boolean
+  created_at: string
+  units: Unit[]
+}
+
 async function PropertyDetails({ id, addUnit }: { id: string, addUnit: boolean }) {
-  const supabase = await createClient()
+  let property: Property
 
-  // Busca a propriedade e suas unidades
-  const { data: property, error } = await supabase
-    .from("properties")
-    .select(`
-      *,
-      units (*)
-    `)
-    .eq("id", id)
-    .single()
-
-  if (error || !property) {
-    if (error?.code === "PGRST116") { // Não encontrado
-      notFound()
-    }
-    throw error
+  try {
+    property = await goFetch<Property>("/api/v1/properties/" + id, {})
+  } catch (error) {
+    console.error("Erro ao buscar propriedade:", error)
+    notFound()
+    return null
   }
 
-  // Ordena as unidades por label
-  const units = ((property.units as unknown as Unit[]) || []).sort((a, b) => 
+  if (!property) {
+    notFound()
+    return null
+  }
+
+  const units = (property.units || []).sort((a, b) => 
     a.label.localeCompare(b.label, undefined, { numeric: true })
   )
 
   return (
     <div className="space-y-8">
-      {/* Cabeçalho */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -73,7 +79,6 @@ async function PropertyDetails({ id, addUnit }: { id: string, addUnit: boolean }
         </div>
       </div>
 
-      {/* Lista de Unidades */}
       <Card>
         <CardHeader>
           <CardTitle>Unidades ({units.length})</CardTitle>

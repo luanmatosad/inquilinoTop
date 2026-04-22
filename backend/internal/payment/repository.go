@@ -7,9 +7,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/db"
 	"github.com/jackc/pgx/v5"
 )
+
+var ErrNotFound = apierr.ErrNotFound
 
 type pgRepository struct{ db *db.DB }
 
@@ -141,6 +144,39 @@ func (r *pgRepository) MarkPaid(ctx context.Context, id, ownerID uuid.UUID, paid
 	), &p)
 	if err != nil {
 		return nil, fmt.Errorf("payment.repo: mark paid: %w", err)
+	}
+	return &p, nil
+}
+
+func (r *pgRepository) UpdateChargeInfo(ctx context.Context, id, ownerID uuid.UUID, in UpdateChargeInfoInput) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE payments SET charge_id = $3, charge_method = $4, charge_qrcode = $5, charge_link = $6, charge_barcode = $7, updated_at = NOW()
+		 WHERE id = $1 AND owner_id = $2`,
+		id, ownerID, in.ChargeID, in.ChargeMethod, in.QRCode, in.Link, in.BarCode,
+	)
+	return err
+}
+
+func (r *pgRepository) UpdatePayoutInfo(ctx context.Context, id, ownerID uuid.UUID, payoutID, status string) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE payments SET payout_id = $3, payout_status = $4, updated_at = NOW()
+		 WHERE id = $1 AND owner_id = $2`,
+		id, ownerID, payoutID, status,
+	)
+	return err
+}
+
+func (r *pgRepository) GetByChargeID(ctx context.Context, chargeID string) (*Payment, error) {
+	var p Payment
+	err := scanPayment(r.db.Pool.QueryRow(ctx,
+		`SELECT `+paymentCols+` FROM payments WHERE charge_id = $1`,
+		chargeID,
+	), &p)
+	if err == pgx.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("payment.repo: get by charge id: %w", err)
 	}
 	return &p, nil
 }
