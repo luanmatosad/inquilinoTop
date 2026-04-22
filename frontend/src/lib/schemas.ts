@@ -3,7 +3,7 @@ import { z } from "zod"
 export const propertySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   type: z.enum(["RESIDENTIAL", "SINGLE"], {
-    required_error: "Tipo é obrigatório",
+    message: "Tipo é obrigatório",
   }),
   address_line: z.string().optional(),
   city: z.string().optional(),

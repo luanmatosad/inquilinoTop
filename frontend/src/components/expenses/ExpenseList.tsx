@@ -38,6 +38,7 @@ interface Expense {
 
 interface ExpenseListProps {
   expenses: Expense[]
+  unitId: string
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -49,7 +50,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   OTHER: 'Outros',
 }
 
-export function ExpenseList({ expenses }: ExpenseListProps) {
+export function ExpenseList({ expenses, unitId }: ExpenseListProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const router = useRouter()
@@ -57,7 +58,7 @@ export function ExpenseList({ expenses }: ExpenseListProps) {
   const handleMarkAsPaid = async (id: string) => {
     setLoadingId(id)
     try {
-      const result = await markExpenseAsPaid(id)
+      const result = await markExpenseAsPaid(id, unitId)
       if (result.error) {
         toast.error(result.error)
       } else {
@@ -74,7 +75,7 @@ export function ExpenseList({ expenses }: ExpenseListProps) {
   const handleDelete = async () => {
     if (!deletingId) return
     try {
-      const result = await deleteExpense(deletingId)
+      const result = await deleteExpense(deletingId, unitId)
       if (result.error) {
         toast.error(result.error)
       } else {

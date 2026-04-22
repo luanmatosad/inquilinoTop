@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login - InquilinoTop</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#e2e2e3",
+                        "secondary-fixed": "#ffdcc3",
+                        "on-background": "#1b1b1b",
+                        "on-tertiary-fixed-variant": "#454748",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed-variant": "#004396",
+                        "secondary-container": "#fd8b00",
+                        "on-primary": "#ffffff",
+                        "surface-bright": "#f9f9f9",
+                        "primary": "#0057be",
+                        "surface-container-highest": "#e2e2e2",
+                        "tertiary-container": "#737475",
+                        "outline": "#727786",
+                        "on-secondary-container": "#603100",
+                        "surface-container-lowest": "#ffffff",
+                        "background": "#f9f9f9",
+                        "on-primary-fixed": "#001a42",
+                        "on-tertiary-fixed": "#1a1c1d",
+                        "primary-container": "#006fee",
+                        "surface-container": "#eeeeee",
+                        "inverse-primary": "#aec6ff",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#d8e2ff",
+                        "on-secondary-fixed-variant": "#6e3900",
+                        "surface-dim": "#dadada",
+                        "tertiary": "#5a5c5d",
+                        "on-surface-variant": "#414754",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#c6c6c7",
+                        "surface-variant": "#e2e2e2",
+                        "on-surface": "#1b1b1b",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-container-low": "#f3f3f3",
+                        "on-secondary-fixed": "#2f1500",
+                        "secondary-fixed-dim": "#ffb77d",
+                        "surface-tint": "#005ac3",
+                        "on-primary-container": "#fefbff",
+                        "outline-variant": "#c1c6d7",
+                        "inverse-surface": "#303030",
+                        "secondary": "#904d00",
+                        "primary-fixed-dim": "#aec6ff",
+                        "on-tertiary-container": "#fcfcfd",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#e8e8e8",
+                        "surface": "#f9f9f9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "unit": "4px",
+                        "2xl": "48px",
+                        "lg": "24px",
+                        "margin-desktop": "32px",
+                        "xl": "32px",
+                        "margin-mobile": "16px",
+                        "gutter": "16px",
+                        "xs": "4px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "h2": ["Inter"],
+                        "h1": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "mono-sm": ["ui-monospace"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.01em", "fontWeight": "600" }],
+                        "h2": ["24px", { "lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "h1": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                        "mono-sm": ["13px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface-bright min-h-screen flex items-center justify-center p-margin-mobile md:p-margin-desktop antialiased text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<main class="w-full max-w-[420px] flex flex-col gap-lg">
+<!-- Brand Header -->
+<div class="text-center flex flex-col items-center gap-xs">
+<div class="bg-primary-container/10 p-sm rounded-xl text-primary-container inline-flex mb-sm">
+<span class="material-symbols-outlined" data-icon="apartment" style="font-variation-settings: 'FILL' 1; font-size: 32px;">apartment</span>
+</div>
+<h1 class="font-h1 text-h1 tracking-tight text-on-surface">InquilinoTop</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Gestão imobiliária moderna.</p>
+</div>
+<!-- Login Card -->
+<div class="bg-surface-container-lowest rounded-xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] border border-surface-variant p-lg md:p-xl flex flex-col gap-lg relative overflow-hidden">
+<!-- Segmented Control (Tabs) -->
+<div class="flex bg-surface-container-low p-xs rounded-lg relative">
+<button class="flex-1 py-sm font-label-md text-label-md bg-surface-container-lowest text-primary-container shadow-sm rounded-md transition-colors relative z-10">Entrar</button>
+<button class="flex-1 py-sm font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors relative z-10">Cadastrar</button>
+</div>
+<!-- Form Area -->
+<form class="flex flex-col gap-md">
+<!-- Email Input -->
+<div class="flex flex-col gap-sm">
+<label class="font-label-sm text-label-sm text-on-surface-variant ml-xs" for="email">E-mail</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-md text-outline" data-icon="mail" style="font-size: 20px;">mail</span>
+<input class="w-full bg-surface-container-low border-transparent rounded-lg pl-[44px] pr-md py-[12px] font-body-md text-body-md text-on-surface placeholder:text-outline-variant focus:border-primary-container focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary-container transition-all" id="email" placeholder="voce@exemplo.com" required="" type="email"/>
+</div>
+</div>
+<!-- Password Input -->
+<div class="flex flex-col gap-sm">
+<div class="flex justify-between items-center ml-xs">
+<label class="font-label-sm text-label-sm text-on-surface-variant" for="password">Senha</label>
+<a class="font-label-sm text-label-sm text-primary-container hover:underline decoration-primary-container/50 underline-offset-2 transition-all" href="#">Esqueceu a senha?</a>
+</div>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-md text-outline" data-icon="lock" style="font-size: 20px;">lock</span>
+<input class="w-full bg-surface-container-low border-transparent rounded-lg pl-[44px] pr-[44px] py-[12px] font-body-md text-body-md text-on-surface placeholder:text-outline-variant focus:border-primary-container focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary-container transition-all" id="password" placeholder="••••••••" required="" type="password"/>
+<button class="absolute right-md text-outline hover:text-on-surface transition-colors flex items-center justify-center" type="button">
+<span class="material-symbols-outlined" data-icon="visibility" style="font-size: 20px;">visibility</span>
+</button>
+</div>
+</div>
+<!-- Submit Button -->
+<button class="w-full bg-primary-container text-on-primary-container font-label-md text-label-md py-[14px] rounded-lg mt-sm hover:opacity-90 active:scale-[0.98] transition-all flex justify-center items-center gap-sm shadow-sm" type="submit">
+                    Acessar painel
+                    <span class="material-symbols-outlined" data-icon="arrow_forward" style="font-size: 18px;">arrow_forward</span>
+</button>
+</form>
+</div>
+<!-- Minimal Footer context for Login -->
+<div class="text-center">
+<p class="font-label-sm text-label-sm text-outline">
+                Protegido por reCAPTCHA. <a class="hover:text-on-surface underline decoration-outline/50 underline-offset-2" href="#">Privacidade</a> e <a class="hover:text-on-surface underline decoration-outline/50 underline-offset-2" href="#">Termos</a> aplicáveis.
+            </p>
+</div>
+</main>
+</body></html>

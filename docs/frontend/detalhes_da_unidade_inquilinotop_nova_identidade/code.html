@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Detalhes da Unidade - InquilinoTop</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-fixed": "#e2e2e3",
+                      "secondary-fixed": "#ffdcc3",
+                      "on-background": "#1b1b1b",
+                      "on-tertiary-fixed-variant": "#454748",
+                      "error": "#ba1a1a",
+                      "on-primary-fixed-variant": "#004396",
+                      "secondary-container": "#fd8b00",
+                      "on-primary": "#ffffff",
+                      "surface-bright": "#f9f9f9",
+                      "primary": "#0057be",
+                      "surface-container-highest": "#e2e2e2",
+                      "tertiary-container": "#737475",
+                      "outline": "#727786",
+                      "on-secondary-container": "#603100",
+                      "surface-container-lowest": "#ffffff",
+                      "background": "#f9f9f9",
+                      "on-primary-fixed": "#001a42",
+                      "on-tertiary-fixed": "#1a1c1d",
+                      "primary-container": "#006fee",
+                      "surface-container": "#eeeeee",
+                      "inverse-primary": "#aec6ff",
+                      "on-tertiary": "#ffffff",
+                      "on-error": "#ffffff",
+                      "primary-fixed": "#d8e2ff",
+                      "on-secondary-fixed-variant": "#6e3900",
+                      "surface-dim": "#dadada",
+                      "tertiary": "#5a5c5d",
+                      "on-surface-variant": "#414754",
+                      "error-container": "#ffdad6",
+                      "on-error-container": "#93000a",
+                      "tertiary-fixed-dim": "#c6c6c7",
+                      "surface-variant": "#e2e2e2",
+                      "on-surface": "#1b1b1b",
+                      "inverse-on-surface": "#f1f1f1",
+                      "surface-container-low": "#f3f3f3",
+                      "on-secondary-fixed": "#2f1500",
+                      "secondary-fixed-dim": "#ffb77d",
+                      "surface-tint": "#005ac3",
+                      "on-primary-container": "#fefbff",
+                      "outline-variant": "#c1c6d7",
+                      "inverse-surface": "#303030",
+                      "secondary": "#904d00",
+                      "primary-fixed-dim": "#aec6ff",
+                      "on-tertiary-container": "#fcfcfd",
+                      "on-secondary": "#ffffff",
+                      "surface-container-high": "#e8e8e8",
+                      "surface": "#f9f9f9"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "unit": "4px",
+                      "2xl": "48px",
+                      "lg": "24px",
+                      "margin-desktop": "32px",
+                      "xl": "32px",
+                      "margin-mobile": "16px",
+                      "gutter": "16px",
+                      "xs": "4px",
+                      "sm": "8px"
+              },
+              "fontFamily": {
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "h2": [
+                              "Inter"
+                      ],
+                      "h1": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "mono-sm": [
+                              "ui-monospace"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "h2": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "h1": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "mono-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+      </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-['Inter'] antialiased">
+<!-- TopAppBar -->
+<header class="bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md docked full-width top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] sticky font-['Inter'] antialiased">
+<div class="flex justify-between items-center h-16 px-6 max-w-7xl mx-auto">
+<div class="flex items-center gap-8">
+<div class="text-2xl font-black tracking-tight text-blue-600 dark:text-blue-500">
+                    InquilinoTop
+                </div>
+<nav class="hidden md:flex gap-6 h-full items-center">
+<a class="text-zinc-600 dark:text-zinc-400 font-medium hover:text-blue-500 dark:hover:text-blue-400 transition-all duration-200" href="#">
+                        Imóveis
+                    </a>
+<a class="text-blue-600 dark:text-blue-400 font-semibold border-b-2 border-blue-600 dark:border-blue-400 pb-1 hover:text-blue-500 dark:hover:text-blue-400 transition-all duration-200 active:scale-95 transition-transform duration-150 h-full flex items-center mt-[2px]" href="#">
+                        Inquilinos
+                    </a>
+</nav>
+</div>
+<div class="flex items-center gap-4 text-blue-600 dark:text-blue-500">
+<button class="hover:text-blue-500 dark:hover:text-blue-400 transition-all duration-200 active:scale-95 transition-transform duration-150 flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:text-blue-500 dark:hover:text-blue-400 transition-all duration-200 active:scale-95 transition-transform duration-150 flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow w-full max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-xl">
+<!-- Page Header -->
+<div class="mb-xl flex flex-col md:flex-row md:items-end justify-between gap-md">
+<div>
+<nav class="flex text-body-md font-body-md text-on-surface-variant mb-xs">
+<ol class="flex items-center space-x-2">
+<li><a class="hover:underline" href="#">Inquilinos</a></li>
+<li><span class="material-symbols-outlined text-sm">chevron_right</span></li>
+<li class="font-label-md text-label-md text-on-surface">Unidade 402</li>
+</ol>
+</nav>
+<div class="flex items-center gap-md mt-sm">
+<h1 class="text-h1 font-h1 text-on-surface">Apt 402 - Centro</h1>
+<span class="bg-primary-fixed text-on-primary-fixed px-3 py-1 rounded-full text-label-sm font-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                        Ativo
+                    </span>
+</div>
+</div>
+<div class="flex gap-sm">
+<button class="flex items-center gap-2 px-md min-h-[44px] bg-surface-container text-on-surface rounded-lg hover:bg-surface-container-high transition-colors text-label-md font-label-md border border-surface-variant">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+                    Editar
+                </button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-lg">
+<!-- Left Column: Tenant & Contract Info -->
+<div class="lg:col-span-8 flex flex-col gap-lg">
+<!-- Tenant Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] p-lg flex flex-col md:flex-row items-start md:items-center gap-lg">
+<div class="w-24 h-24 rounded-full overflow-hidden flex-shrink-0 border-4 border-surface-container">
+<img alt="Tenant Avatar" class="w-full h-full object-cover" data-alt="portrait of a professional young man with short dark hair smiling warmly, natural daylight, soft background blur" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEoQNZmLsT2qeagfOEcyTi7Ul7IKnvTLiyV737HmZ5hs7JbBd2n47B1gVPsvdEv51ZSCJ0tvmNX_TlM7wIPyZpZBnljX0nzh3iJ60dcTlApcYENO5NG1Xv4BeGE25ymBxe_NawIPlABTp8syf8N0zU7amyWXzpZ4mtXU7PmxDPUQOpvWzK36nZMhzcxvHmnE7myQk_9teV9HbEq46cWdm9lKfVfn8UdUdYlHlmAogaqZBufoxLIKqb-Xe6k4K7VPZrL7AaXYeqNQc"/>
+</div>
+<div class="flex-grow">
+<h2 class="text-h2 font-h2 text-on-surface mb-xs">Carlos Eduardo Silva</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-y-sm gap-x-lg mt-md">
+<div class="flex items-center gap-2 text-body-md font-body-md text-on-surface-variant">
+<span class="material-symbols-outlined text-outline">mail</span>
+                                carlos.silva@email.com
+                            </div>
+<div class="flex items-center gap-2 text-body-md font-body-md text-on-surface-variant">
+<span class="material-symbols-outlined text-outline">phone</span>
+                                (11) 98765-4321
+                            </div>
+<div class="flex items-center gap-2 text-body-md font-body-md text-on-surface-variant">
+<span class="material-symbols-outlined text-outline">badge</span>
+                                CPF: 123.456.789-00
+                            </div>
+<div class="flex items-center gap-2 text-body-md font-body-md text-on-surface-variant">
+<span class="material-symbols-outlined text-outline">calendar_today</span>
+                                Desde: Jan 2024
+                            </div>
+</div>
+</div>
+</div>
+<!-- Receipts Table Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] overflow-hidden">
+<div class="p-lg border-b border-surface-variant flex justify-between items-center bg-surface-bright">
+<h3 class="text-label-md font-label-md text-on-surface text-lg">Histórico de Recebimentos</h3>
+<button class="text-primary hover:text-primary-container text-label-md font-label-md flex items-center gap-1">
+                            Ver todos <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface text-on-surface-variant text-label-sm font-label-sm border-b border-surface-variant">
+<th class="py-md px-lg font-medium">Mês Referência</th>
+<th class="py-md px-lg font-medium">Vencimento</th>
+<th class="py-md px-lg font-medium">Valor</th>
+<th class="py-md px-lg font-medium">Status</th>
+<th class="py-md px-lg font-medium text-right">Ação</th>
+</tr>
+</thead>
+<tbody class="text-body-md font-body-md text-on-surface divide-y divide-surface-variant">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-md px-lg">Março/2024</td>
+<td class="py-md px-lg">05/04/2024</td>
+<td class="py-md px-lg font-semibold">R$ 2.500,00</td>
+<td class="py-md px-lg">
+<span class="inline-flex bg-primary text-on-primary px-3 py-1 rounded-full text-label-sm font-label-sm items-center gap-1">
+                                            Pago
+                                        </span>
+</td>
+<td class="py-md px-lg text-right">
+<button class="text-outline hover:text-primary transition-colors p-2" title="Baixar Recibo">
+<span class="material-symbols-outlined">download</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-md px-lg">Abril/2024</td>
+<td class="py-md px-lg">05/05/2024</td>
+<td class="py-md px-lg font-semibold">R$ 2.500,00</td>
+<td class="py-md px-lg">
+<span class="inline-flex bg-error text-on-error px-3 py-1 rounded-full text-label-sm font-label-sm items-center gap-1">
+                                            Atrasado
+                                        </span>
+</td>
+<td class="py-md px-lg text-right">
+<button class="text-outline hover:text-primary transition-colors p-2" title="Cobrar">
+<span class="material-symbols-outlined">notifications_active</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-md px-lg">Maio/2024</td>
+<td class="py-md px-lg">05/06/2024</td>
+<td class="py-md px-lg font-semibold">R$ 2.500,00</td>
+<td class="py-md px-lg">
+<span class="inline-flex bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-label-sm font-label-sm items-center gap-1">
+                                            Pendente
+                                        </span>
+</td>
+<td class="py-md px-lg text-right">
+<button class="text-outline hover:text-primary transition-colors p-2" title="Enviar Boleto">
+<span class="material-symbols-outlined">send</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Column: Quick Actions & Contract Summary -->
+<div class="lg:col-span-4 flex flex-col gap-lg">
+<!-- Contract Info Card (Hero Style) -->
+<div class="bg-primary text-on-primary rounded-xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] p-lg relative overflow-hidden">
+<!-- Decorative abstract shape -->
+<div class="absolute -right-10 -top-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
+<h3 class="text-label-md font-label-md opacity-80 mb-sm uppercase tracking-wider">Valor do Aluguel</h3>
+<div class="text-[40px] font-bold leading-tight mb-md">
+                        R$ 2.500<span class="text-h2 font-h2 opacity-80">,00</span>
+</div>
+<div class="space-y-sm text-body-md font-body-md opacity-90 mt-lg border-t border-white/20 pt-md">
+<div class="flex justify-between items-center">
+<span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">event</span> Vencimento:</span>
+<span class="font-semibold">Dia 05</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">history</span> Período:</span>
+<span class="font-semibold">12 Meses</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">schedule</span> Início:</span>
+<span class="font-semibold">01/Jan/2024</span>
+</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] p-lg flex flex-col gap-md">
+<h3 class="text-label-md font-label-md text-on-surface mb-xs">Ações Rápidas</h3>
+<button class="w-full flex items-center justify-center gap-2 px-md min-h-[44px] bg-primary-container text-on-primary-container rounded-lg hover:bg-primary transition-colors text-label-md font-label-md shadow-sm">
+<span class="material-symbols-outlined text-[20px]">payments</span>
+                        Registrar Pagamento
+                    </button>
+<button class="w-full flex items-center justify-center gap-2 px-md min-h-[44px] bg-surface-container text-on-surface rounded-lg hover:bg-surface-container-high transition-colors text-label-md font-label-md border border-surface-variant">
+<span class="material-symbols-outlined text-[20px]">chat</span>
+                        Enviar Mensagem
+                    </button>
+<button class="w-full flex items-center justify-center gap-2 px-md min-h-[44px] bg-surface-container text-on-surface rounded-lg hover:bg-surface-container-high transition-colors text-label-md font-label-md border border-surface-variant">
+<span class="material-symbols-outlined text-[20px]">receipt_long</span>
+                        Gerar Recibo Avulso
+                    </button>
+<div class="w-full h-px bg-surface-variant my-xs"></div>
+<button class="w-full flex items-center justify-center gap-2 px-md min-h-[44px] text-error hover:bg-error-container hover:text-on-error-container rounded-lg transition-colors text-label-md font-label-md">
+<span class="material-symbols-outlined text-[20px]">cancel</span>
+                        Encerrar Contrato
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-white dark:bg-zinc-950 w-full border-t mt-auto border-zinc-200 dark:border-zinc-800 flat no shadows font-['Inter']">
+<div class="flex flex-col md:flex-row justify-between items-center py-8 px-6 max-w-7xl mx-auto gap-4">
+<div class="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                InquilinoTop
+            </div>
+<div class="text-sm text-blue-600 dark:text-blue-500">
+                © 2024 InquilinoTop. Gestão imobiliária moderna.
+            </div>
+<div class="flex gap-4">
+<a class="text-zinc-500 dark:text-zinc-400 text-sm hover:text-blue-600 dark:hover:text-blue-400 underline decoration-2 underline-offset-4 transition-colors duration-200" href="#">Termos de Uso</a>
+<a class="text-zinc-500 dark:text-zinc-400 text-sm hover:text-blue-600 dark:hover:text-blue-400 underline decoration-2 underline-offset-4 transition-colors duration-200" href="#">Privacidade</a>
+<a class="text-zinc-500 dark:text-zinc-400 text-sm hover:text-blue-600 dark:hover:text-blue-400 underline decoration-2 underline-offset-4 transition-colors duration-200" href="#">Suporte</a>
+<a class="text-zinc-500 dark:text-zinc-400 text-sm hover:text-blue-600 dark:hover:text-blue-400 underline decoration-2 underline-offset-4 transition-colors duration-200" href="#">Contato</a>
+</div>
+</div>
+</footer>
+</body></html>

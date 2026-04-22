@@ -1,89 +1,91 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import Link from 'next/link'
-import { ArrowRight, AlertTriangle } from 'lucide-react'
+import { Card } from '@heroui/react'
+import { Receipt, AlertCircle } from 'lucide-react'
 
 interface RecentActivityProps {
-  payments: {
+  payments: Array<{
     id: string
     description: string
     amount: number
     due_date: string
     status: string
-    tenantName: string
-  }[]
-  expiringLeases: {
+    tenantName?: string
+  }>
+  expiringLeases: Array<{
     id: string
     unitLabel: string
     tenantName: string
     endDate: string
-  }[]
+  }>
 }
 
 export function RecentActivity({ payments, expiringLeases }: RecentActivityProps) {
-  return (
-    <div className="col-span-4 lg:col-span-2 space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Pagamentos Recentes</CardTitle>
-          <Link href="/properties" className="text-sm text-primary hover:underline flex items-center gap-1">
-            Ver unidades <ArrowRight className="h-4 w-4" />
-          </Link>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {payments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum pagamento recente.</p>
-            ) : (
-              payments.map((payment) => (
-                <div key={payment.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">{payment.description}</p>
-                    <p className="text-xs text-muted-foreground">{payment.tenantName}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="font-bold text-sm">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(payment.amount)}
-                    </span>
-                    {payment.status === 'PAID' ? (
-                      <Badge className="bg-green-600 h-5 text-[10px] text-white hover:bg-green-700">Pago</Badge>
-                    ) : payment.status === 'LATE' ? (
-                      <Badge variant="destructive" className="h-5 text-[10px]">Atrasado</Badge>
-                    ) : (
-                      <Badge variant="secondary" className="h-5 text-[10px]">Pendente</Badge>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
+  const formatCurrency = (value: number) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 
-      {expiringLeases.length > 0 && (
-        <Card className="border-yellow-200 bg-yellow-50/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-yellow-800">
-              <AlertTriangle className="h-5 w-5" /> Contratos Vencendo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {expiringLeases.map((lease) => (
-                <div key={lease.id} className="flex items-center justify-between border-b border-yellow-200 pb-2 last:border-0 last:pb-0">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">{lease.unitLabel}</p>
-                    <p className="text-xs text-muted-foreground">{lease.tenantName}</p>
-                  </div>
-                  <div className="text-sm font-medium text-yellow-700">
-                    Vence em {new Date(lease.endDate).toLocaleDateString('pt-BR')}
-                  </div>
-                </div>
-              ))}
+  const formatDate = (date: string) => {
+    const d = new Date(date)
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    if (d.toDateString() === today.toDateString()) return 'Hoje'
+    if (d.toDateString() === yesterday.toDateString()) return 'Ontem'
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+  }
+
+  return (
+    <Card className="p-4">
+      <h2 className="text-xl font-semibold text-on-surface mb-4">Atividades Recentes</h2>
+      
+      <div className="flex flex-col gap-2 max-h-[240px] overflow-y-auto pr-2">
+        {payments.slice(0, 3).map((payment) => (
+          <div 
+            key={payment.id}
+            className="flex items-start gap-3 p-2 rounded-lg hover:bg-surface transition-colors cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center shrink-0">
+              <Receipt className="w-5 h-5 text-primary" />
             </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium text-on-surface block">
+                Pagamento Recebido
+              </span>
+              <span className="text-xs text-tertiary truncate block">
+                {payment.description || 'Aluguel'} ({formatCurrency(payment.amount)})
+              </span>
+            </div>
+            <span className="text-xs text-outline shrink-0">
+              {formatDate(payment.due_date)}
+            </span>
+          </div>
+        ))}
+
+        {expiringLeases.slice(0, 2).map((lease) => (
+          <div 
+            key={lease.id}
+            className="flex items-start gap-3 p-2 rounded-lg hover:bg-surface transition-colors cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-full bg-secondary-fixed flex items-center justify-center shrink-0">
+              <AlertCircle className="w-5 h-5 text-secondary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium text-on-surface block">
+                Contrato Expirando
+              </span>
+              <span className="text-xs text-tertiary truncate block">
+                {lease.unitLabel} (em {formatDate(lease.endDate)})
+              </span>
+            </div>
+            <span className="text-xs text-outline shrink-0">
+              {formatDate(lease.endDate)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <button className="w-full py-2 mt-4 border border-outline-variant rounded-lg text-sm font-medium text-on-surface hover:bg-surface transition-colors">
+        Ver todo histórico
+      </button>
+    </Card>
   )
 }

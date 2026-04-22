@@ -33,15 +33,16 @@ export interface Payment {
 
 interface PaymentListProps {
   payments: Payment[]
+  leaseId: string
 }
 
-export function PaymentList({ payments }: PaymentListProps) {
+export function PaymentList({ payments, leaseId }: PaymentListProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
   const handleMarkAsPaid = async (id: string) => {
     setLoadingId(id)
     try {
-      const result = await markAsPaid(id)
+      const result = await markAsPaid(id, leaseId)
       if (result.error) {
         toast.error(result.error)
       } else {
@@ -57,7 +58,7 @@ export function PaymentList({ payments }: PaymentListProps) {
   const handleMarkAsPending = async (id: string) => {
       setLoadingId(id)
       try {
-        const result = await markAsPending(id)
+        const result = await markAsPending(id, leaseId)
         if (result.error) {
           toast.error(result.error)
         } else {

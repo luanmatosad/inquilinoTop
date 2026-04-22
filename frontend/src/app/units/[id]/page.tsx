@@ -82,7 +82,7 @@ export default async function UnitPage({
             <div className="grid md:grid-cols-2 gap-8">
               <div>
                 <h3 className="text-lg font-medium mb-4">Pagamentos do Aluguel</h3>
-                <PaymentList payments={payments} />
+                <PaymentList payments={payments} leaseId={activeLease?.id || ''} />
               </div>
 
               <div>
@@ -90,7 +90,7 @@ export default async function UnitPage({
                   <h3 className="text-lg font-medium">Despesas da Unidade</h3>
                   <ExpenseDialog unitId={unit.id} />
                 </div>
-                <ExpenseList expenses={expenses || []} />
+                <ExpenseList expenses={expenses || []} unitId={unit.id} />
               </div>
             </div>
           </div>
@@ -110,7 +110,7 @@ export default async function UnitPage({
                 <h3 className="text-lg font-medium">Despesas da Unidade</h3>
                 <ExpenseDialog unitId={unit.id} />
               </div>
-              <ExpenseList expenses={expenses || []} />
+              <ExpenseList expenses={expenses || []} unitId={unit.id} />
             </div>
           </div>
         )}

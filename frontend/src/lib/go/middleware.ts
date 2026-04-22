@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { getToken } from 'next-auth/jwt'
 import { cookies } from 'next/headers'
 
 export async function validateSession(request: NextRequest) {
@@ -40,7 +39,7 @@ export async function getUserFromRequest(request: NextRequest) {
   }
 }
 
-export function isAuthenticated(request: NextRequest): boolean {
-  const cookieStore = cookies()
+export async function isAuthenticated(request: NextRequest): Promise<boolean> {
+  const cookieStore = await cookies()
   return !!cookieStore.get('access_token')?.value
 }

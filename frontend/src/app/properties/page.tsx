@@ -1,19 +1,8 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import { Plus, Search } from "lucide-react"
+import { Plus, Search, MapPin, Building2 } from "lucide-react"
 import { goFetch } from "@/lib/go/client"
-
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Button, Input, Card, Badge } from "@heroui/react"
 
 interface PropertyWithUnits {
   id: string
@@ -25,6 +14,26 @@ interface PropertyWithUnits {
   is_active: boolean
   created_at: string
   units: { id: string }[]
+}
+
+const PROPERTY_TYPE_LABELS: Record<string, string> = {
+  RESIDENTIAL: 'Residencial',
+  COMMERCIAL: 'Comercial',
+  SINGLE: 'Único',
+}
+
+const PROPERTY_TYPE_BADGE_CLASS: Record<string, string> = {
+  RESIDENTIAL: 'bg-primary/10 text-primary',
+  COMMERCIAL: 'bg-tertiary-container text-on-tertiary-container',
+  SINGLE: 'bg-secondary-container text-on-secondary-container',
+}
+
+function getPropertyTypeLabel(type: string): string {
+  return PROPERTY_TYPE_LABELS[type] || 'Desconhecido'
+}
+
+function getPropertyTypeBadgeClass(type: string): string {
+  return PROPERTY_TYPE_BADGE_CLASS[type] || 'bg-surface text-on-surface'
 }
 
 async function PropertiesList({ search }: { search?: string }) {
@@ -44,8 +53,8 @@ async function PropertiesList({ search }: { search?: string }) {
 
   if (!properties || properties.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-muted/10">
-        <p className="text-muted-foreground mb-4">Nenhum imóvel encontrado.</p>
+      <div className="flex flex-col items-center justify-center h-64 border border-outline-variant rounded-xl bg-surface">
+        <p className="text-on-surface-variant mb-4">Nenhum imóvel encontrado.</p>
         <Link href="/properties/new">
           <Button>Criar Primeiro Imóvel</Button>
         </Link>
@@ -54,29 +63,38 @@ async function PropertiesList({ search }: { search?: string }) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {properties.map((property) => (
         <Link key={property.id} href={`/properties/${property.id}`} className="block h-full">
-          <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <CardTitle className="line-clamp-1">{property.name}</CardTitle>
-                <Badge variant={property.type === "RESIDENTIAL" ? "default" : "secondary"}>
-                  {property.type === "RESIDENTIAL" ? "Residencial" : "Único"}
+          <Card className="h-full overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+            <Card.Content className="p-5">
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="text-lg font-semibold text-on-surface line-clamp-1">
+                  {property.name}
+                </h3>
+                <Badge 
+                  className={getPropertyTypeBadgeClass(property.type)}
+                  variant="soft" 
+                  size="sm"
+                >
+                  {getPropertyTypeLabel(property.type)}
                 </Badge>
               </div>
-              <CardDescription className="line-clamp-1">
-                {property.address_line || "Sem endereço"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {property.city ? `${property.city}/${property.state}` : "Localização não informada"}
-              </p>
-            </CardContent>
-            <CardFooter className="text-sm text-muted-foreground">
-              {property.units?.length || 0} unidade(s)
-            </CardFooter>
+              
+              <div className="flex items-start gap-1 text-outline mb-4">
+                <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
+                <span className="text-sm line-clamp-1">
+                  {property.address_line || "Sem endereço"}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1 text-on-surface-variant text-sm pt-4 border-t border-surface-variant">
+                <Building2 className="w-4 h-4" />
+                <span className="font-medium">
+                  {property.units?.length || 0} unidade(s)
+                </span>
+              </div>
+            </Card.Content>
           </Card>
         </Link>
       ))}
@@ -94,28 +112,44 @@ export default async function PropertiesPage({
 
   return (
     <div className="container py-8 space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Meus Imóveis</h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-on-surface">Meus Imóveis</h1>
+          <p className="text-base text-on-surface-variant mt-1">
+            Gerencie seu portfólio de propriedades.
+          </p>
+        </div>
         <Link href="/properties/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Novo Imóvel
+          <Button className="bg-secondary-container text-on-secondary-container">
+            <Plus className="w-4 h-4" />
+            Novo Imóvel
           </Button>
         </Link>
       </div>
 
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <form action="/properties" method="GET">
-            <Input
-              name="q"
-              placeholder="Buscar por nome..."
-              className="pl-8"
-              defaultValue={query}
-            />
-          </form>
+      <Card className="p-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-4 h-4" />
+            <form action="/properties" method="GET" className="relative">
+              <Input
+                name="q"
+                placeholder="Buscar por nome, endereço ou cidade..."
+                defaultValue={query}
+                className="pl-10"
+              />
+            </form>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" className="border-outline-variant">
+              <span className="hidden sm:inline">Filtros</span>
+            </Button>
+            <Button variant="outline" className="border-outline-variant">
+              <span className="hidden sm:inline">Ordenar</span>
+            </Button>
+          </div>
         </div>
-      </div>
+      </Card>
 
       <Suspense fallback={<div className="text-center py-10">Carregando imóveis...</div>}>
         <PropertiesList search={query} />

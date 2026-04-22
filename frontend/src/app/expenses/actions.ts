@@ -8,7 +8,7 @@ const expenseSchema = z.object({
   unit_id: z.string().uuid(),
   description: z.string().min(3, { message: "Descrição deve ter no mínimo 3 caracteres." }),
   category: z.enum(["ELECTRICITY", "WATER", "CONDO", "TAX", "MAINTENANCE", "OTHER"], {
-    errorMap: () => ({ message: "Selecione uma categoria válida." }),
+    message: "Selecione uma categoria válida.",
   }),
   amount: z.coerce.number().min(0.01, { message: "Valor deve ser maior que zero." }),
   due_date: z.string().min(1, { message: "Data de vencimento obrigatória." }),

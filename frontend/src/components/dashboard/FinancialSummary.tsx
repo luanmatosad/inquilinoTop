@@ -1,6 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { DollarSign, TrendingUp, AlertCircle } from 'lucide-react'
+import { Card } from '@heroui/react'
 
 interface FinancialSummaryProps {
   revenue: {
@@ -12,65 +10,77 @@ interface FinancialSummaryProps {
 }
 
 export function FinancialSummary({ revenue }: FinancialSummaryProps) {
-  const percentPaid = revenue.total > 0 ? (revenue.paid / revenue.total) * 100 : 0
+  const receivedPct = revenue.total > 0 ? (revenue.paid / revenue.total) * 100 : 0
+  const pendingPct = revenue.total > 0 ? (revenue.pending / revenue.total) * 100 : 0
+  const latePct = revenue.total > 0 ? (revenue.overdue / revenue.total) * 100 : 0
+
+  const formatCurrency = (value: number) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 
   return (
-    <Card className="col-span-4 lg:col-span-2">
-      <CardHeader>
-        <CardTitle>Resumo Financeiro (Mês Atual)</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-8">
-          <div className="flex items-center">
-            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
-              <DollarSign className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4 space-y-1">
-              <p className="text-sm font-medium leading-none text-muted-foreground">Total Esperado</p>
-              <p className="text-2xl font-bold">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenue.total)}
-              </p>
-            </div>
-          </div>
+    <Card className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-on-surface">Resumo Financeiro</h2>
+        <button className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
+          Ver relatório detalhado
+        </button>
+      </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="flex flex-col space-y-1 border-l-4 border-green-500 pl-4">
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" /> Recebido
-              </span>
-              <span className="text-lg font-bold text-green-600">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenue.paid)}
-              </span>
-              <span className="text-xs text-muted-foreground">{percentPaid.toFixed(0)}% do total</span>
-            </div>
+      {/* Progress Bar */}
+      <div className="relative w-full h-4 bg-surface-container rounded-full overflow-hidden flex mb-4">
+        <div 
+          className="bg-primary h-full transition-all duration-500" 
+          style={{ width: `${receivedPct}%` }} 
+          title="Recebida" 
+        />
+        <div 
+          className="bg-secondary-container h-full transition-all duration-500" 
+          style={{ width: `${pendingPct}%` }} 
+          title="Pendente" 
+        />
+        <div 
+          className="bg-error h-full transition-all duration-500" 
+          style={{ width: `${latePct}%` }} 
+          title="Atrasada" 
+        />
+      </div>
 
-            <div className="flex flex-col space-y-1 border-l-4 border-yellow-500 pl-4">
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" /> Pendente
-              </span>
-              <span className="text-lg font-bold text-yellow-600">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenue.pending)}
-              </span>
-            </div>
-
-            <div className="flex flex-col space-y-1 border-l-4 border-red-500 pl-4">
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" /> Atrasado
-              </span>
-              <span className="text-lg font-bold text-red-600">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenue.overdue)}
-              </span>
-            </div>
-          </div>
-
-          <div className="w-full bg-secondary h-3 rounded-full overflow-hidden">
-            <div 
-              className="bg-green-500 h-full transition-all" 
-              style={{ width: `${percentPaid}%` }}
-            />
-          </div>
+      {/* Values Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-outline">Prevista</span>
+          <span className="text-xl font-semibold text-on-surface">
+            {formatCurrency(revenue.total)}
+          </span>
         </div>
-      </CardContent>
+        <div className="flex flex-col gap-1 border-l border-surface-container pl-4">
+          <span className="text-xs text-outline flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-primary" />
+            Recebida
+          </span>
+          <span className="text-xl font-semibold text-on-surface">
+            {formatCurrency(revenue.paid)}
+          </span>
+        </div>
+        <div className="flex flex-col gap-1 border-l border-surface-container pl-4">
+          <span className="text-xs text-outline flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-secondary-container" />
+            Pendente
+          </span>
+          <span className="text-xl font-semibold text-on-surface">
+            {formatCurrency(revenue.pending)}
+          </span>
+        </div>
+        <div className="flex flex-col gap-1 border-l border-surface-container pl-4">
+          <span className="text-xs text-error flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-error" />
+            Atrasada
+          </span>
+          <span className="text-xl font-semibold text-error">
+            {formatCurrency(revenue.overdue)}
+          </span>
+        </div>
+      </div>
     </Card>
   )
 }

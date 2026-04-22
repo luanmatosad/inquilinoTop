@@ -32,8 +32,8 @@ async function getRefreshToken() {
   return cookieStore.get('refresh_token')?.value
 }
 
-function setTokens(accessToken: string, refreshToken: string) {
-  const cookieStore = cookies()
+async function setTokens(accessToken: string, refreshToken: string) {
+  const cookieStore = await cookies()
   const options = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -45,8 +45,8 @@ function setTokens(accessToken: string, refreshToken: string) {
   cookieStore.set('refresh_token', refreshToken, options)
 }
 
-function clearTokens() {
-  const cookieStore = cookies()
+async function clearTokens() {
+  const cookieStore = await cookies()
   cookieStore.delete('access_token')
   cookieStore.delete('refresh_token')
 }
