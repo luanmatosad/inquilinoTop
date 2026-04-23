@@ -32,7 +32,7 @@ async function getRefreshToken() {
   return cookieStore.get('refresh_token')?.value
 }
 
-async function setTokens(accessToken: string, refreshToken: string) {
+export async function setTokens(accessToken: string, refreshToken: string) {
   const cookieStore = await cookies()
   const options = {
     httpOnly: true,
@@ -50,6 +50,8 @@ async function clearTokens() {
   cookieStore.delete('access_token')
   cookieStore.delete('refresh_token')
 }
+
+export { clearTokens }
 
 export async function goFetch<T>(
   path: string,
@@ -83,14 +85,19 @@ export async function goFetch<T>(
     throw new Error('UNAUTHORIZED')
   }
 
-  const data = await res.json()
+  let data: unknown
+  try {
+    data = await res.json()
+  } catch {
+    throw new Error('INVALID_JSON_RESPONSE')
+  }
 
   if (!res.ok) {
     const err = data as GoError
     throw new Error(err.error?.message || 'REQUEST_FAILED')
   }
 
-  return data.data as T
+  return (data as { data: T }).data
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {

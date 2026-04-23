@@ -58,12 +58,11 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+    # No volume mount for frontend - use built image only
     environment:
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+      NEXT_PUBLIC_API_URL: http://backend:8080
     depends_on:
       - backend
 
@@ -71,3 +70,4 @@ volumes:
   postgres_data:
   go_cache:
   go_modules:
+  frontend_node_modules:

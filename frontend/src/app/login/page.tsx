@@ -4,7 +4,7 @@ import { useActionState } from 'react'
 import { login, signup, type ActionState } from '@/app/auth/actions'
 import { Button, Input, Card } from '@heroui/react'
 import { useState } from 'react'
-import { Mail, Lock, Eye, EyeOff, Building2 } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Building2, User } from 'lucide-react'
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true)
@@ -62,6 +62,26 @@ export default function LoginPage() {
           </Card.Header>
           <Card.Content>
             <form action={formAction} className="flex flex-col gap-4">
+              {!isLogin && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-on-surface-variant ml-1" htmlFor="fullName">
+                    Nome Completo
+                  </label>
+                  <div className="relative flex items-center">
+                    <User className="absolute left-3 text-outline w-5 h-5" />
+                    <Input
+                      id="fullName"
+                      name="fullName"
+                      type="text"
+                      placeholder="João da Silva"
+                      required
+                      minLength={3}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-on-surface-variant ml-1" htmlFor="email">
                   E-mail
@@ -84,9 +104,11 @@ export default function LoginPage() {
                   <label className="text-xs text-on-surface-variant" htmlFor="password">
                     Senha
                   </label>
-                  <a className="text-xs text-primary-container hover:underline" href="#">
-                    Esqueceu a senha?
-                  </a>
+                  {isLogin && (
+                    <a className="text-xs text-primary-container hover:underline" href="#">
+                      Esqueceu a senha?
+                    </a>
+                  )}
                 </div>
                 <div className="relative flex items-center">
                   <Lock className="absolute left-3 text-outline w-5 h-5" />
@@ -107,6 +129,25 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
+
+              {!isLogin && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-on-surface-variant ml-1" htmlFor="confirmPassword">
+                    Confirmar Senha
+                  </label>
+                  <div className="relative flex items-center">
+                    <Lock className="absolute left-3 text-outline w-5 h-5" />
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      className="pl-10 pr-10"
+                    />
+                  </div>
+                </div>
+              )}
 
               {state?.error && (
                 <div className="text-error text-sm font-medium">

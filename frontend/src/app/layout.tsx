@@ -25,17 +25,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-theme="light">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
         <Header />
-        <main className="flex-1 container mx-auto p-4">
-          {children}
+        <main className="flex-1 md:ml-64 pt-16">
+          <div className="p-4 md:p-8">
+            {children}
+          </div>
         </main>
-        <footer className="border-t p-4 text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} Inquilino Top
-        </footer>
         <Toaster />
       </body>
     </html>

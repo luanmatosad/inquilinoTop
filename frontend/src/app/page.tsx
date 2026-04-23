@@ -13,7 +13,15 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  const metrics = await getDashboardMetrics()
+  let metrics
+  try {
+    metrics = await getDashboardMetrics()
+  } catch (error) {
+    if (error instanceof Error && error.message === 'UNAUTHORIZED') {
+      redirect('/login')
+    }
+    throw error
+  }
 
   return (
     <div className="container py-8 space-y-8">

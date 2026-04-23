@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>InquilinoTop - Contas a Receber</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-container": "#fcfcfd",
+                        "on-secondary-fixed": "#2f1500",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-container-highest": "#e2e2e2",
+                        "surface-variant": "#e2e2e2",
+                        "error-container": "#ffdad6",
+                        "on-primary-container": "#fefbff",
+                        "primary-fixed-dim": "#aec6ff",
+                        "on-primary-fixed": "#001a42",
+                        "primary": "#0057be",
+                        "secondary-container": "#fd8b00",
+                        "inverse-surface": "#303030",
+                        "secondary": "#904d00",
+                        "primary-container": "#006fee",
+                        "on-tertiary-fixed": "#1a1c1d",
+                        "on-secondary-container": "#603100",
+                        "on-tertiary-fixed-variant": "#454748",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#c6c6c7",
+                        "tertiary-container": "#737475",
+                        "primary-fixed": "#d8e2ff",
+                        "tertiary-fixed": "#e2e2e3",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#1b1b1b",
+                        "background": "#f9f9f9",
+                        "secondary-fixed-dim": "#ffb77d",
+                        "secondary-fixed": "#ffdcc3",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-primary": "#aec6ff",
+                        "surface": "#f9f9f9",
+                        "surface-container-low": "#f3f3f3",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#1b1b1b",
+                        "error": "#ba1a1a",
+                        "outline": "#727786",
+                        "surface-container-high": "#e8e8e8",
+                        "on-secondary-fixed-variant": "#6e3900",
+                        "on-error-container": "#93000a",
+                        "surface-dim": "#dadada",
+                        "on-primary-fixed-variant": "#004396",
+                        "surface-bright": "#f9f9f9",
+                        "on-error": "#ffffff",
+                        "tertiary": "#5a5c5d",
+                        "outline-variant": "#c1c6d7",
+                        "on-surface-variant": "#414754",
+                        "surface-tint": "#005ac3",
+                        "surface-container": "#eeeeee"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "2xl": "48px",
+                        "lg": "24px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px",
+                        "xs": "4px",
+                        "margin-mobile": "16px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "h2": ["Inter"],
+                        "body-md": ["Inter"],
+                        "mono-sm": ["ui-monospace"],
+                        "label-md": ["Inter"],
+                        "h1": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h2": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "mono-sm": ["13px", {"lineHeight": "1.4", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "1.4", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                        "h1": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "1.2", "fontWeight": "500"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .soft-lift {
+            box-shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.05);
+        }
+        body {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface antialiased">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full flex flex-col p-4 z-40 h-screen w-64 border-r border-zinc-200 bg-white font-['Inter'] antialiased text-sm font-medium">
+<div class="flex items-center gap-3 px-2 mb-8">
+<div class="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center text-white">
+<span class="material-symbols-outlined" data-icon="apartment">apartment</span>
+</div>
+<div>
+<h1 class="text-xl font-black tracking-tight text-zinc-900">InquilinoTop</h1>
+<p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Gestão Financeira</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard Financeiro
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-blue-600 bg-blue-50 rounded-lg font-semibold active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+                Contas a Receber
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+                Contas a Pagar
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+                Conciliação Bancária
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+                Repasses
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="percent">percent</span>
+                Comissões
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+                Relatórios
+            </a>
+</nav>
+<div class="mt-auto pt-4 border-t border-zinc-100">
+<div class="flex items-center gap-3 px-2">
+<img alt="Avatar" class="w-10 h-10 rounded-full border-2 border-zinc-100" data-alt="Professional headshot of a financial manager in a suit with a friendly and confident expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDM0P1UiNA_G1oweOSiF9AJBRK_1b5j7GeylWzNZosl3hnu-_bQaSVxSjjv6OPNUqh6VblRiEjXcVFw3yyHwHWtJd0MqnTXuwx1lNZlzm_dtAMY5ZDPp7QJ4vn2LFPpfkSKT7wqYHHblCap7OMYYd5po2wTyj04tPh7APtY6cpv8Ai3l590YD4OaT85wCoG8vPLh8C3wGJzvYEYznjp1XMGJ7VmQYeD9ClpD3yHZBf8jDcsuMnHVFGRlwvkzk2VKbp9cccHzW6sxgw"/>
+<div class="flex-1 overflow-hidden">
+<p class="font-bold text-zinc-900 truncate">Gestor Financeiro</p>
+<p class="text-xs text-zinc-500 truncate">financeiro@inquilinotop.com</p>
+</div>
+<button class="text-zinc-400 hover:text-zinc-600 transition-colors">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar -->
+<header class="sticky top-0 z-30 flex items-center justify-between px-8 py-4 bg-white/80 backdrop-blur-md border-b border-zinc-200 shadow-sm font-['Inter'] antialiased">
+<div class="flex items-center gap-4">
+<h2 class="text-lg font-bold text-zinc-900">Módulo Financeiro</h2>
+<div class="h-6 w-px bg-zinc-200"></div>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 material-symbols-outlined scale-75" data-icon="search">search</span>
+<input class="bg-zinc-100 border-none rounded-lg pl-10 pr-4 py-2 text-sm w-64 focus:ring-2 focus:ring-primary-container transition-all" placeholder="Buscar cobrança..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-zinc-500 hover:bg-zinc-100 rounded-full transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-white"></span>
+</button>
+<button class="p-2 text-zinc-500 hover:bg-zinc-100 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</header>
+<div class="p-8 max-w-7xl mx-auto">
+<!-- Header Section -->
+<div class="flex items-center justify-between mb-8">
+<div>
+<h1 class="font-h1 text-h1 text-on-surface">Contas a Receber</h1>
+<p class="text-on-surface-variant font-body-md mt-1">Gerencie todos os recebíveis de aluguéis, vendas e taxas.</p>
+</div>
+<button class="bg-primary-container text-white px-6 py-3 rounded-xl font-label-md flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all soft-lift">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                    Nova Cobrança
+                </button>
+</div>
+<!-- Tabs and Filters Toolbar -->
+<div class="bg-white rounded-2xl p-4 soft-lift border border-zinc-200 mb-6">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<!-- Tabs -->
+<div class="flex bg-zinc-100 p-1 rounded-xl w-fit">
+<button class="px-6 py-2 rounded-lg text-sm font-semibold bg-white text-primary shadow-sm">Aluguéis</button>
+<button class="px-6 py-2 rounded-lg text-sm font-medium text-zinc-500 hover:text-zinc-700 transition-colors">Parcelas de Venda</button>
+<button class="px-6 py-2 rounded-lg text-sm font-medium text-zinc-500 hover:text-zinc-700 transition-colors">Taxas Condominiais</button>
+</div>
+<!-- Filters -->
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-zinc-400 uppercase tracking-wider mr-2">Filtrar Status:</span>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-200 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                            Pago
+                        </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-200 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors">
+<span class="w-2 h-2 rounded-full bg-secondary-container"></span>
+                            Pendente
+                        </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-200 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+                            Atrasado
+                        </button>
+<div class="h-6 w-px bg-zinc-200 mx-2"></div>
+<button class="p-2 text-zinc-500 hover:bg-zinc-100 rounded-lg transition-colors border border-zinc-200">
+<span class="material-symbols-outlined scale-75" data-icon="filter_list">filter_list</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Dashboard Summary Cards (HeroUI style) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="bg-white p-6 rounded-2xl soft-lift border border-zinc-200 flex items-center gap-4">
+<div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+</div>
+<div>
+<p class="text-xs font-bold text-zinc-400 uppercase tracking-widest">Total Recebido</p>
+<h3 class="text-2xl font-black text-zinc-900">R$ 45.280,00</h3>
+</div>
+</div>
+<div class="bg-white p-6 rounded-2xl soft-lift border border-zinc-200 flex items-center gap-4">
+<div class="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="pending_actions">pending_actions</span>
+</div>
+<div>
+<p class="text-xs font-bold text-zinc-400 uppercase tracking-widest">Aguardando Pagto</p>
+<h3 class="text-2xl font-black text-zinc-900">R$ 12.450,00</h3>
+</div>
+</div>
+<div class="bg-white p-6 rounded-2xl soft-lift border border-zinc-200 flex items-center gap-4">
+<div class="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+</div>
+<div>
+<p class="text-xs font-bold text-zinc-400 uppercase tracking-widest">Total Atrasado</p>
+<h3 class="text-2xl font-black text-zinc-900">R$ 3.820,00</h3>
+</div>
+</div>
+</div>
+<!-- Receivables Table Container -->
+<div class="bg-white rounded-2xl soft-lift border border-zinc-200 overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-zinc-50/50 border-b border-zinc-100">
+<th class="px-6 py-4 font-label-md text-zinc-500 uppercase text-[11px] tracking-wider">Vencimento</th>
+<th class="px-6 py-4 font-label-md text-zinc-500 uppercase text-[11px] tracking-wider">Pagador</th>
+<th class="px-6 py-4 font-label-md text-zinc-500 uppercase text-[11px] tracking-wider">Imóvel</th>
+<th class="px-6 py-4 font-label-md text-zinc-500 uppercase text-[11px] tracking-wider">Valor</th>
+<th class="px-6 py-4 font-label-md text-zinc-500 uppercase text-[11px] tracking-wider">Forma de Pagto</th>
+<th class="px-6 py-4 font-label-md text-zinc-500 uppercase text-[11px] tracking-wider">Status</th>
+<th class="px-6 py-4 font-label-md text-zinc-500 uppercase text-[11px] tracking-wider text-center">Ações</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-zinc-100">
+<!-- Row 1: Pago -->
+<tr class="hover:bg-zinc-50/50 transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="text-sm font-semibold text-zinc-900">10 Jun 2024</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center overflow-hidden">
+<img alt="Pagador" class="w-full h-full object-cover" data-alt="Portrait of a young professional man with short dark hair and a friendly smile wearing a light blue polo shirt" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmlQehgSAPKsdgHRBjACEzBNT_IkZ_UIUUB3hV8uf8BkI7jQFDOtzsmpuIshGBKygPfLxsQlqKOtlSHsXtMcO33LysuYx0xxs08DDCSHcOvKbjPsMvj4hzRn6MqoxM20Ez1-7Qpy303KSO4KGsHQZmx4XOxwJ4H0y7GXpBVwaky0v6VoIWWgeJnPhoWgofrzmalmh8-_VrmOZmoH2G10QgTVSNZBLFrFV3bfT8Jw4HsIC18NETldyxlGi4f5ppXuWWbKVhA6xM2Ik"/>
+</div>
+<span class="text-sm font-medium text-zinc-700">Ricardo Oliveira</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-zinc-600 line-clamp-1">Ed. Horizon - Apto 402</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="text-sm font-bold text-zinc-900">R$ 2.450,00</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-zinc-400 scale-75" data-icon="barcode">barcode</span>
+<span class="text-xs font-medium text-zinc-500">Boleto</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="px-3 py-1 rounded-full bg-primary text-white text-[11px] font-bold uppercase tracking-wider">Pago</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-center">
+<div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-zinc-400 hover:text-primary transition-colors"><span class="material-symbols-outlined scale-75" data-icon="visibility">visibility</span></button>
+<button class="p-1.5 text-zinc-400 hover:text-zinc-600 transition-colors"><span class="material-symbols-outlined scale-75" data-icon="download">download</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 2: Pendente -->
+<tr class="hover:bg-zinc-50/50 transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="text-sm font-semibold text-zinc-900">15 Jun 2024</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center overflow-hidden">
+<img alt="Pagador" class="w-full h-full object-cover" data-alt="Close-up portrait of a woman with long wavy brown hair and glasses, looking professional and calm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGL_3xD4rSoeec14Q0ps2SxHIECQy3156UVNe9Vmn4SojD1ZVS8hzVYUTmTALwARgVajQDEEcd0AUqbFdhYKtO6GhrHR8fjIEn5bmPSIJj37V9T-_4EFsbzqGNpersf3i-mJlZ-1EaCc-nci3tjbp8OCtQe6SFGVG7XgpdrkGHrtgJKVIl38wPJcTCWvCadHpj1PIDT7pabvwHHP8_i4d6nmsJflD_QzBYKeTn29dPlwhyhNVgOQF8_AvoXHgeryNuY45HcVRISDk"/>
+</div>
+<span class="text-sm font-medium text-zinc-700">Beatriz Santos</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-zinc-600 line-clamp-1">Cond. Solaris - Sala 12</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="text-sm font-bold text-zinc-900">R$ 1.200,00</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-zinc-400 scale-75" data-icon="qr_code">qr_code</span>
+<span class="text-xs font-medium text-zinc-500">PIX</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="px-3 py-1 rounded-full bg-secondary-container text-white text-[11px] font-bold uppercase tracking-wider">Pendente</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-center">
+<div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-zinc-400 hover:text-primary transition-colors"><span class="material-symbols-outlined scale-75" data-icon="visibility">visibility</span></button>
+<button class="p-1.5 text-zinc-400 hover:text-zinc-600 transition-colors"><span class="material-symbols-outlined scale-75" data-icon="mail">mail</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 3: Atrasado -->
+<tr class="hover:bg-zinc-50/50 transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="text-sm font-semibold text-red-600">05 Jun 2024</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center overflow-hidden">
+<img alt="Pagador" class="w-full h-full object-cover" data-alt="Portrait of an elderly man with white hair and beard wearing a casual linen shirt, appearing relaxed" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1AGeSv_Fo4A0hr-yHgZvl-EAVHylZ317TZeP_tpzp7zV9sGU3nbZo21HqRWECC8rbuPwmzklXErgzFXIe0zn5Yg5myqDXUviv776d425ak7qKGo_ki2sgD3OAXQ7ZPq_Z7KmZ5B7GbQ3L-p4RSKQ8TzfnJ3L74n6_0P5nNVvgdHvKtlx16or7KgLppnTiICBbJaBV1B9aCbPa7SLgWMQ_wS0VxbHKu698-YVlTxznC3HD598A0ME_8zihHbd_6IGw2_jw2FWVyqg"/>
+</div>
+<span class="text-sm font-medium text-zinc-700">Carlos Alberto</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-zinc-600 line-clamp-1">Casa Jardim das Flores</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="text-sm font-bold text-zinc-900">R$ 3.820,00</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-zinc-400 scale-75" data-icon="barcode">barcode</span>
+<span class="text-xs font-medium text-zinc-500">Boleto</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="px-3 py-1 rounded-full bg-error text-white text-[11px] font-bold uppercase tracking-wider">Atrasado</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-center">
+<div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-zinc-400 hover:text-primary transition-colors"><span class="material-symbols-outlined scale-75" data-icon="visibility">visibility</span></button>
+<button class="p-1.5 text-error hover:opacity-80 transition-colors"><span class="material-symbols-outlined scale-75" data-icon="notification_important">notification_important</span></button>
+</div>
+</td>
+</tr>
+<!-- Additional Rows for density -->
+<tr class="hover:bg-zinc-50/50 transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="text-sm font-semibold text-zinc-900">12 Jun 2024</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center overflow-hidden">
+<img alt="Pagador" class="w-full h-full object-cover" data-alt="Portrait of a young woman with curly black hair wearing a modern yellow blazer, looking confident" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBi3iXryF-j6ygIwHgDJ0nZhTAwFrwRVHVl2Znpz4FSKGm95qcFFtZQQETXj3YNYZAiHQGXFcAl6HaqMRZOxtEVH2XbIHKBEqQv18IsJuo_yE5uMyWxN3ANGUQFlz4xPp8NPTkMio4tO1Zcp9LfApD49WATgcQ5RDjapeZ-oE4DewkB2WCSSPKkf-3zSR4slJCmTDQ_x6RV1taEVkPo4efjkmLDgE2WusDEZctSOVRX5ur-auHOyUDz-sIMNp7G3ind945C64TF_Wc"/>
+</div>
+<span class="text-sm font-medium text-zinc-700">Mariana Lima</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-zinc-600 line-clamp-1">Ed. Metropolitan - Sala 805</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="text-sm font-bold text-zinc-900">R$ 1.980,00</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-zinc-400 scale-75" data-icon="qr_code">qr_code</span>
+<span class="text-xs font-medium text-zinc-500">PIX</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="px-3 py-1 rounded-full bg-primary text-white text-[11px] font-bold uppercase tracking-wider">Pago</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-center">
+<div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-zinc-400 hover:text-primary transition-colors"><span class="material-symbols-outlined scale-75" data-icon="visibility">visibility</span></button>
+<button class="p-1.5 text-zinc-400 hover:text-zinc-600 transition-colors"><span class="material-symbols-outlined scale-75" data-icon="download">download</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Footer -->
+<div class="px-6 py-4 bg-zinc-50/30 border-t border-zinc-100 flex items-center justify-between">
+<p class="text-xs text-zinc-500 font-medium">Exibindo 1-10 de 128 cobranças</p>
+<div class="flex items-center gap-2">
+<button class="p-2 border border-zinc-200 rounded-lg text-zinc-400 hover:text-zinc-600 disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined scale-75" data-icon="chevron_left">chevron_left</span>
+</button>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 rounded-lg bg-primary-container text-white text-xs font-bold">1</button>
+<button class="w-8 h-8 rounded-lg hover:bg-zinc-100 text-zinc-600 text-xs font-medium transition-colors">2</button>
+<button class="w-8 h-8 rounded-lg hover:bg-zinc-100 text-zinc-600 text-xs font-medium transition-colors">3</button>
+</div>
+<button class="p-2 border border-zinc-200 rounded-lg text-zinc-400 hover:text-zinc-600 transition-colors">
+<span class="material-symbols-outlined scale-75" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Quick Action Button (Suppressing for this detail view as per rules, but showing context) -->
+</main>
+</body></html>

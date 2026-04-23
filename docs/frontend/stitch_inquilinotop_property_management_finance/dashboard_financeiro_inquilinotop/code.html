@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-container": "#fcfcfd",
+                    "on-secondary-fixed": "#2f1500",
+                    "inverse-on-surface": "#f1f1f1",
+                    "surface-container-highest": "#e2e2e2",
+                    "surface-variant": "#e2e2e2",
+                    "error-container": "#ffdad6",
+                    "on-primary-container": "#fefbff",
+                    "primary-fixed-dim": "#aec6ff",
+                    "on-primary-fixed": "#001a42",
+                    "primary": "#0057be",
+                    "secondary-container": "#fd8b00",
+                    "inverse-surface": "#303030",
+                    "secondary": "#904d00",
+                    "primary-container": "#006fee",
+                    "on-tertiary-fixed": "#1a1c1d",
+                    "on-secondary-container": "#603100",
+                    "on-tertiary-fixed-variant": "#454748",
+                    "on-secondary": "#ffffff",
+                    "tertiary-fixed-dim": "#c6c6c7",
+                    "tertiary-container": "#737475",
+                    "primary-fixed": "#d8e2ff",
+                    "tertiary-fixed": "#e2e2e3",
+                    "on-primary": "#ffffff",
+                    "on-surface": "#1b1b1b",
+                    "background": "#f9f9f9",
+                    "secondary-fixed-dim": "#ffb77d",
+                    "secondary-fixed": "#ffdcc3",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-primary": "#aec6ff",
+                    "surface": "#f9f9f9",
+                    "surface-container-low": "#f3f3f3",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#1b1b1b",
+                    "error": "#ba1a1a",
+                    "outline": "#727786",
+                    "surface-container-high": "#e8e8e8",
+                    "on-secondary-fixed-variant": "#6e3900",
+                    "on-error-container": "#93000a",
+                    "surface-dim": "#dadada",
+                    "on-primary-fixed-variant": "#004396",
+                    "surface-bright": "#f9f9f9",
+                    "on-error": "#ffffff",
+                    "tertiary": "#5a5c5d",
+                    "outline-variant": "#c1c6d7",
+                    "on-surface-variant": "#414754",
+                    "surface-tint": "#005ac3",
+                    "surface-container": "#eeeeee"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "2xl": "48px",
+                    "lg": "24px",
+                    "margin-desktop": "32px",
+                    "gutter": "16px",
+                    "xs": "4px",
+                    "margin-mobile": "16px",
+                    "xl": "32px",
+                    "sm": "8px",
+                    "md": "16px"
+            },
+            "fontFamily": {
+                    "h2": ["Inter"],
+                    "body-md": ["Inter"],
+                    "mono-sm": ["ui-monospace"],
+                    "label-md": ["Inter"],
+                    "h1": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "h2": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "mono-sm": ["13px", {"lineHeight": "1.4", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "1.4", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "h1": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "1.2", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f9f9f9; }
+        .soft-lift { box-shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.05); }
+        .border-subtle { border: 1px solid #E4E4E7; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full flex flex-col p-4 z-40 h-screen w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 font-['Inter'] antialiased text-sm font-medium">
+<div class="mb-8 px-4 py-2">
+<h1 class="text-xl font-black tracking-tight text-zinc-900 dark:text-white">InquilinoTop</h1>
+<p class="text-xs text-zinc-500 font-normal">Gestão Financeira</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg font-semibold active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard Financeiro
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">payments</span>
+                Contas a Receber
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+                Contas a Pagar
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+                Conciliação Bancária
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+                Repasses
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">percent</span>
+                Comissões
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">assessment</span>
+                Relatórios
+            </a>
+</nav>
+<div class="mt-auto p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+<div class="flex items-center gap-3">
+<img alt="Gestor Financeiro" class="w-10 h-10 rounded-full bg-zinc-200" data-alt="close-up portrait of a professional male financial manager in a modern office environment with soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAj8ZqcG8gvh6ZfDO4UH3CoQiPkWxa3G0y9coVRsGA2R9TxUNqN_duSTmqaLvfiJD1Czm0gTrU8ysDWI83iYV0h1h2uw7QRe2c1wE5QxtOhTm6VvtLlNgMq0b16p8ap5l7Cq1S0HqUFIvh7ftaTtFKSBBHvAjpStJB7W8aWkwpiraXxb3z5qNJrwPcYxOUfTpgn83uo-8jikk3qnVOYqFciJmGhWQYLjrSVLJgwWEjIN1fBf6ExWJQGf2XO0nn-E6MB7f_oNAYkzh0"/>
+<div>
+<p class="text-sm font-bold text-zinc-900">Rodrigo Silva</p>
+<p class="text-[10px] text-zinc-500 uppercase tracking-wider">Gestor Master</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar -->
+<header class="sticky top-0 right-0 z-30 flex items-center justify-between px-8 py-3 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm font-['Inter'] antialiased">
+<div class="flex items-center gap-6">
+<h2 class="text-lg font-bold text-zinc-900 dark:text-white">Módulo Financeiro</h2>
+<div class="relative w-96">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-lg">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-zinc-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-container" placeholder="Buscar por contrato, inquilino ou imóvel..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-zinc-500 hover:text-blue-600 transition-colors active:opacity-80">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-zinc-500 hover:text-blue-600 transition-colors active:opacity-80">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-px bg-zinc-200"></div>
+<div class="flex items-center gap-2">
+<div class="text-right">
+<p class="text-xs font-semibold text-zinc-900">Admin</p>
+<p class="text-[10px] text-zinc-400">inquilinotop@finance.com</p>
+</div>
+</div>
+</div>
+</header>
+<section class="p-8 max-w-[1400px] mx-auto">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+<div>
+<h1 class="font-h1 text-h1 text-on-surface">Visão Geral - Mês Atual</h1>
+<p class="font-body-md text-on-surface-variant">Acompanhe a saúde financeira da sua carteira em tempo real.</p>
+</div>
+<div class="flex items-center gap-3 bg-white border-subtle soft-lift p-2 rounded-xl">
+<span class="material-symbols-outlined text-zinc-400 pl-2">calendar_today</span>
+<select class="border-none bg-transparent text-sm font-label-md focus:ring-0">
+<option>Outubro 2023</option>
+<option>Setembro 2023</option>
+<option>Agosto 2023</option>
+</select>
+</div>
+</div>
+<!-- KPI Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-8">
+<!-- Receita Prevista vs. Realizada -->
+<div class="bg-white p-6 rounded-xl border-subtle soft-lift">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-primary/10 rounded-lg text-primary">
+<span class="material-symbols-outlined">trending_up</span>
+</div>
+<span class="text-xs font-label-sm text-green-600 bg-green-50 px-2 py-1 rounded-full">+12%</span>
+</div>
+<p class="text-label-sm text-on-surface-variant mb-1">Receita Prevista vs. Realizada</p>
+<h3 class="text-h2 font-h2 mb-4">R$ 142.500,00</h3>
+<div class="w-full bg-zinc-100 h-2 rounded-full mb-2">
+<div class="bg-primary-container h-2 rounded-full" style="width: 82%;"></div>
+</div>
+<p class="text-[11px] text-zinc-500">Realizado: R$ 116.850,00 (82%)</p>
+</div>
+<!-- Índice de Inadimplência -->
+<div class="bg-white p-6 rounded-xl border-subtle soft-lift">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-error/10 rounded-lg text-error">
+<span class="material-symbols-outlined">warning</span>
+</div>
+<span class="text-xs font-label-sm text-error bg-error-container px-2 py-1 rounded-full">Alerta</span>
+</div>
+<p class="text-label-sm text-on-surface-variant mb-1">Índice de Inadimplência</p>
+<h3 class="text-h2 font-h2 text-error mb-4">4.2%</h3>
+<div class="flex items-center gap-1 text-xs text-zinc-500">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>0.8% acima do mês anterior</span>
+</div>
+</div>
+<!-- Valor Geral de Aluguel (VGA) -->
+<div class="bg-white p-6 rounded-xl border-subtle soft-lift">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-secondary-container/10 rounded-lg text-secondary-container">
+<span class="material-symbols-outlined">apartment</span>
+</div>
+</div>
+<p class="text-label-sm text-on-surface-variant mb-1">Valor Geral de Aluguel (VGA)</p>
+<h3 class="text-h2 font-h2 mb-4">R$ 2.450.000</h3>
+<p class="text-xs text-zinc-500">124 imóveis ativos na carteira</p>
+</div>
+<!-- Total a Repassar -->
+<div class="bg-white p-6 rounded-xl border-subtle soft-lift">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-tertiary-container/10 rounded-lg text-tertiary">
+<span class="material-symbols-outlined">move_up</span>
+</div>
+</div>
+<p class="text-label-sm text-on-surface-variant mb-1">Total a Repassar</p>
+<h3 class="text-h2 font-h2 mb-4">R$ 98.420,00</h3>
+<div class="flex items-center gap-1 text-xs text-zinc-500">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span>Próximo lote: 05/11</span>
+</div>
+</div>
+</div>
+<!-- Bento Layout Main Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Fluxo de Caixa Chart Area -->
+<div class="lg:col-span-2 bg-white p-8 rounded-xl border-subtle soft-lift">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="font-h2 text-h2 mb-1">Fluxo de Caixa</h3>
+<p class="text-label-sm text-on-surface-variant">Comparativo de Receitas vs Despesas (Últimos 6 meses)</p>
+</div>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-primary-container"></div>
+<span class="text-xs font-medium text-zinc-600">Receitas</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-zinc-300"></div>
+<span class="text-xs font-medium text-zinc-600">Despesas</span>
+</div>
+</div>
+</div>
+<!-- Simulated Area Chart -->
+<div class="relative h-[300px] w-full flex items-end justify-between gap-4 mt-4">
+<!-- Chart Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none">
+<div class="border-b border-zinc-50 w-full h-px"></div>
+<div class="border-b border-zinc-50 w-full h-px"></div>
+<div class="border-b border-zinc-50 w-full h-px"></div>
+<div class="border-b border-zinc-50 w-full h-px"></div>
+</div>
+<!-- Bars/Columns to simulate visual data -->
+<div class="flex-1 flex flex-col items-center group relative">
+<div class="w-full flex items-end gap-1 h-full">
+<div class="flex-1 bg-primary-container/20 h-3/4 rounded-t-sm transition-all group-hover:bg-primary-container/40"></div>
+<div class="flex-1 bg-zinc-100 h-1/4 rounded-t-sm"></div>
+</div>
+<span class="mt-4 text-xs font-label-sm text-zinc-400">Maio</span>
+</div>
+<div class="flex-1 flex flex-col items-center group relative">
+<div class="w-full flex items-end gap-1 h-full">
+<div class="flex-1 bg-primary-container/20 h-4/5 rounded-t-sm transition-all group-hover:bg-primary-container/40"></div>
+<div class="flex-1 bg-zinc-100 h-1/3 rounded-t-sm"></div>
+</div>
+<span class="mt-4 text-xs font-label-sm text-zinc-400">Junho</span>
+</div>
+<div class="flex-1 flex flex-col items-center group relative">
+<div class="w-full flex items-end gap-1 h-full">
+<div class="flex-1 bg-primary-container/20 h-2/3 rounded-t-sm transition-all group-hover:bg-primary-container/40"></div>
+<div class="flex-1 bg-zinc-100 h-2/5 rounded-t-sm"></div>
+</div>
+<span class="mt-4 text-xs font-label-sm text-zinc-400">Julho</span>
+</div>
+<div class="flex-1 flex flex-col items-center group relative">
+<div class="w-full flex items-end gap-1 h-full">
+<div class="flex-1 bg-primary-container/20 h-[85%] rounded-t-sm transition-all group-hover:bg-primary-container/40"></div>
+<div class="flex-1 bg-zinc-100 h-1/4 rounded-t-sm"></div>
+</div>
+<span class="mt-4 text-xs font-label-sm text-zinc-400">Agosto</span>
+</div>
+<div class="flex-1 flex flex-col items-center group relative">
+<div class="w-full flex items-end gap-1 h-full">
+<div class="flex-1 bg-primary-container/20 h-[70%] rounded-t-sm transition-all group-hover:bg-primary-container/40"></div>
+<div class="flex-1 bg-zinc-100 h-1/5 rounded-t-sm"></div>
+</div>
+<span class="mt-4 text-xs font-label-sm text-zinc-400">Setembro</span>
+</div>
+<div class="flex-1 flex flex-col items-center group relative">
+<div class="w-full flex items-end gap-1 h-full">
+<div class="flex-1 bg-primary-container/60 h-[90%] rounded-t-sm ring-2 ring-primary-container ring-offset-2"></div>
+<div class="flex-1 bg-zinc-200 h-1/4 rounded-t-sm"></div>
+</div>
+<span class="mt-4 text-xs font-label-sm text-zinc-900 font-bold">Outubro</span>
+</div>
+</div>
+</div>
+<!-- Aging de Contas Side Panel -->
+<div class="bg-white rounded-xl border-subtle soft-lift flex flex-col">
+<div class="p-6 border-b border-zinc-100">
+<div class="flex items-center justify-between">
+<h3 class="font-h2 text-body-lg font-bold">Aging de Contas</h3>
+<span class="text-xs font-label-md text-error bg-error-container/50 px-2 py-1 rounded-lg">3 Pendentes</span>
+</div>
+<p class="text-label-sm text-on-surface-variant mt-1">Inquilinos com aluguéis em atraso</p>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-4">
+<!-- Tenant 1 -->
+<div class="p-4 bg-zinc-50 rounded-xl border border-zinc-100 group hover:border-error/30 transition-colors">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<img alt="Inquilino" class="w-10 h-10 rounded-full object-cover" data-alt="professional headshot of a middle-aged woman with glasses and friendly expression against a neutral studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPJki5ObSUyS-9tB60C3r1LQJUVbi9SQ3uTf34ADOo0LLeTJwaPrRD1aaW753gid_JtN7Sdi-NnkFsqtilbxVeL4GqRGhSwK0FxZv05ra4ik_7HXiiUVeciYcd-52sb1896kALAVVClP6-f5R4FEorD_EWvBuxh8YQ1P3-kTrujjH0mPTribIx1fd9wKavKrnEBrXxZqhWQibs_FPWkRvKdBA-My1QzHG1FnhfeXX1t0pniWYsA_MPa-medWN7Zw-_dDS2AoyyCug"/>
+<div>
+<p class="text-sm font-bold text-zinc-900">Mariana Fontes</p>
+<p class="text-[11px] text-zinc-500">Apto 402 - Ed. Solaris</p>
+</div>
+</div>
+<span class="text-[11px] font-bold text-error">12 dias</span>
+</div>
+<div class="flex justify-between items-center mb-4">
+<p class="text-xs text-zinc-600 font-medium">Valor: R$ 3.450,00</p>
+</div>
+<button class="w-full py-2.5 bg-[#25D366] text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-lg">chat</span>
+                                Cobrar via WhatsApp
+                            </button>
+</div>
+<!-- Tenant 2 -->
+<div class="p-4 bg-zinc-50 rounded-xl border border-zinc-100 group hover:border-error/30 transition-colors">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<img alt="Inquilino" class="w-10 h-10 rounded-full object-cover" data-alt="portrait of a young businessman in a casual suit with a modern city office interior in soft focus" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFuHCEi-Kk7F3-j4cG5fvME2STlPiWPH-QZjwrjz_ckZjCAqh0HmO62j7TOBUY9ayst6SZRHKndovc69HEnIHpiEH96sHqGAjsFV5B1srKrBEPiO4QWGBsno_kEvz3tPUnTKSZ-wwnIdEcRln-WsWXvCg3TMLSyK3_nW4Lqfi4xf3ioAfnSWKUA78HJt7WQ5GBMBeE-Vn77IntT0HXhpqoQ4TscrbxpQDZUEthFyr9gCMptyzPSQ3IRUN2zEhh0J4nGE_kOuI9ihI"/>
+<div>
+<p class="text-sm font-bold text-zinc-900">Ricardo Menezes</p>
+<p class="text-[11px] text-zinc-500">Sala 1205 - Work Center</p>
+</div>
+</div>
+<span class="text-[11px] font-bold text-error">08 dias</span>
+</div>
+<div class="flex justify-between items-center mb-4">
+<p class="text-xs text-zinc-600 font-medium">Valor: R$ 1.890,00</p>
+</div>
+<button class="w-full py-2.5 bg-[#25D366] text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-lg">chat</span>
+                                Cobrar via WhatsApp
+                            </button>
+</div>
+<!-- Tenant 3 -->
+<div class="p-4 bg-zinc-50 rounded-xl border border-zinc-100 group hover:border-error/30 transition-colors">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<img alt="Inquilino" class="w-10 h-10 rounded-full object-cover" data-alt="close-up of an elderly man with silver hair and warm smile, wearing a knit sweater, soft indoor lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7TWZHiSQIzCuyqqMpOHJGt1zxYy82WZ91tsQgkRuNenbPmTNRjnAo9zYsIszQwtU2Dw9k3jFK1B13VNLL64t28p1dPNpW8aBLMm2UqNWzCla-bJ8Hq0AXOjYuPvtsFOR5i-zuEbm7tdlRKN3ydwO3vkqBvEAfqePAB9Pb96EmgRM33PxvG6fE0c4V_K-iQmmcym174yjVdyCLg1lKMsxa2BbLa6J_6dA04MdhGK6qMG6egr4gWj-vlG3qmIX10gz-cIgZKR09Axg"/>
+<div>
+<p class="text-sm font-bold text-zinc-900">Carlos Alberto</p>
+<p class="text-[11px] text-zinc-500">Casa 04 - Cond. Vila Real</p>
+</div>
+</div>
+<span class="text-[11px] font-bold text-error">04 dias</span>
+</div>
+<div class="flex justify-between items-center mb-4">
+<p class="text-xs text-zinc-600 font-medium">Valor: R$ 5.200,00</p>
+</div>
+<button class="w-full py-2.5 bg-[#25D366] text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-lg">chat</span>
+                                Cobrar via WhatsApp
+                            </button>
+</div>
+</div>
+<div class="p-4 border-t border-zinc-100">
+<button class="w-full py-3 text-zinc-600 font-label-md hover:bg-zinc-50 transition-colors rounded-lg flex items-center justify-center gap-2">
+                            Ver todos os inadimplentes
+                            <span class="material-symbols-outlined text-lg">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Additional Detail: Transaction Summary -->
+<div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<div class="bg-primary text-white p-8 rounded-xl overflow-hidden relative">
+<div class="relative z-10">
+<h4 class="text-xl font-bold mb-2">Resumo de Repasses</h4>
+<p class="text-primary-fixed opacity-90 mb-6">Você tem 42 repasses agendados para os próximos 5 dias.</p>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-black">R$ 14.502,00</span>
+<span class="text-sm opacity-80">líquido estimado</span>
+</div>
+</div>
+<!-- Abstract Background Shape -->
+<div class="absolute -right-8 -bottom-8 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+<div class="absolute right-12 top-12">
+<span class="material-symbols-outlined text-6xl opacity-20">account_balance_wallet</span>
+</div>
+</div>
+<div class="bg-white border-subtle soft-lift p-8 rounded-xl flex items-center justify-between">
+<div>
+<h4 class="text-lg font-bold text-on-surface mb-1">Manutenções Pendentes</h4>
+<p class="text-on-surface-variant text-sm mb-4">8 solicitações aguardando aprovação de orçamento.</p>
+<div class="flex -space-x-2">
+<img alt="Team member" class="w-8 h-8 rounded-full border-2 border-white" data-alt="professional profile photo of a young woman with curly hair and cheerful expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKisLHNQMZur2ck5c6nQ-3snnmloHrNe0T0Xf68L0XbSLMcnIxkA0UsCR6GAlFKFlgfarMAnwljDhpf1ROpWyHJLjzU7DuJ26pVxk-n-ptNpTXJ3x07dvJ9cSGaMh-x9KgnoPY6xu5eYrsWWhVeFM2o2olJrV31oyPZfVeVOx3tvZAKibrRPhQ-iTC0UlyjbHYgCTaQbVaeBlMrjXCYBl0GydACedF4LYbQDdhsF6mgwCocbGTbJc02BGMwbXLoLtJKUAnNft7XaY"/>
+<img alt="Team member" class="w-8 h-8 rounded-full border-2 border-white" data-alt="portrait of a man with short dark hair wearing a business casual shirt" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgl7-dvOswHJwBwnbWg7taQLS1u56BjOHdT7A3xqs1d0WzLLvcnv_e5mEY-SiPTtwAYg0fbuXbwZWtgUeKDI7p8Kz-h0Vi8hqVepMRx2tHreDnI8WTiWmYBWsAyg7unjO5Glu44yF3ybnRL7lnOO3RhQNmyxrjVZEEtbA_QwP3NcmqALxlKiPdFBBdZZhuqyaCycpbp532x1FP47mparKTbcLPrtc5vXE9hUYxM_9YaRirtFx8inzDy5sNRmhmetNECMwhqw2Mh8I"/>
+<div class="w-8 h-8 rounded-full border-2 border-white bg-zinc-100 flex items-center justify-center text-[10px] font-bold text-zinc-500">+6</div>
+</div>
+</div>
+<button class="px-6 py-3 bg-zinc-900 text-white rounded-xl font-bold text-sm active:scale-95 transition-all">
+                        Gerenciar
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- FAB -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">add</span>
+</button>
+</body></html>
