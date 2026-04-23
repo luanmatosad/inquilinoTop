@@ -21,11 +21,11 @@ type Expense struct {
 }
 
 type CreateExpenseInput struct {
-	UnitID      uuid.UUID `json:"unit_id"`
-	Description string    `json:"description"`
-	Amount      float64   `json:"amount"`
-	DueDate     time.Time `json:"due_date"`
-	Category    string    `json:"category"`
+	UnitID      uuid.UUID `json:"-"`
+	Description string    `json:"description" validate:"required,max=500"`
+	Amount      float64   `json:"amount" validate:"required,min=0"`
+	DueDate     time.Time `json:"due_date" validate:"required"`
+	Category    string    `json:"category" validate:"required,oneof=ELECTRICITY WATER CONDO TAX MAINTENANCE OTHER"`
 }
 
 type Repository interface {

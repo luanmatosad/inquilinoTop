@@ -8,11 +8,14 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
+
+	"github.com/inquilinotop/api/internal/audit"
 	"github.com/inquilinotop/api/internal/expense"
 	_ "github.com/inquilinotop/api/docs"
 	"github.com/inquilinotop/api/internal/fiscal"
@@ -20,6 +23,8 @@ import (
 	"github.com/inquilinotop/api/internal/lease"
 	"github.com/inquilinotop/api/internal/payment"
 	"github.com/inquilinotop/api/internal/property"
+	"github.com/inquilinotop/api/internal/ratelimit"
+	"github.com/inquilinotop/api/internal/support"
 	"github.com/inquilinotop/api/internal/tenant"
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/db"
@@ -94,11 +99,27 @@ func main() {
 	fiscalSvc := fiscal.NewService(fiscalAggRepo)
 	fiscalHandler := fiscal.NewHandler(fiscalSvc)
 
+	supportRepo := support.NewRepository(database)
+	supportSvc := support.NewService(supportRepo)
+	supportHandler := support.NewHandler(supportSvc)
+
+	auditRepo := audit.NewRepository(database.Pool)
+	auditSvc := audit.NewService(auditRepo)
+	auditHandler := audit.NewHandler(auditSvc)
+
+	rateLimiter := ratelimit.NewMiddleware(ratelimit.Config{
+		IPRate:    100 / 60.0,
+		IPBurst:  100,
+		UserRate: 200 / 60.0,
+		UserBurst: 200,
+	})
+
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(rateLimiter.Middleware)
 	r.Use(corsMiddleware)
 
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
@@ -118,6 +139,8 @@ func main() {
 	paymentHandler.Register(r, authMW)
 	expenseHandler.Register(r, authMW)
 	fiscalHandler.Register(r, authMW)
+	supportHandler.Register(r, authMW)
+	auditHandler.Register(r, authMW)
 
 	port := envOr("PORT", "8080")
 	slog.Info("server starting", "port", port)
@@ -126,7 +149,7 @@ func main() {
 		Handler:      r,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		IdleTimeout: 60 * time.Second,
 	}
 	if err := srv.ListenAndServe(); err != nil {
 		slog.Error("server error", "error", err)
@@ -135,14 +158,47 @@ func main() {
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
+	allowedOrigins := strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",")
+	for i, o := range allowedOrigins {
+		allowedOrigins[i] = strings.TrimSpace(o)
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		origin := r.Header.Get("Origin")
+
+		allowed := false
+		if len(allowedOrigins) == 0 {
+			slog.Warn("CORS_ALLOWED_ORIGINS not set, defaulting to reject")
+			allowed = false
+		} else {
+			for _, allowedOrigin := range allowedOrigins {
+				if allowedOrigin == "*" {
+					slog.Error("CORS wildcard origin not allowed for security")
+					httputil.Err(w, http.StatusForbidden, "CORS_INVALID", "wildcard origin não permitido")
+					return
+				}
+				if origin == allowedOrigin {
+					allowed = true
+					break
+				}
+			}
+		}
+
+		if allowed {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		}
+
 		if r.Method == http.MethodOptions {
+			if !allowed {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }

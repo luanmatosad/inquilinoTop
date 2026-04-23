@@ -32,17 +32,17 @@ type Unit struct {
 }
 
 type CreatePropertyInput struct {
-	Type        string  `json:"type"`
-	Name        string  `json:"name"`
-	AddressLine *string `json:"address_line,omitempty"`
-	City        *string `json:"city,omitempty"`
-	State       *string `json:"state,omitempty"`
+	Type        string  `json:"type" validate:"required,oneof=RESIDENTIAL SINGLE"`
+	Name        string  `json:"name" validate:"required,max=200"`
+	AddressLine *string `json:"address_line,omitempty" validate:"omitempty,max=500"`
+	City        *string `json:"city,omitempty" validate:"omitempty,max=100"`
+	State       *string `json:"state,omitempty" validate:"omitempty,max=2"`
 }
 
 type CreateUnitInput struct {
-	Label string  `json:"label"`
-	Floor *string `json:"floor,omitempty"`
-	Notes *string `json:"notes,omitempty"`
+	Label string  `json:"label" validate:"required,max=100"`
+	Floor *string `json:"floor,omitempty" validate:"omitempty,max=50"`
+	Notes *string `json:"notes,omitempty" validate:"omitempty,max=2000"`
 }
 
 type PropertyWithUnits struct {

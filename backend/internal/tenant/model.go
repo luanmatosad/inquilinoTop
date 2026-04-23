@@ -21,11 +21,11 @@ type Tenant struct {
 }
 
 type CreateTenantInput struct {
-	Name       string  `json:"name"`
-	Email      *string `json:"email,omitempty"`
-	Phone      *string `json:"phone,omitempty"`
-	Document   *string `json:"document,omitempty"`
-	PersonType *string `json:"person_type,omitempty"`
+	Name       string  `json:"name" validate:"required,max=200"`
+	Email      *string `json:"email,omitempty" validate:"omitempty,email,max=255"`
+	Phone      *string `json:"phone,omitempty" validate:"omitempty,max=20"`
+	Document   *string `json:"document,omitempty" validate:"omitempty,max=20"`
+	PersonType *string `json:"person_type,omitempty" validate:"omitempty,oneof=PF PJ"`
 }
 
 type Repository interface {

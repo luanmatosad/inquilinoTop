@@ -154,3 +154,14 @@ func TestService_AnnualReport_OwnerNãoEncontrado(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "owner não encontrado")
 }
+
+func TestService_AnnualReport_EmptyYear(t *testing.T) {
+	svc := fiscal.NewService(&mockAggRepo{
+		ownerName: "Owner",
+		leases:    []fiscal.LeaseSummary{},
+	})
+
+	rep, err := svc.AnnualReport(context.Background(), uuid.New(), 2026)
+	require.NoError(t, err)
+	assert.Len(t, rep.Leases, 0)
+}

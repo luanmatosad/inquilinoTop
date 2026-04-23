@@ -36,7 +36,7 @@ func (m *mockLeaseRepo) Create(_ context.Context, ownerID uuid.UUID, in lease.Cr
 	l := &lease.Lease{
 		ID: uuid.New(), OwnerID: ownerID, UnitID: in.UnitID,
 		TenantID: in.TenantID, StartDate: in.StartDate,
-		RentAmount: in.RentAmount, Status: "ACTIVE", IsActive: true,
+		RentAmount: in.RentAmount, PaymentDay: in.PaymentDay, Status: "ACTIVE", IsActive: true,
 	}
 	m.leases[l.ID] = l
 	return l, nil
@@ -172,6 +172,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 		TenantID:   uuid.New(),
 		StartDate:  time.Now(),
 		RentAmount: 1500,
+		PaymentDay: 5,
 	})
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/leases", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")

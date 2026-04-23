@@ -119,3 +119,88 @@ func TestService_Create_PersonTypePF(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "PF", out.PersonType)
 }
+
+func TestService_Create_NameObrigatório(t *testing.T) {
+	svc := tenant.NewService(newMockTenantRepo())
+	pf := "PF"
+	_, err := svc.Create(context.Background(), uuid.New(), tenant.CreateTenantInput{
+		Name:       "",
+		PersonType: &pf,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "name")
+}
+
+func TestService_Get_Encontrado(t *testing.T) {
+	mock := newMockTenantRepo()
+	svc := tenant.NewService(mock)
+	ownerID := uuid.New()
+	pf := "PF"
+
+	t1, _ := svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{
+		Name:       "Foo",
+		PersonType: &pf,
+	})
+	found, err := svc.Get(context.Background(), t1.ID, ownerID)
+	require.NoError(t, err)
+	assert.Equal(t, t1.ID, found.ID)
+}
+
+func TestService_Get_NãoEncontrado(t *testing.T) {
+	svc := tenant.NewService(newMockTenantRepo())
+	_, err := svc.Get(context.Background(), uuid.New(), uuid.New())
+	require.Error(t, err)
+}
+
+func TestService_List(t *testing.T) {
+	mock := newMockTenantRepo()
+	svc := tenant.NewService(mock)
+	ownerID := uuid.New()
+	pf := "PF"
+
+	svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "A", PersonType: &pf})
+	svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "B", PersonType: &pf})
+
+	list, err := svc.List(context.Background(), ownerID)
+	require.NoError(t, err)
+	assert.Len(t, list, 2)
+}
+
+func TestService_Update(t *testing.T) {
+	mock := newMockTenantRepo()
+	svc := tenant.NewService(mock)
+	ownerID := uuid.New()
+	pf := "PF"
+
+	t1, _ := svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "Foo", PersonType: &pf})
+	updated, err := svc.Update(context.Background(), t1.ID, ownerID, tenant.CreateTenantInput{Name: "Bar", PersonType: &pf})
+	require.NoError(t, err)
+	assert.Equal(t, "Bar", updated.Name)
+}
+
+func TestService_Update_NãoEncontrado(t *testing.T) {
+	svc := tenant.NewService(newMockTenantRepo())
+	pf := "PF"
+	_, err := svc.Update(context.Background(), uuid.New(), uuid.New(), tenant.CreateTenantInput{Name: "Bar", PersonType: &pf})
+	require.Error(t, err)
+}
+
+func TestService_Delete(t *testing.T) {
+	mock := newMockTenantRepo()
+	svc := tenant.NewService(mock)
+	ownerID := uuid.New()
+	pf := "PF"
+
+	t1, _ := svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "Foo", PersonType: &pf})
+	err := svc.Delete(context.Background(), t1.ID, ownerID)
+	require.NoError(t, err)
+
+	list, _ := svc.List(context.Background(), ownerID)
+	assert.Len(t, list, 0)
+}
+
+func TestService_Delete_NãoEncontrado(t *testing.T) {
+	svc := tenant.NewService(newMockTenantRepo())
+	err := svc.Delete(context.Background(), uuid.New(), uuid.New())
+	require.Error(t, err)
+}

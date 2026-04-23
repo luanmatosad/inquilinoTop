@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, Wallet, FileText, Smartphone, MoreHorizontal, MessageCircle } from 'lucide-react';
+import { Search, Wallet, FileText, Smartphone, MoreHorizontal, MessageCircle, Ticket } from 'lucide-react';
 
 const categories = [
   { id: 'financeiro', label: 'Financeiro', icon: Wallet, description: 'Dúvidas sobre pagamentos e finanças' },
@@ -47,23 +47,22 @@ export default function SupportCentral() {
       </div>
 
       <div className="bg-surface p-6 rounded-xl border border-outline">
-        <h2 className="text-lg font-semibold text-on-surface mb-4">Artigos Recentes</h2>
+        <h2 className="text-lg font-semibold text-on-surface mb-4">Meus Chamados</h2>
         <div className="space-y-3">
-          {[
-            'Como alterar a data de vencimento do aluguel?',
-            'Documentos necessários para locação',
-            'Como usar o aplicativo InquilinoTop',
-            'Entendendo as taxas do contrato',
-          ].map((article, i) => (
-            <button
-              key={i}
-              disabled
-              className="flex items-center justify-between p-3 rounded-lg hover:bg-surface-container transition-colors group w-full text-left cursor-not-allowed opacity-60"
-            >
-              <span className="text-on-surface group-hover:text-primary transition-colors">{article}</span>
-              <MessageCircle className="w-4 h-4 text-on-surface-variant" />
-            </button>
-          ))}
+          <Link
+            href="/support/tickets"
+            className="flex items-center justify-between p-3 rounded-lg hover:bg-surface-container transition-colors group w-full text-left"
+          >
+            <span className="text-on-surface group-hover:text-primary transition-colors">Ver meus chamados</span>
+            <Ticket className="w-4 h-4 text-on-surface-variant" />
+          </Link>
+          <Link
+            href="/support/new-ticket"
+            className="flex items-center justify-between p-3 rounded-lg hover:bg-surface-container transition-colors group w-full text-left"
+          >
+            <span className="text-on-surface group-hover:text-primary transition-colors">Abrir novo chamado</span>
+            <MessageCircle className="w-4 h-4 text-on-surface-variant" />
+          </Link>
         </div>
       </div>
     </div>

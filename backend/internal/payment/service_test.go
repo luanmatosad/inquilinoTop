@@ -203,12 +203,25 @@ func (m *mockUnitReader) GetByID(_ context.Context, id, ownerID uuid.UUID) (*pay
 	return u, nil
 }
 
+func (ts *testService) addLease(l *lease.Lease) {
+	ts.leaseReader.leases[l.ID] = l
+}
+
+func (ts *testService) addOwner(o *payment.OwnerSummary) {
+	ts.ownerReader.owners[o.ID] = o
+}
+
+func (ts *testService) addUnit(u *payment.UnitSummary) {
+	ts.unitReader.units[u.ID] = u
+}
+
 type testService struct {
 	*payment.Service
 	leaseReader  *mockLeaseReader
 	tenantReader *mockTenantReader
 	unitReader   *mockUnitReader
 	ownerReader  *mockOwnerReader
+	repo         payment.Repository
 }
 
 func (ts *testService) addTenant(t *tenant.Tenant) {
@@ -223,7 +236,7 @@ func newTestService() *testService {
 	ow := newMockOwnerReader()
 	irrf := &mockIRRFTable{}
 	svc := payment.NewService(repo, lr, tr, ur, ow, irrf)
-	return &testService{Service: svc, leaseReader: lr, tenantReader: tr, unitReader: ur, ownerReader: ow}
+	return &testService{Service: svc, leaseReader: lr, tenantReader: tr, unitReader: ur, ownerReader: ow, repo: repo}
 }
 
 func setupLease(svc *testService, leaseID, ownerID uuid.UUID, lateFeePercent, dailyInterestPercent float64) {
@@ -509,4 +522,258 @@ func TestService_GenerateMonth_DiaInexistenteNoMes(t *testing.T) {
 	ps, err := svc.GenerateMonth(context.Background(), leaseID, ownerID, "2026-02")
 	require.NoError(t, err)
 	assert.Equal(t, 28, ps[0].DueDate.Day())
+}
+
+func ptr[T any](v T) *T {
+	return &v
+}
+
+func TestService_BuildReceipt_Pago(t *testing.T) {
+	svc := newTestService()
+	ownerID, leaseID, unitID := uuid.New(), uuid.New(), uuid.New()
+	tenantID := uuid.New()
+
+	l := &lease.Lease{
+		ID:         leaseID,
+		OwnerID:    ownerID,
+		TenantID:   tenantID,
+		UnitID:     unitID,
+		StartDate:  time.Now().AddDate(0, -6, 0),
+		RentAmount: 2000,
+		Status:     "ACTIVE",
+	}
+	svc.addLease(l)
+
+	tn := &tenant.Tenant{
+		ID:         tenantID,
+		OwnerID:    ownerID,
+		Name:       "Tenant Test",
+		Document:   ptr("12345678900"),
+		PersonType: "PF",
+	}
+	svc.addTenant(tn)
+
+	doc := ptr("98765432100")
+	ow := &payment.OwnerSummary{
+		ID:       ownerID,
+		Name:     "Owner Test",
+		Document: doc,
+	}
+	svc.addOwner(ow)
+
+	label := ptr("Apto 101")
+	addr := ptr("Rua Test")
+	un := &payment.UnitSummary{
+		ID:               unitID,
+		Label:            label,
+		PropertyAddress:  addr,
+	}
+	svc.addUnit(un)
+
+	paidDate := time.Now()
+	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
+	})
+	svc.repo.(*mockPaymentRepo).MarkPaid(context.Background(), p.ID, ownerID, paidDate, 0, 0, 0, 2000)
+
+	rec, err := svc.BuildReceipt(context.Background(), p.ID, ownerID)
+	require.NoError(t, err)
+	assert.Equal(t, 2000.0, rec.Amounts.Gross)
+}
+
+func TestService_BuildReceipt_NãoPago(t *testing.T) {
+	svc := newTestService()
+	ownerID, leaseID := uuid.New(), uuid.New()
+
+	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
+	})
+
+	_, err := svc.BuildReceipt(context.Background(), p.ID, ownerID)
+	require.Error(t, err)
+}
+
+func TestService_BuildReceipt_NãoEncontrado(t *testing.T) {
+	svc := newTestService()
+	ownerID := uuid.New()
+
+	_, err := svc.BuildReceipt(context.Background(), uuid.New(), ownerID)
+	require.Error(t, err)
+}
+
+func TestService_Update_PaidDateVazio(t *testing.T) {
+	svc := newTestService()
+	ownerID, leaseID := uuid.New(), uuid.New()
+
+	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
+	})
+
+	updated, err := svc.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
+		Status: "PENDING",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "PENDING", updated.Status)
+}
+
+func TestService_Update_StatusInválidoNaCriação(t *testing.T) {
+	svc := newTestService()
+	ownerID, leaseID := uuid.New(), uuid.New()
+
+	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
+	})
+
+	_, err := svc.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
+		Status: "INVALIDO",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "status")
+}
+
+func TestService_MarkPaid_PagoAnteriormente(t *testing.T) {
+	svc := newTestService()
+	ownerID, leaseID := uuid.New(), uuid.New()
+	setupLease(svc, leaseID, ownerID, 0.1, 0.001)
+
+	tenantID := uuid.New()
+	tn := &tenant.Tenant{
+		ID: tenantID, OwnerID: ownerID, Name: "Tenant", PersonType: "PF",
+	}
+	svc.addTenant(tn)
+
+	l := svc.leaseReader.leases[leaseID]
+	l.TenantID = tenantID
+
+	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
+	})
+
+	svc.repo.MarkPaid(context.Background(), p.ID, ownerID, time.Now(), 0, 0, 0, 2000)
+
+	_, err := svc.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
+		Status: "PAID", PaidDate: ptr(time.Now()),
+	})
+	require.Error(t, err)
+	assert.True(t, svc.IsAlreadyPaid(err))
+}
+
+func TestService_CreateIfAbsent_JáExiste(t *testing.T) {
+	svc := newTestService()
+	ownerID, leaseID := uuid.New(), uuid.New()
+	month := "2026-01"
+
+	p, created, _ := svc.repo.CreateIfAbsent(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT", Competency: &month,
+	})
+	require.True(t, created)
+
+	p2, created2, err := svc.repo.CreateIfAbsent(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT", Competency: &month,
+	})
+	require.NoError(t, err)
+	require.False(t, created2)
+	assert.Equal(t, p.ID, p2.ID)
+}
+
+func TestService_CreateIfAbsent_Novo(t *testing.T) {
+	svc := newTestService()
+	ownerID, leaseID := uuid.New(), uuid.New()
+	month1 := "2026-01"
+	month2 := "2026-02"
+
+	_, created1, _ := svc.repo.CreateIfAbsent(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT", Competency: &month1,
+	})
+	require.True(t, created1)
+
+	_, created2, err := svc.repo.CreateIfAbsent(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT", Competency: &month2,
+	})
+	require.NoError(t, err)
+	require.True(t, created2)
+}
+
+func TestService_ProcessWebhook_PaymentRecebido(t *testing.T) {
+	svc := newTestService()
+	ownerID, leaseID := uuid.New(), uuid.New()
+
+	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
+	})
+
+	chargeID := "charge-123"
+	svc.repo.(*mockPaymentRepo).payments[p.ID].ChargeID = &chargeID
+
+	err := svc.ProcessWebhook(context.Background(), "mock", map[string]interface{}{
+		"event":    "PAYMENT_RECEIVED",
+		"chargeId": chargeID,
+	})
+	require.NoError(t, err)
+
+	updated, _ := svc.Get(context.Background(), p.ID, ownerID)
+	assert.Equal(t, "PAID", updated.Status)
+}
+
+func TestService_ProcessWebhook_EventInválido(t *testing.T) {
+	svc := newTestService()
+
+	err := svc.ProcessWebhook(context.Background(), "mock", map[string]interface{}{
+		"event": "OUTRO_EVENT",
+	})
+	require.NoError(t, err)
+}
+
+func TestService_ProcessWebhook_SemEvent(t *testing.T) {
+	svc := newTestService()
+
+	err := svc.ProcessWebhook(context.Background(), "mock", map[string]interface{}{})
+	require.Error(t, err)
+}
+
+func TestService_ProcessWebhook_ChargeIdInválido(t *testing.T) {
+	svc := newTestService()
+
+	err := svc.ProcessWebhook(context.Background(), "mock", map[string]interface{}{
+		"event": "PAYMENT_RECEIVED",
+	})
+	require.Error(t, err)
+}
+
+func TestService_ProcessWebhook_PaymentNãoEncontrado(t *testing.T) {
+	svc := newTestService()
+
+	err := svc.ProcessWebhook(context.Background(), "mock", map[string]interface{}{
+		"event":    "PAYMENT_RECEIVED",
+		"chargeId": "inexistente",
+	})
+	require.Error(t, err)
+}
+
+func TestService_Enrich_PaymentPago(t *testing.T) {
+	svc := newTestService()
+	ownerID, leaseID := uuid.New(), uuid.New()
+
+	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now().Add(-48 * time.Hour), GrossAmount: 2000, Type: "RENT",
+	})
+
+	paidDate := time.Now()
+	svc.repo.MarkPaid(context.Background(), p.ID, ownerID, paidDate, 0, 0, 0, 2000)
+
+	enriched := svc.Enrich(context.Background(), *p)
+	assert.Equal(t, 0.0, enriched.LateFeeAmount)
+}
+
+func TestService_Enrich_LeaseNãoEncontrado(t *testing.T) {
+	svc := newTestService()
+	ownerID := uuid.New()
+
+	p := payment.Payment{
+		ID: uuid.New(), OwnerID: ownerID, LeaseID: uuid.New(),
+		DueDate: time.Now().Add(-48 * time.Hour), GrossAmount: 2000, Type: "RENT", Status: "PENDING",
+	}
+
+	enriched := svc.Enrich(context.Background(), p)
+	assert.Equal(t, "PENDING", enriched.Status)
 }

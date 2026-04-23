@@ -21,9 +21,9 @@ type Readjustment struct {
 }
 
 type ReadjustInput struct {
-	Percentage float64   `json:"percentage"`
+	Percentage float64   `json:"percentage" validate:"required,min=0.001"`
 	IndexName  *string   `json:"index_name,omitempty"`
-	AppliedAt  time.Time `json:"applied_at"`
+	AppliedAt  time.Time `json:"applied_at" validate:"required"`
 	Notes      *string   `json:"notes,omitempty"`
 }
 

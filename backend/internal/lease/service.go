@@ -27,7 +27,7 @@ func (s *Service) Create(ctx context.Context, ownerID uuid.UUID, in CreateLeaseI
 	if in.RentAmount <= 0 {
 		return nil, fmt.Errorf("lease.svc: rent_amount deve ser positivo")
 	}
-	if in.PaymentDay < 1 || in.PaymentDay > 31 {
+	if in.PaymentDay != 0 && (in.PaymentDay < 1 || in.PaymentDay > 31) {
 		return nil, fmt.Errorf("lease.svc: payment_day deve estar entre 1 e 31")
 	}
 	return s.repo.Create(ctx, ownerID, in)

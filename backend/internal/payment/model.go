@@ -48,18 +48,26 @@ type Payment struct {
 }
 
 type CreatePaymentInput struct {
-	LeaseID     uuid.UUID `json:"lease_id"`
-	DueDate     time.Time `json:"due_date"`
-	GrossAmount float64   `json:"gross_amount"`
-	Type        string    `json:"type"`
-	Competency  *string   `json:"competency,omitempty"`
-	Description *string   `json:"description,omitempty"`
+	LeaseID     uuid.UUID `json:"-"`
+	DueDate     time.Time `json:"due_date" validate:"required"`
+	GrossAmount float64   `json:"gross_amount" validate:"required,min=0"`
+	Type        string    `json:"type" validate:"required,oneof=RENT DEPOSIT EXPENSE OTHER"`
+	Competency  *string   `json:"competency,omitempty" validate:"omitempty,len=7"` // YYYY-MM
+	Description *string   `json:"description,omitempty" validate:"omitempty,max=500"`
 }
 
 type UpdatePaymentInput struct {
 	PaidDate    *time.Time `json:"paid_date,omitempty"`
-	Status      string     `json:"status"`
-	GrossAmount float64    `json:"gross_amount"`
+	Status      string     `json:"status" validate:"required,oneof=PENDING PAID LATE"`
+	GrossAmount float64    `json:"gross_amount" validate:"required,min=0"`
+}
+
+type UpdateChargeInfoInput struct {
+	ChargeID     string `json:"charge_id" validate:"required"`
+	ChargeMethod string `json:"charge_method" validate:"required,oneof=PIX BOLETO TED"`
+	QRCode       string `json:"qr_code,omitempty" validate:"omitempty"`
+	Link          string `json:"link,omitempty" validate:"omitempty,url"`
+	BarCode       string `json:"bar_code,omitempty" validate:"omitempty,numeric"`
 }
 
 type Repository interface {
@@ -130,9 +138,9 @@ type Amounts struct {
 type FinancialConfig struct {
 	ID         uuid.UUID            `json:"id"`
 	OwnerID    uuid.UUID           `json:"owner_id"`
-	Provider  string              `json:"provider"`
+	Provider  string              `json:"provider" validate:"required,oneof=ASAAS BRADESCO ITAU SICOOB MOCK"`
 	Config    map[string]string   `json:"config,omitempty"`
-	PixKey    *string             `json:"pix_key,omitempty"`
+	PixKey    *string             `json:"pix_key,omitempty" validate:"omitempty,max=100"`
 	BankInfo  *BankInfo           `json:"bank_info,omitempty"`
 	IsActive  bool                `json:"is_active"`
 	CreatedAt time.Time           `json:"created_at"`
@@ -140,25 +148,17 @@ type FinancialConfig struct {
 }
 
 type BankInfo struct {
-	BankCode    string `json:"bank_code"`
-	Agency      string `json:"agency"`
-	Account    string `json:"account"`
-	AccountType string `json:"account_type"`
-	OwnerName  string `json:"owner_name"`
-	Document   string `json:"document"`
+	BankCode    string `json:"bank_code" validate:"required,numeric,len=3"`
+	Agency      string `json:"agency" validate:"required,max=10"`
+	Account    string `json:"account" validate:"required,max=20"`
+	AccountType string `json:"account_type" validate:"required,oneof=CC CP"`
+	OwnerName  string `json:"owner_name" validate:"required,max=200"`
+	Document   string `json:"document" validate:"required,max=20"`
 }
 
 type CreateFinancialConfigInput struct {
-	Provider string              `json:"provider"`
-	Config   map[string]string  `json:"config"`
-	PixKey   *string             `json:"pix_key,omitempty"`
+	Provider string              `json:"provider" validate:"required,oneof=ASAAS BRADESCO ITAU SICOOB MOCK"`
+	Config   map[string]string  `json:"config" validate:"required"`
+	PixKey   *string             `json:"pix_key,omitempty" validate:"omitempty,max=100"`
 	BankInfo *BankInfo            `json:"bank_info,omitempty"`
-}
-
-type UpdateChargeInfoInput struct {
-	ChargeID     string
-	ChargeMethod string
-	QRCode       string
-	Link          string
-	BarCode       string
 }

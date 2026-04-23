@@ -123,3 +123,26 @@ func TestService_Refresh(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, result.AccessToken)
 }
+
+func TestService_Logout(t *testing.T) {
+	svc := newTestService(t)
+	reg, _ := svc.Register(context.Background(), "logout@test.com", "senha123")
+
+	err := svc.Logout(context.Background(), reg.RefreshToken)
+	require.NoError(t, err)
+}
+
+func TestService_Login_UserNotFound(t *testing.T) {
+	svc := newTestService(t)
+	_, err := svc.Login(context.Background(), "naoexiste@test.com", "senha")
+	assert.Error(t, err)
+}
+
+func TestService_Refresh_ExpiredToken(t *testing.T) {
+	svc := newTestService(t)
+	_, _ = svc.Register(context.Background(), "expired@test.com", "senha123")
+
+	_, err := svc.Refresh(context.Background(), "token-inexistente")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "inválido")
+}

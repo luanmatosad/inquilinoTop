@@ -11,6 +11,7 @@ import (
 	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/httputil"
+	"github.com/inquilinotop/api/pkg/validator"
 )
 
 type Handler struct {
@@ -67,6 +68,10 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
 		return
 	}
+	if err := validator.Validate(in); err != nil {
+		httputil.ValidationErr(w, err)
+		return
+	}
 	l, err := h.svc.Create(r.Context(), ownerID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "CREATE_FAILED", err.Error())
@@ -116,6 +121,10 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	var in UpdateLeaseInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+	if err := validator.Validate(in); err != nil {
+		httputil.ValidationErr(w, err)
 		return
 	}
 	l, err := h.svc.Update(r.Context(), id, ownerID, in)
@@ -192,6 +201,10 @@ func (h *Handler) renew(w http.ResponseWriter, r *http.Request) {
 	var in RenewLeaseInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+	if err := validator.Validate(in); err != nil {
+		httputil.ValidationErr(w, err)
 		return
 	}
 	l, err := h.svc.Renew(r.Context(), id, ownerID, in)

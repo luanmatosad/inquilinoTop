@@ -86,6 +86,7 @@ func TestLeaseRepository_CreateAndList(t *testing.T) {
 		TenantID:   tenantID,
 		StartDate:  time.Now(),
 		RentAmount: 1500.00,
+		PaymentDay: 5,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "ACTIVE", l.Status)

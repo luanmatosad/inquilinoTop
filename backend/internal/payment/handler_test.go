@@ -194,15 +194,34 @@ func TestHandler_Generate_MonthInválido(t *testing.T) {
 	ownerID := uuid.New()
 
 	r := chi.NewRouter()
-	r.With(noopAuthMWWithOwnerID(ownerID)).Post("/leases/{leaseId}/payments/generate", h.Generate)
+	r.With(noopAuthMWWithOwnerID(ownerID)).Post("/api/v1/leases/{leaseId}/payments/generate", h.Generate)
 
 	leaseID := uuid.New()
 	setupLeaseInHandler(ts, leaseID, ownerID)
 
-	req := httptest.NewRequest("POST", "/leases/"+leaseID.String()+"/payments/generate?month=abril", nil)
+	req := httptest.NewRequest("POST", "/api/v1/leases/"+leaseID.String()+"/payments/generate?month=abril", nil)
 	w := httptest.NewRecorder()
 
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "INVALID_MONTH")
+}
+
+func TestHandler_Generate_RouteExists(t *testing.T) {
+	ts := newTestService()
+	h := payment.NewHandler(ts.Service)
+	ownerID := uuid.New()
+
+	r := chi.NewRouter()
+	r.With(noopAuthMWWithOwnerID(ownerID)).Post("/api/v1/leases/{leaseId}/payments/generate", h.Generate)
+
+	leaseID := uuid.New()
+	setupLeaseInHandler(ts, leaseID, ownerID)
+
+	req := httptest.NewRequest("POST", "/api/v1/leases/"+leaseID.String()+"/payments/generate?month=2026-04", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+	require.NotEqual(t, http.StatusMethodNotAllowed, w.Code)
+	require.NotEqual(t, http.StatusNotFound, w.Code)
 }

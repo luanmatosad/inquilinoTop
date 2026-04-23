@@ -107,6 +107,19 @@ func (m *mockRepo) DeleteUnit(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockRepo) ListUnitsByPropertyIDs(_ context.Context, propertyIDs []uuid.UUID) ([]property.Unit, error) {
+	var list []property.Unit
+	for _, u := range m.units {
+		for _, pid := range propertyIDs {
+			if u.PropertyID == pid && u.IsActive {
+				list = append(list, *u)
+				break
+			}
+		}
+	}
+	return list, nil
+}
+
 func TestService_CreateSingleProperty_AutoCreatesUnit(t *testing.T) {
 	mock := newMockRepo()
 	svc := property.NewService(mock)
@@ -249,4 +262,49 @@ func TestService_DeleteUnit(t *testing.T) {
 
 	list, _ := svc.ListUnits(context.Background(), p.ID)
 	assert.Len(t, list, 0)
+}
+
+func TestService_CreateProperty_NomeVazio(t *testing.T) {
+	svc := property.NewService(newMockRepo())
+	_, err := svc.CreateProperty(context.Background(), uuid.New(), property.CreatePropertyInput{
+		Name: "", Type: "RESIDENTIAL",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "nome")
+}
+
+func TestService_ListProperties(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+
+	svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa 1"})
+	svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa 2"})
+
+	list, err := svc.ListProperties(context.Background(), ownerID)
+	require.NoError(t, err)
+	assert.Len(t, list, 2)
+}
+
+func TestService_ListPropertiesWithUnits(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+
+	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Apto 101"})
+
+	result, err := svc.ListPropertiesWithUnits(context.Background(), ownerID)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	assert.Len(t, result[0].Units, 1)
+}
+
+func TestService_ListPropertiesWithUnits_Vazio(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+
+	result, err := svc.ListPropertiesWithUnits(context.Background(), uuid.New())
+	require.NoError(t, err)
+	assert.Nil(t, result)
 }

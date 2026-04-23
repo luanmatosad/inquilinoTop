@@ -12,6 +12,7 @@ import (
 	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/httputil"
+	"github.com/inquilinotop/api/pkg/validator"
 	"github.com/inquilinotop/api/internal/payment/provider"
 )
 
@@ -104,6 +105,10 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
 		return
 	}
+	if err := validator.Validate(in); err != nil {
+		httputil.ValidationErr(w, err)
+		return
+	}
 	in.LeaseID = leaseID
 	p, err := h.svc.Create(r.Context(), ownerID, in)
 	if err != nil {
@@ -132,6 +137,10 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	var in UpdatePaymentInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+	if err := validator.Validate(in); err != nil {
+		httputil.ValidationErr(w, err)
 		return
 	}
 	p, err := h.svc.Update(r.Context(), id, ownerID, in)
@@ -326,13 +335,21 @@ func (h *Handler) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var event map[string]interface{}
+	var event WebhookEvent
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
 		return
 	}
 
-	err := h.svc.ProcessWebhook(r.Context(), providerName, event)
+	if err := validator.Validate(event); err != nil {
+		httputil.ValidationErr(w, err)
+		return
+	}
+
+	err := h.svc.ProcessWebhook(r.Context(), providerName, map[string]interface{}{
+		"event":    event.Event,
+		"chargeId": event.ChargeID,
+	})
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "WEBHOOK_FAILED", err.Error())
 		return
