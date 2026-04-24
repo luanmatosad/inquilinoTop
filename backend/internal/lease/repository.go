@@ -24,7 +24,7 @@ func (r *pgRepository) Create(ctx context.Context, ownerID uuid.UUID, in CreateL
 	err := r.db.Pool.QueryRow(ctx,
 		`INSERT INTO leases (owner_id, unit_id, tenant_id, start_date, end_date, rent_amount, deposit_amount, payment_day,
 			late_fee_percent, daily_interest_percent, iptu_reimbursable, annual_iptu_amount, iptu_year)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
 		 RETURNING `+leaseCols,
 		ownerID, in.UnitID, in.TenantID, in.StartDate, in.EndDate, in.RentAmount, in.DepositAmount, in.PaymentDay,
 		in.LateFeePercent, in.DailyInterestPercent, in.IPTUReimbursable, in.AnnualIPTUAmount, in.IPTUYear,

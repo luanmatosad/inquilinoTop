@@ -72,3 +72,21 @@ type Repository interface {
 	Renew(ctx context.Context, id, ownerID uuid.UUID, in RenewLeaseInput) (*Lease, error)
 	UpdateRentAmount(ctx context.Context, id, ownerID uuid.UUID, amount float64) (*Lease, error)
 }
+
+type IndexValue struct {
+	ID             uuid.UUID `json:"id"`
+	IndexType      string    `json:"index_type"`
+	ReferenceMonth time.Time `json:"reference_month"`
+	Value          float64   `json:"value"`
+	Cumulative     float64   `json:"cumulative"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type AdjustLeaseInput struct {
+	IndexType string `json:"index_type" validate:"required"`
+}
+
+type IndexRepository interface {
+	GetHistory(ctx context.Context, indexType string) ([]IndexValue, error)
+	GetLatest(ctx context.Context, indexType string) (*IndexValue, error)
+}

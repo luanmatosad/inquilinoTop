@@ -148,8 +148,18 @@ func seedLease(t *testing.T, mock *mockLeaseRepo) *lease.Lease {
 	return l
 }
 
+type mockIndexRepo struct{}
+
+func (m *mockIndexRepo) GetHistory(ctx context.Context, indexType string) ([]lease.IndexValue, error) {
+	return []lease.IndexValue{}, nil
+}
+
+func (m *mockIndexRepo) GetLatest(ctx context.Context, indexType string) (*lease.IndexValue, error) {
+	return nil, nil
+}
+
 func TestHandler_Create_BodyInválido(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
@@ -162,7 +172,7 @@ func TestHandler_Create_BodyInválido(t *testing.T) {
 }
 
 func TestHandler_Create_Válido(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
@@ -183,7 +193,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 }
 
 func TestHandler_Get_IDInválido(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
@@ -196,7 +206,7 @@ func TestHandler_Get_IDInválido(t *testing.T) {
 }
 
 func TestHandler_Update_IDInválido(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
@@ -209,7 +219,7 @@ func TestHandler_Update_IDInválido(t *testing.T) {
 }
 
 func TestHandler_Delete_IDInválido(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
@@ -224,7 +234,7 @@ func TestHandler_Delete_IDInválido(t *testing.T) {
 func TestHandler_EndLease_RouteExists(t *testing.T) {
 	mock := newMockLeaseRepo()
 	l := seedLease(t, mock)
-	svc := lease.NewService(mock, newMockReadjustmentRepo())
+	svc := lease.NewService(mock, newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 
 	r := chi.NewRouter()
@@ -240,7 +250,7 @@ func TestHandler_EndLease_RouteExists(t *testing.T) {
 func TestHandler_RenewLease_RouteExists(t *testing.T) {
 	mock := newMockLeaseRepo()
 	l := seedLease(t, mock)
-	svc := lease.NewService(mock, newMockReadjustmentRepo())
+	svc := lease.NewService(mock, newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 
 	r := chi.NewRouter()
@@ -261,7 +271,7 @@ func TestHandler_RenewLease_RouteExists(t *testing.T) {
 func TestHandler_Readjust_RouteExists(t *testing.T) {
 	mock := newMockLeaseRepo()
 	l := seedLease(t, mock)
-	svc := lease.NewService(mock, newMockReadjustmentRepo())
+	svc := lease.NewService(mock, newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 
 	r := chi.NewRouter()
@@ -285,7 +295,7 @@ func TestHandler_Readjust_PercentagemInválida(t *testing.T) {
 	readjMock := newMockReadjustmentRepo()
 	ownerID, leaseID := uuid.New(), uuid.New()
 	leaseMock.leases[leaseID] = &lease.Lease{ID: leaseID, OwnerID: ownerID, Status: "ACTIVE", RentAmount: 2000, IsActive: true}
-	svc := lease.NewService(leaseMock, readjMock)
+	svc := lease.NewService(leaseMock, readjMock, &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 
 	r := chi.NewRouter()

@@ -5,10 +5,13 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,11 +19,13 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/inquilinotop/api/internal/audit"
+	"github.com/inquilinotop/api/internal/document"
 	"github.com/inquilinotop/api/internal/expense"
 	_ "github.com/inquilinotop/api/docs"
 	"github.com/inquilinotop/api/internal/fiscal"
 	"github.com/inquilinotop/api/internal/identity"
 	"github.com/inquilinotop/api/internal/lease"
+	"github.com/inquilinotop/api/internal/notification"
 	"github.com/inquilinotop/api/internal/payment"
 	"github.com/inquilinotop/api/internal/property"
 	"github.com/inquilinotop/api/internal/ratelimit"
@@ -78,7 +83,8 @@ func main() {
 
 	leaseRepo := lease.NewRepository(database)
 	leaseReadjRepo := lease.NewReadjustmentRepository(database)
-	leaseSvc := lease.NewService(leaseRepo, leaseReadjRepo)
+	indexRepo := lease.NewIndexRepository(database)
+	leaseSvc := lease.NewService(leaseRepo, leaseReadjRepo, indexRepo)
 	leaseHandler := lease.NewHandler(leaseSvc)
 
 	identityRepoForPayment := identity.NewRepository(database)
@@ -107,6 +113,24 @@ func main() {
 	auditSvc := audit.NewService(auditRepo)
 	auditHandler := audit.NewHandler(auditSvc)
 
+	docStoragePath := envOr("DOCUMENT_STORAGE_PATH", "./documents")
+	docStorage := document.NewLocalStorage(docStoragePath)
+	documentRepo := document.NewRepository(database)
+	documentSvc := document.NewService(documentRepo, docStorage)
+	documentHandler := document.NewHandler(documentSvc)
+
+	smtpConfig := notification.SMTPConfig{
+		Host:     envOr("SMTP_HOST", "localhost"),
+		Port:     envOrInt("SMTP_PORT", 587),
+		Username: os.Getenv("SMTP_USERNAME"),
+		Password: os.Getenv("SMTP_PASSWORD"),
+		From:     envOr("EMAIL_FROM", "InquilinoTop <noreply@inquilinotop.com>"),
+	}
+	emailSender := notification.NewSMTPSender(smtpConfig)
+	notificationRepo := notification.NewRepository(database)
+	notificationSvc := notification.NewService(notificationRepo, emailSender)
+	notificationHandler := notification.NewHandler(notificationSvc)
+
 	rateLimiter := ratelimit.NewMiddleware(ratelimit.Config{
 		IPRate:    100 / 60.0,
 		IPBurst:  100,
@@ -122,6 +146,15 @@ func main() {
 	r.Use(rateLimiter.Middleware)
 	r.Use(corsMiddleware)
 
+	// API v2 group com header
+	r.Route("/api/v2", func(r2 chi.Router) {
+		r2.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				w.Header().Set("API-Version", "2.0")
+				next.ServeHTTP(w, req)
+			})
+		})
+	})
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -141,6 +174,8 @@ func main() {
 	fiscalHandler.Register(r, authMW)
 	supportHandler.Register(r, authMW)
 	auditHandler.Register(r, authMW)
+	documentHandler.Register(r, authMW)
+	notificationHandler.Register(r, authMW)
 
 	port := envOr("PORT", "8080")
 	slog.Info("server starting", "port", port)
@@ -151,10 +186,31 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout: 60 * time.Second,
 	}
-	if err := srv.ListenAndServe(); err != nil {
+
+	idleConnsClosed := make(chan struct{})
+	go func() {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+		<-sigCh
+
+		slog.Info("shutting down server...")
+		
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := srv.Shutdown(ctx); err != nil {
+			slog.Error("server shutdown error", "error", err)
+		}
+		close(idleConnsClosed)
+	}()
+
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		slog.Error("server error", "error", err)
 		os.Exit(1)
 	}
+
+	<-idleConnsClosed
+	slog.Info("server stopped gracefully")
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
@@ -215,6 +271,16 @@ func mustEnv(key string) string {
 func envOr(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	return fallback
+}
+
+func envOrInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		var n int
+		if _, err := fmt.Sscanf(v, "%d", &n); err == nil {
+			return n
+		}
 	}
 	return fallback
 }
