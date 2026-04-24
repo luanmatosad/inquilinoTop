@@ -28,18 +28,18 @@ func testDB(t *testing.T) *db.DB {
 	return d
 }
 
-func TestRepository_CreateAndGetUser(t *testing.T) {
+func TestRepository_GetUserByID_WithoutTwoFactor(t *testing.T) {
 	database := testDB(t)
 	repo := identity.NewRepository(database)
 
-	user, err := repo.CreateUser(context.Background(), "test@example.com", "hash123")
+	user, err := repo.CreateUser(context.Background(), "noTfa@test.com", "hash123")
 	require.NoError(t, err)
-	assert.NotEmpty(t, user.ID)
-	assert.Equal(t, "test@example.com", user.Email)
+	require.False(t, user.TwoFactorEnabled)
 
-	found, err := repo.GetUserByEmail(context.Background(), "test@example.com")
-	require.NoError(t, err)
-	assert.Equal(t, user.ID, found.ID)
+	got, err := repo.GetUserByID(context.Background(), user.ID)
+	require.NoError(t, err, "GetUserByID não deve falhar para user sem 2FA configurado")
+	assert.Equal(t, user.ID, got.ID)
+	assert.Equal(t, "", got.TotpSecret, "TotpSecret deve ser string vazia quando NULL")
 }
 
 func TestRepository_CreateRefreshToken(t *testing.T) {

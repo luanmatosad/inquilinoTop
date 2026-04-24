@@ -156,6 +156,7 @@ func main() {
 		})
 
 		identityHandler.Register(r2)
+		identityHandler.RegisterProtected(r2, authMW)
 		propertyHandler.Register(r2, authMW)
 		tenantHandler.Register(r2, authMW)
 		leaseHandler.Register(r2, authMW)
@@ -187,6 +188,7 @@ func main() {
 		})
 
 		identityHandler.Register(r1)
+		identityHandler.RegisterProtected(r1, authMW)
 		propertyHandler.Register(r1, authMW)
 		tenantHandler.Register(r1, authMW)
 		leaseHandler.Register(r1, authMW)

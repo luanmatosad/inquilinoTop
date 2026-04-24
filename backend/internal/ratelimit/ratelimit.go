@@ -151,6 +151,9 @@ func getIP(r *http.Request) string {
 }
 
 func getUserID(r *http.Request) string {
+	if id, ok := r.Context().Value("owner_id").(uuid.UUID); ok && id != uuid.Nil {
+		return id.String()
+	}
 	return ""
 }
 

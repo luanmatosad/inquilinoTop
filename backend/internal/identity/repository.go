@@ -45,7 +45,7 @@ func (r *pgRepository) GetUserByEmail(ctx context.Context, email string) (*User,
 func (r *pgRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	var u User
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT id, email, password_hash, plan, totp_secret, backup_codes, two_factor_enabled, created_at, updated_at FROM users WHERE id = $1`,
+		`SELECT id, email, password_hash, plan, COALESCE(totp_secret, ''), COALESCE(backup_codes, '{}'), two_factor_enabled, created_at, updated_at FROM users WHERE id = $1`,
 		id,
 	).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Plan, &u.TotpSecret, &u.BackupCodes, &u.TwoFactorEnabled, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
@@ -118,7 +118,7 @@ func (r *pgRepository) Disable2FA(ctx context.Context, userID uuid.UUID) error {
 func (r *pgRepository) GetUser(ctx context.Context, id uuid.UUID) (*User, error) {
 	var u User
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT id, email, password_hash, plan, totp_secret, backup_codes, two_factor_enabled, created_at, updated_at FROM users WHERE id = $1`,
+		`SELECT id, email, password_hash, plan, COALESCE(totp_secret, ''), COALESCE(backup_codes, '{}'), two_factor_enabled, created_at, updated_at FROM users WHERE id = $1`,
 		id,
 	).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Plan, &u.TotpSecret, &u.BackupCodes, &u.TwoFactorEnabled, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
@@ -130,7 +130,7 @@ func (r *pgRepository) GetUser(ctx context.Context, id uuid.UUID) (*User, error)
 func (r *pgRepository) GetUserWith2FA(ctx context.Context, userID uuid.UUID) (*User, error) {
 	var u User
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT id, email, password_hash, plan, totp_secret, backup_codes, two_factor_enabled, created_at, updated_at FROM users WHERE id = $1`,
+		`SELECT id, email, password_hash, plan, COALESCE(totp_secret, ''), COALESCE(backup_codes, '{}'), two_factor_enabled, created_at, updated_at FROM users WHERE id = $1`,
 		userID,
 	).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Plan, &u.TotpSecret, &u.BackupCodes, &u.TwoFactorEnabled, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {

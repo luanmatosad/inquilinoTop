@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/httputil"
 )
 
@@ -24,9 +25,12 @@ func (h *Handler) Register(r chi.Router) {
 	r.Post("/api/v1/auth/2fa/login", h.login2FA)
 	r.Post("/api/v1/auth/refresh", h.refresh)
 	r.Post("/api/v1/auth/logout", h.logout)
-	r.Post("/api/v1/auth/2fa/setup", h.setup2FA)
-	r.Post("/api/v1/auth/2fa/verify", h.verify2FA)
-	r.Post("/api/v1/auth/2fa/disable", h.disable2FA)
+}
+
+func (h *Handler) RegisterProtected(r chi.Router, authMW func(http.Handler) http.Handler) {
+	r.With(authMW).Post("/api/v1/auth/2fa/setup", h.setup2FA)
+	r.With(authMW).Post("/api/v1/auth/2fa/verify", h.verify2FA)
+	r.With(authMW).Post("/api/v1/auth/2fa/disable", h.disable2FA)
 }
 
 type credentialsInput struct {
@@ -199,15 +203,9 @@ func (h *Handler) setup2FA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.svc.repo.GetUserByEmail(r.Context(), in.Email)
+	setup, err := h.svc.Setup2FAByEmail(r.Context(), in.Email)
 	if err != nil {
-		httputil.Err(w, http.StatusNotFound, "USER_NOT_FOUND", "usuário não encontrado")
-		return
-	}
-
-	setup, err := h.svc.Setup2FA(r.Context(), user.ID, in.Email)
-	if err != nil {
-		httputil.Err(w, http.StatusInternalServerError, "2FA_SETUP_FAILED", err.Error())
+		httputil.Err(w, http.StatusInternalServerError, "2FA_SETUP_FAILED", "falha ao configurar 2FA")
 		return
 	}
 	httputil.OK(w, setup)
@@ -227,8 +225,8 @@ func (h *Handler) verify2FA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ownerID, ok := r.Context().Value("owner_id").(uuid.UUID)
-	if !ok {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+	if ownerID == uuid.Nil {
 		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "não autorizado")
 		return
 	}
@@ -255,8 +253,8 @@ func (h *Handler) disable2FA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ownerID, ok := r.Context().Value("owner_id").(uuid.UUID)
-	if !ok {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+	if ownerID == uuid.Nil {
 		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "não autorizado")
 		return
 	}
