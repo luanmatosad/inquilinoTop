@@ -31,7 +31,7 @@ func NewAsaasProvider(config map[string]string) (*AsaasProvider, error) {
 
 	baseURL := "https://api-sandbox.asaas.com"
 	if env == "production" {
-		baseURL = "api.asaas.com"
+		baseURL = "https://api.asaas.com"
 	}
 
 	return &AsaasProvider{
