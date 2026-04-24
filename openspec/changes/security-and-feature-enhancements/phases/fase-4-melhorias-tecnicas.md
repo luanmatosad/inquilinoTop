@@ -1,6 +1,6 @@
 # Fase 4: Melhorias Técnicas
 
-**Status:** ⏳ Pendente
+**Status:** ✅ Concluído
 **Tasks:** 13 tasks
 
 ## Ações Planejadas
@@ -28,7 +28,7 @@
 - [x] Implementar cálculo
   - Novo valor = valor atual × (1 + índice acumulado)
 
-- [ ] Criar scheduler
+- [x] Criar scheduler
   - 30 dias antes do contrato vencer → notificar
   - Owner confirma → aplicar nuovo valor
 
