@@ -88,7 +88,7 @@
   w.Header().Set("API-Version", "2.0")
   ```
 
-- [ ] Deprecar v1 com warnings
+- [x] Deprecar v1 com warnings
   - Adicionar header `Deprecation: /api/v1`
 
 - [x] Documentar breaking changes

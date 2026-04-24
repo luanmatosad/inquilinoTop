@@ -77,6 +77,68 @@ func (m *mockRepo) RevokeRefreshToken(_ context.Context, tokenHash string) error
 	return nil
 }
 
+func (m *mockRepo) Enable2FA(_ context.Context, userID uuid.UUID, secret string, backupCodes []string) error {
+	for _, u := range m.users {
+		if u.ID == userID {
+			u.TotpSecret = secret
+			u.BackupCodes = backupCodes
+			u.TwoFactorEnabled = true
+			return nil
+		}
+	}
+	return nil
+}
+
+func (m *mockRepo) Disable2FA(_ context.Context, userID uuid.UUID) error {
+	for _, u := range m.users {
+		if u.ID == userID {
+			u.TotpSecret = ""
+			u.BackupCodes = nil
+			u.TwoFactorEnabled = false
+			return nil
+		}
+	}
+	return nil
+}
+
+func (m *mockRepo) GetUserWith2FA(_ context.Context, userID uuid.UUID) (*identity.User, error) {
+	for _, u := range m.users {
+		if u.ID == userID {
+			return u, nil
+		}
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) GetUser(_ context.Context, userID uuid.UUID) (*identity.User, error) {
+	for _, u := range m.users {
+		if u.ID == userID {
+			return u, nil
+		}
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) UseBackupCode(_ context.Context, userID uuid.UUID, code string) (bool, error) {
+	return false, nil
+}
+
+func (m *mockRepo) StoreTempToken(_ context.Context, userID uuid.UUID, token string) error {
+	return nil
+}
+
+func (m *mockRepo) GetTempTokenUser(_ context.Context, token string) (uuid.UUID, error) {
+	return uuid.Nil, nil
+}
+
+func (m *mockRepo) InvalidateTempToken(_ context.Context, token string) error {
+	return nil
+}
+
+func (m *mockRepo) CleanupExpiredTempTokens(_ context.Context) (int64, error) {
+	return 0, nil
+}
+
 func newTestService(t *testing.T) *identity.Service {
 	t.Helper()
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
