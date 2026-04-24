@@ -225,3 +225,52 @@ func TestHandler_Generate_RouteExists(t *testing.T) {
 	require.NotEqual(t, http.StatusMethodNotAllowed, w.Code)
 	require.NotEqual(t, http.StatusNotFound, w.Code)
 }
+
+func TestHandler_HandleWebhook_RejectsWhenSecretNotConfigured(t *testing.T) {
+	t.Helper()
+	t.Setenv("WEBHOOK_SECRET", "")
+
+	ts := newTestService()
+	h := payment.NewHandler(ts.Service)
+
+	body := `{"event":"PAYMENT_RECEIVED","chargeId":"ch_123","amount":100.0,"paymentDate":"2024-01-01T00:00:00Z"}`
+	req := httptest.NewRequest(http.MethodPost, "/webhook/asaas", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Webhook-Secret", "any-value")
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+}
+
+func TestHandler_HandleWebhook_AcceptsWithCorrectSecret(t *testing.T) {
+	t.Helper()
+	t.Setenv("WEBHOOK_SECRET", "secret123")
+
+	ts := newTestService()
+	h := payment.NewHandler(ts.Service)
+	ownerID := uuid.New()
+
+	// Set up a payment with a chargeID so webhook processing succeeds
+	chargeID := "ch_123"
+	leaseID := uuid.New()
+	p, _ := ts.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
+	})
+	ts.mockRepo.payments[p.ID].ChargeID = &chargeID
+
+	body := `{"event":"PAYMENT_RECEIVED","chargeId":"ch_123"}`
+	req := httptest.NewRequest(http.MethodPost, "/webhook/asaas", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Webhook-Secret", "secret123")
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+}

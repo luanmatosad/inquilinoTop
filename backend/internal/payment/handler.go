@@ -330,7 +330,11 @@ func (h *Handler) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	expectedSecret := os.Getenv("WEBHOOK_SECRET")
-	if expectedSecret != "" && webhookSecret != expectedSecret {
+	if expectedSecret == "" {
+		httputil.Err(w, http.StatusUnauthorized, "WEBHOOK_NOT_CONFIGURED", "webhook secret not configured")
+		return
+	}
+	if webhookSecret != expectedSecret {
 		httputil.Err(w, http.StatusUnauthorized, "INVALID_SECRET", "invalid webhook secret")
 		return
 	}
