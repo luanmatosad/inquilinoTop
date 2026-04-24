@@ -1,7 +1,6 @@
 package audit
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -38,29 +37,23 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input ListInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
-		return
-	}
-
 	var from, to *time.Time
-	if input.From != nil {
-		t, err := time.Parse(time.RFC3339, *input.From)
+	if fromStr := r.URL.Query().Get("from"); fromStr != "" {
+		t, err := time.Parse(time.RFC3339, fromStr)
 		if err == nil {
 			from = &t
 		}
 	}
-	if input.To != nil {
-		t, err := time.Parse(time.RFC3339, *input.To)
+	if toStr := r.URL.Query().Get("to"); toStr != "" {
+		t, err := time.Parse(time.RFC3339, toStr)
 		if err == nil {
 			to = &t
 		}
 	}
 
 	var eventType *string
-	if input.EventType != nil && *input.EventType != "" {
-		eventType = input.EventType
+	if et := r.URL.Query().Get("event_type"); et != "" {
+		eventType = &et
 	}
 
 	logs, err := h.svc.ListLogs(r.Context(), ownerID, from, to, eventType)
