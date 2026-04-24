@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -85,7 +86,7 @@ type PayoutResponse struct {
 var ErrUnknownProvider = fmt.Errorf("unknown provider type")
 
 func NewProvider(providerType string, config map[string]string) (PaymentProvider, error) {
-	switch providerType {
+	switch strings.ToLower(providerType) {
 	case "asaas":
 		return NewAsaasProvider(config)
 	case "sicoob":

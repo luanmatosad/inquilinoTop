@@ -1,0 +1,2 @@
+# TDD exemptions for Task 2 - provider type normalization
+backend/internal/payment/provider/provider\.go
