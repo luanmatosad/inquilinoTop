@@ -4,8 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type IndexScheduler struct {

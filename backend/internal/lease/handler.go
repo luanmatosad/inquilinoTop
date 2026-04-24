@@ -328,6 +328,10 @@ func (h *Handler) autoAdjust(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
 		return
 	}
+	if err := validator.Validate(in); err != nil {
+		httputil.ValidationErr(w, err)
+		return
+	}
 	out, err := h.svc.AdjustByAutoIndex(r.Context(), id, ownerID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "AUTO_ADJUST_FAILED", err.Error())

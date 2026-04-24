@@ -154,6 +154,18 @@ func main() {
 				next.ServeHTTP(w, req)
 			})
 		})
+
+		identityHandler.Register(r2)
+		propertyHandler.Register(r2, authMW)
+		tenantHandler.Register(r2, authMW)
+		leaseHandler.Register(r2, authMW)
+		paymentHandler.Register(r2, authMW)
+		expenseHandler.Register(r2, authMW)
+		fiscalHandler.Register(r2, authMW)
+		supportHandler.Register(r2, authMW)
+		auditHandler.Register(r2, authMW)
+		documentHandler.Register(r2, authMW)
+		notificationHandler.Register(r2, authMW)
 	})
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
@@ -165,17 +177,30 @@ func main() {
 		httputil.OK(w, map[string]string{"status": "ok"})
 	})
 
-	identityHandler.Register(r)
-	propertyHandler.Register(r, authMW)
-	tenantHandler.Register(r, authMW)
-	leaseHandler.Register(r, authMW)
-	paymentHandler.Register(r, authMW)
-	expenseHandler.Register(r, authMW)
-	fiscalHandler.Register(r, authMW)
-	supportHandler.Register(r, authMW)
-	auditHandler.Register(r, authMW)
-	documentHandler.Register(r, authMW)
-	notificationHandler.Register(r, authMW)
+	r.Route("/api/v1", func(r1 chi.Router) {
+		r1.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				w.Header().Set("Deprecation", "true")
+				w.Header().Set("Warning", "299 - \"This API v1 is deprecated and will be removed. Please migrate to /api/v2.\"")
+				next.ServeHTTP(w, req)
+			})
+		})
+
+		identityHandler.Register(r1)
+		propertyHandler.Register(r1, authMW)
+		tenantHandler.Register(r1, authMW)
+		leaseHandler.Register(r1, authMW)
+		paymentHandler.Register(r1, authMW)
+		expenseHandler.Register(r1, authMW)
+		fiscalHandler.Register(r1, authMW)
+		supportHandler.Register(r1, authMW)
+		auditHandler.Register(r1, authMW)
+		documentHandler.Register(r1, authMW)
+		notificationHandler.Register(r1, authMW)
+	})
+
+	idxScheduler := lease.NewIndexScheduler(leaseSvc)
+	idxScheduler.Start(context.Background(), 24*time.Hour)
 
 	port := envOr("PORT", "8080")
 	slog.Info("server starting", "port", port)
@@ -194,6 +219,7 @@ func main() {
 		<-sigCh
 
 		slog.Info("shutting down server...")
+		idxScheduler.Stop()
 		
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
