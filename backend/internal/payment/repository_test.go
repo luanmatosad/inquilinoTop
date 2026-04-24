@@ -97,15 +97,53 @@ func TestPaymentRepository_Update_MarkAsPaid(t *testing.T) {
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
 	})
 
-	now := time.Now()
-	updated, err := repo.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
-		PaidDate:    &now,
-		Status:      "PAID",
+	paidDate := time.Now()
+	p, err := repo.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
+		Status:    "PAID",
+		PaidDate:  &paidDate,
 		GrossAmount: 1000,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "PAID", updated.Status)
-	assert.NotNil(t, updated.PaidDate)
+	assert.Equal(t, "PAID", p.Status)
+	assert.NotNil(t, p.PaidDate)
+}
+
+func TestFinancialRepository_DeleteFinancialConfig_SoftDelete(t *testing.T) {
+	database := testDB(t)
+	repo := payment.NewRepository(database)
+
+	ownerID := uuid.New()
+	_, _ = database.Pool.Exec(context.Background(),
+		`INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)`,
+		ownerID, "owner@test.com", "hash",
+	)
+
+	cfg, err := repo.CreateFinancialConfig(context.Background(), ownerID, payment.CreateFinancialConfigInput{
+		Provider: "MOCK",
+		Config:   map[string]string{},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	paidDate := time.Now()
+	err = repo.DeleteFinancialConfig(context.Background(), cfg.ID, ownerID)
+	require.NoError(t, err)
+
+	var count int
+	err = database.Pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM financial_config WHERE id=$1`, cfg.ID,
+	).Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count, "soft-delete não deve remover o registro do banco")
+
+	var isActive bool
+	err = database.Pool.QueryRow(context.Background(),
+		`SELECT is_active FROM financial_config WHERE id=$1`, cfg.ID,
+	).Scan(&isActive)
+	require.NoError(t, err)
+	assert.False(t, isActive, "is_active deve ser false após soft-delete")
+
+	_ = paidDate
 }
 
 func TestRepository_CreateIfAbsent_Idempotente(t *testing.T) {

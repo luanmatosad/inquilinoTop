@@ -122,6 +122,14 @@ func (m *mockPaymentRepo) GetActiveFinancialConfig(_ context.Context, ownerID uu
 	return nil, errors.New("not configured")
 }
 
+func (m *mockPaymentRepo) CreateFinancialConfig(_ context.Context, ownerID uuid.UUID, in payment.CreateFinancialConfigInput) (*payment.FinancialConfig, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockPaymentRepo) DeleteFinancialConfig(_ context.Context, id, ownerID uuid.UUID) error {
+	return errors.New("not implemented")
+}
+
 func (m *mockPaymentRepo) GetByChargeID(_ context.Context, chargeID string) (*payment.Payment, error) {
 	for _, p := range m.payments {
 		if p.ChargeID != nil && *p.ChargeID == chargeID {

@@ -111,7 +111,7 @@ func (p *pgRepository) UpdateFinancialConfig(ctx context.Context, id, ownerID uu
 
 func (p *pgRepository) DeleteFinancialConfig(ctx context.Context, id, ownerID uuid.UUID) error {
 	result, err := p.db.Pool.Exec(ctx,
-		`DELETE FROM financial_config WHERE id = $1 AND owner_id = $2`,
+		`UPDATE financial_config SET is_active=false, updated_at=NOW() WHERE id=$1 AND owner_id=$2 AND is_active=true`,
 		id, ownerID,
 	)
 	if err != nil {

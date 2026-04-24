@@ -82,6 +82,8 @@ type Repository interface {
 	UpdateChargeInfo(ctx context.Context, id, ownerID uuid.UUID, in UpdateChargeInfoInput) error
 	UpdatePayoutInfo(ctx context.Context, id, ownerID uuid.UUID, payoutID, status string) error
 	GetActiveFinancialConfig(ctx context.Context, ownerID uuid.UUID) (*FinancialConfig, error)
+	CreateFinancialConfig(ctx context.Context, ownerID uuid.UUID, in CreateFinancialConfigInput) (*FinancialConfig, error)
+	DeleteFinancialConfig(ctx context.Context, id, ownerID uuid.UUID) error
 }
 
 type OwnerReader interface {
