@@ -9,7 +9,7 @@
 
 **Módulo:** adjustments em `lease`
 
-- [ ] Criar tabela `index_values`
+- [x] Criar tabela `index_values`
   ```sql
   CREATE TABLE index_values (
     id SERIAL PRIMARY KEY,
@@ -21,25 +21,25 @@
   );
   ```
 
-- [ ] Criar endpoint para buscar índices
+- [x] Criar endpoint para buscar índices
   - `GET /api/v1/indices/{type}/history`
   - Buscar dados do BCB/API (futuro) ou manual
 
-- [ ] Implementar cálculo
+- [x] Implementar cálculo
   - Novo valor = valor atual × (1 + índice acumulado)
 
 - [ ] Criar scheduler
   - 30 dias antes do contrato vencer → notificar
   - Owner confirma → aplicar nuovo valor
 
-- [ ] Criar endpoint confirm
+- [x] Criar endpoint confirm
   - `POST /api/v1/leases/{id}/adjust` - confirmar ajuste
 
 ### 4.2 Graceful Shutdown
 
 **Módulo:** adjustments em `main.go`
 
-- [ ] Adicionar signal handling
+- [x] Adicionar signal handling
   ```go
   func main() {
     // ... existing code ...
@@ -66,24 +66,24 @@
   }
   ```
 
-- [ ] Context timeout para shutdown
+- [x] Context timeout para shutdown
   - 30 segundos para conexões terminarem
 
-- [ ] Logging de shutdown
+- [x] Logging de shutdown
   - Logar conexões ativas antes de fechar
 
 ### 4.3 API v2
 
 **Módulo:** versionamento
 
-- [ ] Criar grupo de rotas v2
+- [x] Criar grupo de rotas v2
   ```go
   r.Route("/api/v2", func(r chi.Router) {
     // same handlers but v2 versions
   })
   ```
 
-- [ ] Adicionar version header
+- [x] Adicionar version header
   ```go
   w.Header().Set("API-Version", "2.0")
   ```
@@ -91,7 +91,7 @@
 - [ ] Deprecar v1 com warnings
   - Adicionar header `Deprecation: /api/v1`
 
-- [ ] Documentar breaking changes
+- [x] Documentar breaking changes
   - Criar CHANGELOG.md
 
 ## Arquivos a Modificar
