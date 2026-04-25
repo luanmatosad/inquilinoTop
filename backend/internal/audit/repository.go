@@ -3,6 +3,7 @@ package audit
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -57,17 +58,17 @@ func (r *pgRepository) List(ctx context.Context, ownerID uuid.UUID, from, to *ti
 	argIdx := 2
 
 	if from != nil {
-		query += ` AND created_at >= $` + string(rune('0'+argIdx))
+		query += fmt.Sprintf(` AND created_at >= $%d`, argIdx)
 		args = append(args, *from)
 		argIdx++
 	}
 	if to != nil {
-		query += ` AND created_at <= $` + string(rune('0'+argIdx))
+		query += fmt.Sprintf(` AND created_at <= $%d`, argIdx)
 		args = append(args, *to)
 		argIdx++
 	}
 	if eventType != nil {
-		query += ` AND event_type = $` + string(rune('0'+argIdx))
+		query += fmt.Sprintf(` AND event_type = $%d`, argIdx)
 		args = append(args, *eventType)
 		argIdx++
 	}
