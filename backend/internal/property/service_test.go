@@ -7,19 +7,23 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/property"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type mockRepo struct {
-	properties map[uuid.UUID]*property.Property
-	units      map[uuid.UUID]*property.Unit
+	properties     map[uuid.UUID]*property.Property
+	units          map[uuid.UUID]*property.Unit
+	unitOwners     map[uuid.UUID]uuid.UUID
+	failCreateUnit bool
 }
 
 func newMockRepo() *mockRepo {
 	return &mockRepo{
 		properties: make(map[uuid.UUID]*property.Property),
 		units:      make(map[uuid.UUID]*property.Unit),
+		unitOwners: make(map[uuid.UUID]uuid.UUID),
 	}
 }
 
@@ -66,15 +70,21 @@ func (m *mockRepo) Delete(_ context.Context, id, ownerID uuid.UUID) error {
 }
 
 func (m *mockRepo) CreateUnit(_ context.Context, propertyID uuid.UUID, in property.CreateUnitInput) (*property.Unit, error) {
+	if m.failCreateUnit {
+		return nil, errors.New("db error")
+	}
 	u := &property.Unit{ID: uuid.New(), PropertyID: propertyID, Label: in.Label, IsActive: true}
 	m.units[u.ID] = u
 	return u, nil
 }
 
-func (m *mockRepo) GetUnit(_ context.Context, id uuid.UUID) (*property.Unit, error) {
+func (m *mockRepo) GetUnit(_ context.Context, id, ownerID uuid.UUID) (*property.Unit, error) {
 	u, ok := m.units[id]
-	if !ok {
-		return nil, errors.New("not found")
+	if !ok || !u.IsActive {
+		return nil, apierr.ErrNotFound
+	}
+	if propOwner, exists := m.unitOwners[id]; exists && propOwner != ownerID {
+		return nil, apierr.ErrNotFound
 	}
 	return u, nil
 }
@@ -89,21 +99,21 @@ func (m *mockRepo) ListUnits(_ context.Context, propertyID uuid.UUID) ([]propert
 	return list, nil
 }
 
-func (m *mockRepo) UpdateUnit(_ context.Context, id uuid.UUID, in property.CreateUnitInput) (*property.Unit, error) {
-	u, ok := m.units[id]
-	if !ok {
-		return nil, errors.New("not found")
+func (m *mockRepo) UpdateUnit(_ context.Context, id, ownerID uuid.UUID, in property.CreateUnitInput) (*property.Unit, error) {
+	u, err := m.GetUnit(context.Background(), id, ownerID)
+	if err != nil {
+		return nil, err
 	}
 	u.Label = in.Label
 	return u, nil
 }
 
-func (m *mockRepo) DeleteUnit(_ context.Context, id uuid.UUID) error {
-	u, ok := m.units[id]
-	if !ok {
-		return errors.New("not found")
+func (m *mockRepo) DeleteUnit(_ context.Context, id, ownerID uuid.UUID) error {
+	_, err := m.GetUnit(context.Background(), id, ownerID)
+	if err != nil {
+		return err
 	}
-	u.IsActive = false
+	delete(m.units, id)
 	return nil
 }
 
@@ -211,14 +221,14 @@ func TestService_GetUnit_Encontrado(t *testing.T) {
 	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	u, _ := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Apto 201"})
 
-	found, err := svc.GetUnit(context.Background(), u.ID)
+	found, err := svc.GetUnit(context.Background(), u.ID, ownerID)
 	require.NoError(t, err)
 	assert.Equal(t, u.ID, found.ID)
 }
 
 func TestService_GetUnit_NãoEncontrado(t *testing.T) {
 	svc := property.NewService(newMockRepo())
-	_, err := svc.GetUnit(context.Background(), uuid.New())
+	_, err := svc.GetUnit(context.Background(), uuid.New(), uuid.New())
 	assert.Error(t, err)
 }
 
@@ -244,7 +254,7 @@ func TestService_UpdateUnit(t *testing.T) {
 	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	u, _ := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Original"})
 
-	updated, err := svc.UpdateUnit(context.Background(), u.ID, property.CreateUnitInput{Label: "Atualizado"})
+	updated, err := svc.UpdateUnit(context.Background(), u.ID, ownerID, property.CreateUnitInput{Label: "Atualizado"})
 	require.NoError(t, err)
 	assert.Equal(t, "Atualizado", updated.Label)
 }
@@ -257,7 +267,7 @@ func TestService_DeleteUnit(t *testing.T) {
 	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	u, _ := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Para deletar"})
 
-	err := svc.DeleteUnit(context.Background(), u.ID)
+	err := svc.DeleteUnit(context.Background(), u.ID, ownerID)
 	require.NoError(t, err)
 
 	list, _ := svc.ListUnits(context.Background(), p.ID)
@@ -307,4 +317,17 @@ func TestService_ListPropertiesWithUnits_Vazio(t *testing.T) {
 	result, err := svc.ListPropertiesWithUnits(context.Background(), uuid.New())
 	require.NoError(t, err)
 	assert.Nil(t, result)
+}
+
+func TestService_CreateProperty_SingleUnitCreationError_ReturnsError(t *testing.T) {
+	repo := newMockRepo()
+	repo.failCreateUnit = true
+	svc := property.NewService(repo)
+
+	_, err := svc.CreateProperty(context.Background(), uuid.New(), property.CreatePropertyInput{
+		Type: "SINGLE",
+		Name: "Casa Teste",
+	})
+
+	assert.Error(t, err, "deve retornar erro quando criação da unit automática falha")
 }

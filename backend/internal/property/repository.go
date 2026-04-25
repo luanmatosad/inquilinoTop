@@ -107,12 +107,14 @@ func (r *pgRepository) CreateUnit(ctx context.Context, propertyID uuid.UUID, in 
 	return &u, nil
 }
 
-func (r *pgRepository) GetUnit(ctx context.Context, id uuid.UUID) (*Unit, error) {
+func (r *pgRepository) GetUnit(ctx context.Context, id, ownerID uuid.UUID) (*Unit, error) {
 	var u Unit
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT id, property_id, label, floor, notes, is_active, created_at, updated_at
-		 FROM units WHERE id=$1 AND is_active=true`,
-		id,
+		`SELECT u.id, u.property_id, u.label, u.floor, u.notes, u.is_active, u.created_at, u.updated_at
+		 FROM units u
+		 JOIN properties p ON p.id = u.property_id
+		 WHERE u.id=$1 AND p.owner_id=$2 AND u.is_active=true AND p.is_active=true`,
+		id, ownerID,
 	).Scan(&u.ID, &u.PropertyID, &u.Label, &u.Floor, &u.Notes, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("property.repo: get unit: %w", err)
@@ -144,13 +146,14 @@ func (r *pgRepository) ListUnits(ctx context.Context, propertyID uuid.UUID) ([]U
 	return list, nil
 }
 
-func (r *pgRepository) UpdateUnit(ctx context.Context, id uuid.UUID, in CreateUnitInput) (*Unit, error) {
+func (r *pgRepository) UpdateUnit(ctx context.Context, id, ownerID uuid.UUID, in CreateUnitInput) (*Unit, error) {
 	var u Unit
 	err := r.db.Pool.QueryRow(ctx,
 		`UPDATE units SET label=$1, floor=$2, notes=$3, updated_at=NOW()
 		 WHERE id=$4 AND is_active=true
+		   AND property_id IN (SELECT id FROM properties WHERE owner_id=$5 AND is_active=true)
 		 RETURNING id, property_id, label, floor, notes, is_active, created_at, updated_at`,
-		in.Label, in.Floor, in.Notes, id,
+		in.Label, in.Floor, in.Notes, id, ownerID,
 	).Scan(&u.ID, &u.PropertyID, &u.Label, &u.Floor, &u.Notes, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("property.repo: update unit: %w", err)
@@ -158,9 +161,12 @@ func (r *pgRepository) UpdateUnit(ctx context.Context, id uuid.UUID, in CreateUn
 	return &u, nil
 }
 
-func (r *pgRepository) DeleteUnit(ctx context.Context, id uuid.UUID) error {
+func (r *pgRepository) DeleteUnit(ctx context.Context, id, ownerID uuid.UUID) error {
 	tag, err := r.db.Pool.Exec(ctx,
-		`UPDATE units SET is_active=false, updated_at=NOW() WHERE id=$1 AND is_active=true`, id,
+		`UPDATE units SET is_active=false, updated_at=NOW()
+		 WHERE id=$1 AND is_active=true
+		   AND property_id IN (SELECT id FROM properties WHERE owner_id=$2 AND is_active=true)`,
+		id, ownerID,
 	)
 	if err != nil {
 		return fmt.Errorf("property.repo: delete unit: %w", err)

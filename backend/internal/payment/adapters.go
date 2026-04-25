@@ -13,7 +13,7 @@ type UnitReaderAdapter struct {
 }
 
 func (a *UnitReaderAdapter) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*UnitSummary, error) {
-	u, err := a.Repo.GetUnit(ctx, id)
+	u, err := a.Repo.GetUnit(ctx, id, ownerID)
 	if err != nil {
 		return nil, err
 	}

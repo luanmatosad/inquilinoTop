@@ -28,7 +28,9 @@ func (s *Service) CreateProperty(ctx context.Context, ownerID uuid.UUID, in Crea
 	}
 	if in.Type == "SINGLE" {
 		notes := "Unidade criada automaticamente"
-		s.repo.CreateUnit(ctx, p.ID, CreateUnitInput{Label: "Unidade 01", Notes: &notes})
+		if _, err := s.repo.CreateUnit(ctx, p.ID, CreateUnitInput{Label: "Unidade 01", Notes: &notes}); err != nil {
+			return nil, fmt.Errorf("property.svc: criar unit automática: %w", err)
+		}
 	}
 	return p, nil
 }
@@ -90,18 +92,18 @@ func (s *Service) CreateUnit(ctx context.Context, propertyID uuid.UUID, ownerID 
 	return s.repo.CreateUnit(ctx, propertyID, in)
 }
 
-func (s *Service) GetUnit(ctx context.Context, id uuid.UUID) (*Unit, error) {
-	return s.repo.GetUnit(ctx, id)
+func (s *Service) GetUnit(ctx context.Context, id, ownerID uuid.UUID) (*Unit, error) {
+	return s.repo.GetUnit(ctx, id, ownerID)
 }
 
 func (s *Service) ListUnits(ctx context.Context, propertyID uuid.UUID) ([]Unit, error) {
 	return s.repo.ListUnits(ctx, propertyID)
 }
 
-func (s *Service) UpdateUnit(ctx context.Context, id uuid.UUID, in CreateUnitInput) (*Unit, error) {
-	return s.repo.UpdateUnit(ctx, id, in)
+func (s *Service) UpdateUnit(ctx context.Context, id, ownerID uuid.UUID, in CreateUnitInput) (*Unit, error) {
+	return s.repo.UpdateUnit(ctx, id, ownerID, in)
 }
 
-func (s *Service) DeleteUnit(ctx context.Context, id uuid.UUID) error {
-	return s.repo.DeleteUnit(ctx, id)
+func (s *Service) DeleteUnit(ctx context.Context, id, ownerID uuid.UUID) error {
+	return s.repo.DeleteUnit(ctx, id, ownerID)
 }

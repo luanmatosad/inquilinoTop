@@ -236,14 +236,19 @@ func (h *Handler) createUnit(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /units/{id} [get]
 func (h *Handler) getUnit(w http.ResponseWriter, r *http.Request) {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	u, err := h.svc.GetUnit(r.Context(), id)
+	u, err := h.svc.GetUnit(r.Context(), id, ownerID)
 	if err != nil {
-		httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "unidade não encontrada")
+		if errors.Is(err, apierr.ErrNotFound) {
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "unidade não encontrada")
+			return
+		}
+		httputil.Err(w, http.StatusInternalServerError, "GET_FAILED", err.Error())
 		return
 	}
 	httputil.OK(w, u)
@@ -259,6 +264,7 @@ func (h *Handler) getUnit(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /units/{id} [put]
 func (h *Handler) updateUnit(w http.ResponseWriter, r *http.Request) {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
@@ -273,9 +279,13 @@ func (h *Handler) updateUnit(w http.ResponseWriter, r *http.Request) {
 		httputil.ValidationErr(w, err)
 		return
 	}
-	u, err := h.svc.UpdateUnit(r.Context(), id, in)
+	u, err := h.svc.UpdateUnit(r.Context(), id, ownerID, in)
 	if err != nil {
-		httputil.Err(w, http.StatusBadRequest, "UPDATE_UNIT_FAILED", err.Error())
+		if errors.Is(err, apierr.ErrNotFound) {
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "unidade não encontrada")
+			return
+		}
+		httputil.Err(w, http.StatusInternalServerError, "UPDATE_UNIT_FAILED", err.Error())
 		return
 	}
 	httputil.OK(w, u)
@@ -289,12 +299,13 @@ func (h *Handler) updateUnit(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /units/{id} [delete]
 func (h *Handler) deleteUnit(w http.ResponseWriter, r *http.Request) {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	if err := h.svc.DeleteUnit(r.Context(), id); err != nil {
+	if err := h.svc.DeleteUnit(r.Context(), id, ownerID); err != nil {
 		if errors.Is(err, apierr.ErrNotFound) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "unidade não encontrada")
 			return
