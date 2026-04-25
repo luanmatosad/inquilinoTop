@@ -519,7 +519,7 @@ func TestService_GenerateMonth_LeaseEnded(t *testing.T) {
 
 	_, err := svc.GenerateMonth(context.Background(), leaseID, ownerID, "2026-04")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "not active")
+	assert.ErrorIs(t, err, payment.ErrLeaseNotActive)
 }
 
 func TestService_GenerateMonth_MonthForaRange(t *testing.T) {
@@ -538,7 +538,7 @@ func TestService_GenerateMonth_IPTUMissing(t *testing.T) {
 
 	_, err := svc.GenerateMonth(context.Background(), leaseID, ownerID, "2026-04")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "iptu")
+	assert.ErrorIs(t, err, payment.ErrIPTUMissing)
 }
 
 func TestService_GenerateMonth_DiaInexistenteNoMes(t *testing.T) {

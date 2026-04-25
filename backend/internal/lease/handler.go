@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -243,10 +242,10 @@ func (h *Handler) readjust(w http.ResponseWriter, r *http.Request) {
 	out, err := h.svc.Readjust(r.Context(), id, ownerID, in)
 	if err != nil {
 		switch {
-		case strings.Contains(err.Error(), "percentage"):
-			httputil.Err(w, http.StatusBadRequest, "INVALID_PERCENTAGE", err.Error())
-		case strings.Contains(err.Error(), "not active"):
-			httputil.Err(w, http.StatusConflict, "LEASE_NOT_ACTIVE", err.Error())
+		case errors.Is(err, ErrInvalidPercentage):
+			httputil.Err(w, http.StatusBadRequest, "INVALID_PERCENTAGE", "percentual inválido (esperado entre 0 e 1)")
+		case errors.Is(err, ErrLeaseNotActive):
+			httputil.Err(w, http.StatusConflict, "LEASE_NOT_ACTIVE", "contrato não ativo")
 		case errors.Is(err, apierr.ErrNotFound):
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "contrato não encontrado")
 		default:

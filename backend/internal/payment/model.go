@@ -2,11 +2,18 @@ package payment
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/lease"
 	"github.com/inquilinotop/api/internal/tenant"
+)
+
+var (
+	ErrInvalidMonth    = errors.New("mês inválido")
+	ErrLeaseNotActive  = errors.New("contrato não ativo")
+	ErrIPTUMissing     = errors.New("IPTU não configurado")
 )
 
 type LeaseReader interface {

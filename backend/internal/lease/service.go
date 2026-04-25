@@ -77,14 +77,14 @@ type ReadjustOutput struct {
 
 func (s *Service) Readjust(ctx context.Context, id, ownerID uuid.UUID, in ReadjustInput) (*ReadjustOutput, error) {
 	if in.Percentage <= 0 || in.Percentage > 1 {
-		return nil, fmt.Errorf("lease.svc: percentage deve estar em (0, 1]")
+		return nil, fmt.Errorf("lease.svc: %w", ErrInvalidPercentage)
 	}
 	l, err := s.repo.GetByID(ctx, id, ownerID)
 	if err != nil {
 		return nil, fmt.Errorf("lease.svc: %w", err)
 	}
 	if l.Status != "ACTIVE" {
-		return nil, fmt.Errorf("lease.svc: lease not active")
+		return nil, fmt.Errorf("lease.svc: %w", ErrLeaseNotActive)
 	}
 	oldAmount := l.RentAmount
 	newAmount := round2(oldAmount * (1 + in.Percentage))
@@ -128,7 +128,7 @@ func (s *Service) AdjustByAutoIndex(ctx context.Context, id, ownerID uuid.UUID, 
 	}
 
 	if l.Status != "ACTIVE" {
-		return nil, fmt.Errorf("lease.svc: lease not active")
+		return nil, fmt.Errorf("lease.svc: %w", ErrLeaseNotActive)
 	}
 
 	readjustIn := ReadjustInput{

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -180,12 +179,12 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 	ps, err := h.svc.GenerateMonth(r.Context(), leaseID, ownerID, month)
 	if err != nil {
 		switch {
-		case strings.Contains(err.Error(), "month"):
-			httputil.Err(w, http.StatusBadRequest, "INVALID_MONTH", err.Error())
-		case strings.Contains(err.Error(), "not active"):
-			httputil.Err(w, http.StatusConflict, "LEASE_NOT_ACTIVE", err.Error())
-		case strings.Contains(err.Error(), "iptu"):
-			httputil.Err(w, http.StatusConflict, "IPTU_MISSING", err.Error())
+		case errors.Is(err, ErrInvalidMonth):
+			httputil.Err(w, http.StatusBadRequest, "INVALID_MONTH", "mês inválido (esperado YYYY-MM)")
+		case errors.Is(err, ErrLeaseNotActive):
+			httputil.Err(w, http.StatusConflict, "LEASE_NOT_ACTIVE", "contrato não ativo")
+		case errors.Is(err, ErrIPTUMissing):
+			httputil.Err(w, http.StatusConflict, "IPTU_MISSING", "IPTU não configurado")
 		case errors.Is(err, apierr.ErrNotFound):
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "contrato não encontrado")
 		default:
@@ -217,7 +216,7 @@ func (h *Handler) Receipt(w http.ResponseWriter, r *http.Request) {
 			httputil.Err(w, http.StatusConflict, "PAYMENT_NOT_PAID", "payment não está PAID")
 			return
 		}
-		if strings.Contains(err.Error(), "not found") || errors.Is(err, apierr.ErrNotFound) {
+		if errors.Is(err, apierr.ErrNotFound) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "dados não encontrados")
 			return
 		}

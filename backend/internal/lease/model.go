@@ -2,9 +2,15 @@ package lease
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+)
+
+var (
+	ErrInvalidPercentage = errors.New("percentual inválido")
+	ErrLeaseNotActive    = errors.New("contrato não ativo")
 )
 
 type Lease struct {

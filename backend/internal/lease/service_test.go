@@ -211,7 +211,7 @@ func TestService_Readjust_PercentagemInválida(t *testing.T) {
 		Percentage: 0, AppliedAt: time.Now(),
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "percentage")
+	assert.ErrorIs(t, err, lease.ErrInvalidPercentage)
 }
 
 func TestService_Readjust_PercentagemMaiorQueUm(t *testing.T) {
@@ -226,7 +226,7 @@ func TestService_Readjust_PercentagemMaiorQueUm(t *testing.T) {
 		Percentage: 1.5, AppliedAt: time.Now(),
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "percentage")
+	assert.ErrorIs(t, err, lease.ErrInvalidPercentage)
 }
 
 func TestService_Readjust_LeaseNãoEncontrado(t *testing.T) {
@@ -249,7 +249,7 @@ func TestService_Readjust_LeaseInativo(t *testing.T) {
 		Percentage: 0.1, AppliedAt: time.Now(),
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "active")
+	assert.ErrorIs(t, err, lease.ErrLeaseNotActive)
 }
 
 func TestService_Readjust_Sucesso(t *testing.T) {

@@ -149,7 +149,7 @@ func (s *Service) IsNotPaid(err error) bool {
 func (s *Service) GenerateMonth(ctx context.Context, leaseID, ownerID uuid.UUID, month string) ([]Payment, error) {
 	monthStart, err := time.Parse("2006-01", month)
 	if err != nil {
-		return nil, fmt.Errorf("payment.svc: month inválido (esperado YYYY-MM)")
+		return nil, fmt.Errorf("payment.svc: %w", ErrInvalidMonth)
 	}
 
 	l, err := s.leaseReader.GetByID(ctx, leaseID, ownerID)
@@ -157,7 +157,7 @@ func (s *Service) GenerateMonth(ctx context.Context, leaseID, ownerID uuid.UUID,
 		return nil, fmt.Errorf("payment.svc: %w", err)
 	}
 	if l.Status != "ACTIVE" {
-		return nil, fmt.Errorf("payment.svc: lease not active")
+		return nil, fmt.Errorf("payment.svc: %w", ErrLeaseNotActive)
 	}
 
 	leaseStart := time.Date(l.StartDate.Year(), l.StartDate.Month(), 1, 0, 0, 0, 0, time.UTC)
@@ -187,7 +187,7 @@ func (s *Service) GenerateMonth(ctx context.Context, leaseID, ownerID uuid.UUID,
 
 	if l.IPTUReimbursable {
 		if l.AnnualIPTUAmount == nil {
-			return nil, fmt.Errorf("payment.svc: iptu_reimbursable=true mas annual_iptu_amount ausente")
+			return nil, fmt.Errorf("payment.svc: %w", ErrIPTUMissing)
 		}
 		parcelaValor := round2(*l.AnnualIPTUAmount / 12)
 		year := l.IPTUYear
