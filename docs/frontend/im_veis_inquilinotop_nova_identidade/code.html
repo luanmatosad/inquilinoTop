@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>InquilinoTop - Imóveis</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#e2e2e3",
+                        "secondary-fixed": "#ffdcc3",
+                        "on-background": "#1b1b1b",
+                        "on-tertiary-fixed-variant": "#454748",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed-variant": "#004396",
+                        "secondary-container": "#fd8b00",
+                        "on-primary": "#ffffff",
+                        "surface-bright": "#f9f9f9",
+                        "primary": "#0057be",
+                        "surface-container-highest": "#e2e2e2",
+                        "tertiary-container": "#737475",
+                        "outline": "#727786",
+                        "on-secondary-container": "#603100",
+                        "surface-container-lowest": "#ffffff",
+                        "background": "#f9f9f9",
+                        "on-primary-fixed": "#001a42",
+                        "on-tertiary-fixed": "#1a1c1d",
+                        "primary-container": "#006fee",
+                        "surface-container": "#eeeeee",
+                        "inverse-primary": "#aec6ff",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#d8e2ff",
+                        "on-secondary-fixed-variant": "#6e3900",
+                        "surface-dim": "#dadada",
+                        "tertiary": "#5a5c5d",
+                        "on-surface-variant": "#414754",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#c6c6c7",
+                        "surface-variant": "#e2e2e2",
+                        "on-surface": "#1b1b1b",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-container-low": "#f3f3f3",
+                        "on-secondary-fixed": "#2f1500",
+                        "secondary-fixed-dim": "#ffb77d",
+                        "surface-tint": "#005ac3",
+                        "on-primary-container": "#fefbff",
+                        "outline-variant": "#c1c6d7",
+                        "inverse-surface": "#303030",
+                        "secondary": "#904d00",
+                        "primary-fixed-dim": "#aec6ff",
+                        "on-tertiary-container": "#fcfcfd",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#e8e8e8",
+                        "surface": "#f9f9f9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "unit": "4px",
+                        "2xl": "48px",
+                        "lg": "24px",
+                        "margin-desktop": "32px",
+                        "xl": "32px",
+                        "margin-mobile": "16px",
+                        "gutter": "16px",
+                        "xs": "4px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "h2": ["Inter"],
+                        "h1": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "mono-sm": ["ui-monospace"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.01em", "fontWeight": "600" }],
+                        "h2": ["24px", { "lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "h1": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                        "mono-sm": ["13px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md">
+<!-- TopAppBar -->
+<header class="bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md text-blue-600 dark:text-blue-500 font-['Inter'] antialiased docked full-width top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] sticky">
+<div class="flex justify-between items-center h-16 px-6 max-w-7xl mx-auto">
+<!-- Brand -->
+<div class="text-2xl font-black tracking-tight text-blue-600 dark:text-blue-500 flex items-center gap-2">
+<span class="material-symbols-outlined fill text-primary">apartment</span>
+                InquilinoTop
+            </div>
+<!-- Navigation Links (Desktop) -->
+<nav class="hidden md:flex gap-8 h-full">
+<a class="flex items-center h-full text-blue-600 dark:text-blue-400 font-semibold border-b-2 border-blue-600 dark:border-blue-400 pb-1 hover:text-blue-500 dark:hover:text-blue-400 transition-all duration-200 active:scale-95 transition-transform duration-150" href="#">
+                    Imóveis
+                </a>
+<a class="flex items-center h-full text-zinc-600 dark:text-zinc-400 font-medium hover:text-blue-500 dark:hover:text-blue-400 transition-all duration-200 active:scale-95 transition-transform duration-150" href="#">
+                    Inquilinos
+                </a>
+</nav>
+<!-- Trailing Icons -->
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-zinc-600 active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-zinc-600 active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow w-full max-w-7xl mx-auto px-6 py-8 md:py-12">
+<!-- Header & Actions -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+<div>
+<h1 class="font-h1 text-h1 text-on-background">Meus Imóveis</h1>
+<p class="font-body-md text-body-md text-outline mt-1">Gerencie seu portfólio de propriedades.</p>
+</div>
+<button class="bg-secondary-container text-on-secondary-container px-6 py-3 rounded-lg font-label-md text-label-md flex items-center gap-2 hover:opacity-90 transition-opacity shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)]">
+<span class="material-symbols-outlined fill">add</span>
+                Novo Imóvel
+            </button>
+</div>
+<!-- Search & Filters -->
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] mb-8 flex flex-col md:flex-row gap-4">
+<div class="relative flex-grow">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface text-on-background pl-10 pr-4 py-3 rounded-lg border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-colors font-body-md text-body-md" placeholder="Buscar por nome, endereço ou cidade..." type="text"/>
+</div>
+<div class="flex gap-2 shrink-0">
+<button class="px-4 py-3 bg-surface text-on-surface-variant rounded-lg border border-surface-variant font-label-md text-label-md flex items-center gap-2 hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+                    Filtros
+                </button>
+<button class="px-4 py-3 bg-surface text-on-surface-variant rounded-lg border border-surface-variant font-label-md text-label-md flex items-center gap-2 hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined">sort</span>
+                    Ordenar
+                </button>
+</div>
+</div>
+<!-- Property Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] overflow-hidden group hover:shadow-lg transition-shadow cursor-pointer flex flex-col">
+<div class="relative h-48 bg-surface-container overflow-hidden">
+<img alt="Residencial Bella Vista" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Modern apartment building exterior with large glass windows and balconies against a clear blue sky" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2ZCpzHbi2WHIAFcWv3oMbfODFLlrQDj-R54CeubGgXPCDjxo32Ckdo49_P3-y5H1dX6G2sS8S0sLzNmYtr3eZ-ZKDRj3R0vjBUaivaaq9UfQaM8gY_iik9Q7xfFKE5lWiYXIYMKvCqveTeZO4BYJmSK96royQkmhefidgnsv1T_o5ShL6fduri_L6VDydyUcIvgsHvVaJAVEwVQagSuQU3Zi8hRxqdAl8yWKDlL7QoMIvmy3ZHZZo1DAHitKJAvujm7Do23vc4Tg"/>
+<div class="absolute top-3 left-3 bg-primary-container text-on-primary-container px-2.5 py-1 rounded-full font-label-sm text-label-sm shadow-sm backdrop-blur-md">
+                        Residencial
+                    </div>
+</div>
+<div class="p-5 flex flex-col flex-grow">
+<h3 class="font-h2 text-[20px] text-on-background leading-tight mb-1 group-hover:text-primary transition-colors">Residencial Bella Vista</h3>
+<p class="font-body-md text-body-md text-outline mb-4 flex items-start gap-1">
+<span class="material-symbols-outlined text-[18px] mt-0.5">location_on</span>
+<span>Av. Paulista, 1000<br/>São Paulo - SP</span>
+</p>
+<div class="mt-auto pt-4 border-t border-surface-variant flex justify-between items-center">
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">door_front</span>
+<span class="font-label-md text-label-md">12 Unidades</span>
+</div>
+<div class="flex items-center gap-1.5 text-primary">
+<span class="font-label-md text-label-md">Gerenciar</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] overflow-hidden group hover:shadow-lg transition-shadow cursor-pointer flex flex-col">
+<div class="relative h-48 bg-surface-container overflow-hidden">
+<img alt="Casa Pinheiros" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Modern single family home with white exterior, wooden accents, and a small front garden on a sunny day" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbywQ77-a3suuh-kR6Z-KX89o21_VFbh1gKerJq29ht9li2NiqNoP5Zl8YeSfNk_AD0tLmAYdFD-2ZTUAA2FQ73HUZrjKpcS7yR3Y4cYLQ5xvBu_7G4C0SqwN-UD4knJSN5Zzzkbem9ze1wlIUPcO1oNqdAKKYMumSQpf3eguKg4k6L4xS5ASOQzNJvyfMk_caPsmJkfSp7r26qTaWfm98VK5Ccp4UDEiQpO3pJGkTN2FiXDmjwAIlfe_X7kYjNwbq4-RpVa1wZ4Y"/>
+<div class="absolute top-3 left-3 bg-secondary-container text-on-secondary-container px-2.5 py-1 rounded-full font-label-sm text-label-sm shadow-sm backdrop-blur-md">
+                        Único
+                    </div>
+</div>
+<div class="p-5 flex flex-col flex-grow">
+<h3 class="font-h2 text-[20px] text-on-background leading-tight mb-1 group-hover:text-primary transition-colors">Casa Pinheiros</h3>
+<p class="font-body-md text-body-md text-outline mb-4 flex items-start gap-1">
+<span class="material-symbols-outlined text-[18px] mt-0.5">location_on</span>
+<span>Rua dos Pinheiros, 542<br/>São Paulo - SP</span>
+</p>
+<div class="mt-auto pt-4 border-t border-surface-variant flex justify-between items-center">
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">door_front</span>
+<span class="font-label-md text-label-md">1 Unidade</span>
+</div>
+<div class="flex items-center gap-1.5 text-primary">
+<span class="font-label-md text-label-md">Gerenciar</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] overflow-hidden group hover:shadow-lg transition-shadow cursor-pointer flex flex-col">
+<div class="relative h-48 bg-surface-container overflow-hidden">
+<img alt="Edifício Comercial Centro" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Tall modern commercial glass building reflecting city skyline at sunset" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfaZtOM5ANgqT8iMdBFDBoFrNReKpnZUyYbd2LHHgCxCZuLx6tYa-_MgI6srlsOG_xWVYyRZMM00e2F1yEbJb0r_8Go37ryyuYT1E1oDlML1N_CK-7yj6a0bkc5Xzc9-u4PWTaupOb5zioPyBorTNKGgdx55Xy23Gb9Q3C5xxomG_kj-2r-WIV38lviYLa2VU_zkEjw3RUa8xIAcUEYsq2co4x97H7MekgZuZQyKoOePdRDYTOhGIuJzOFWNwj_Ug-iEDydL-jXhQ"/>
+<div class="absolute top-3 left-3 bg-tertiary-container text-on-tertiary-container px-2.5 py-1 rounded-full font-label-sm text-label-sm shadow-sm backdrop-blur-md">
+                        Comercial
+                    </div>
+</div>
+<div class="p-5 flex flex-col flex-grow">
+<h3 class="font-h2 text-[20px] text-on-background leading-tight mb-1 group-hover:text-primary transition-colors">Edifício Comercial Centro</h3>
+<p class="font-body-md text-body-md text-outline mb-4 flex items-start gap-1">
+<span class="material-symbols-outlined text-[18px] mt-0.5">location_on</span>
+<span>Av. Rio Branco, 156<br/>Rio de Janeiro - RJ</span>
+</p>
+<div class="mt-auto pt-4 border-t border-surface-variant flex justify-between items-center">
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">door_front</span>
+<span class="font-label-md text-label-md">24 Salas</span>
+</div>
+<div class="flex items-center gap-1.5 text-primary">
+<span class="font-label-md text-label-md">Gerenciar</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-white dark:bg-zinc-950 text-blue-600 dark:text-blue-500 text-sm font-['Inter'] w-full border-t mt-auto border-zinc-200 dark:border-zinc-800 flat no shadows flex flex-col md:flex-row justify-between items-center py-8 px-6 max-w-7xl mx-auto gap-4">
+<div class="text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+<span class="material-symbols-outlined fill text-primary">apartment</span>
+            InquilinoTop
+        </div>
+<div class="text-zinc-500 dark:text-zinc-400">
+            © 2024 InquilinoTop. Gestão imobiliária moderna.
+        </div>
+<div class="flex gap-4 flex-wrap justify-center">
+<a class="text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 underline decoration-2 underline-offset-4 transition-colors duration-200" href="#">Termos de Uso</a>
+<a class="text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 underline decoration-2 underline-offset-4 transition-colors duration-200" href="#">Privacidade</a>
+<a class="text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 underline decoration-2 underline-offset-4 transition-colors duration-200" href="#">Suporte</a>
+<a class="text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 underline decoration-2 underline-offset-4 transition-colors duration-200" href="#">Contato</a>
+</div>
+</footer>
+</body></html>

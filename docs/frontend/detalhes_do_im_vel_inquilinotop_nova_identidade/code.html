@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>InquilinoTop - Detalhes do Imóvel</title>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#e2e2e3",
+                        "secondary-fixed": "#ffdcc3",
+                        "on-background": "#1b1b1b",
+                        "on-tertiary-fixed-variant": "#454748",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed-variant": "#004396",
+                        "secondary-container": "#fd8b00",
+                        "on-primary": "#ffffff",
+                        "surface-bright": "#f9f9f9",
+                        "primary": "#0057be",
+                        "surface-container-highest": "#e2e2e2",
+                        "tertiary-container": "#737475",
+                        "outline": "#727786",
+                        "on-secondary-container": "#603100",
+                        "surface-container-lowest": "#ffffff",
+                        "background": "#f9f9f9",
+                        "on-primary-fixed": "#001a42",
+                        "on-tertiary-fixed": "#1a1c1d",
+                        "primary-container": "#006fee",
+                        "surface-container": "#eeeeee",
+                        "inverse-primary": "#aec6ff",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#d8e2ff",
+                        "on-secondary-fixed-variant": "#6e3900",
+                        "surface-dim": "#dadada",
+                        "tertiary": "#5a5c5d",
+                        "on-surface-variant": "#414754",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#c6c6c7",
+                        "surface-variant": "#e2e2e2",
+                        "on-surface": "#1b1b1b",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-container-low": "#f3f3f3",
+                        "on-secondary-fixed": "#2f1500",
+                        "secondary-fixed-dim": "#ffb77d",
+                        "surface-tint": "#005ac3",
+                        "on-primary-container": "#fefbff",
+                        "outline-variant": "#c1c6d7",
+                        "inverse-surface": "#303030",
+                        "secondary": "#904d00",
+                        "primary-fixed-dim": "#aec6ff",
+                        "on-tertiary-container": "#fcfcfd",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#e8e8e8",
+                        "surface": "#f9f9f9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "unit": "4px",
+                        "2xl": "48px",
+                        "lg": "24px",
+                        "margin-desktop": "32px",
+                        "xl": "32px",
+                        "margin-mobile": "16px",
+                        "gutter": "16px",
+                        "xs": "4px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "h2": ["Inter"],
+                        "h1": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "mono-sm": ["ui-monospace"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.01em", "fontWeight": "600" }],
+                        "h2": ["24px", { "lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "h1": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                        "mono-sm": ["13px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col font-body-md text-body-md antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopAppBar Component -->
+<header class="bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md docked full-width top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] font-['Inter'] antialiased sticky">
+<div class="flex justify-between items-center h-16 px-6 max-w-7xl mx-auto">
+<div class="flex items-center gap-xl">
+<a class="text-2xl font-black tracking-tight text-blue-600 dark:text-blue-500 hover:opacity-80 active:scale-95 transition-transform duration-150" href="#">
+                    InquilinoTop
+                </a>
+<nav class="hidden md:flex items-center gap-lg h-full pt-1">
+<a class="text-blue-600 dark:text-blue-400 font-semibold border-b-2 border-blue-600 dark:border-blue-400 pb-1 hover:text-blue-500 dark:hover:text-blue-400 transition-all duration-200 h-full flex items-center mt-1" href="#">
+                        Imóveis
+                    </a>
+<a class="text-zinc-600 dark:text-zinc-400 font-medium hover:text-blue-500 dark:hover:text-blue-400 transition-all duration-200 h-full flex items-center border-b-2 border-transparent" href="#">
+                        Inquilinos
+                    </a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<button aria-label="notifications" class="p-2 text-zinc-600 dark:text-zinc-400 hover:text-blue-500 dark:hover:text-blue-400 transition-all duration-200 active:scale-95 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined block">notifications</span>
+</button>
+<button aria-label="account_circle" class="p-2 text-zinc-600 dark:text-zinc-400 hover:text-blue-500 dark:hover:text-blue-400 transition-all duration-200 active:scale-95 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined block" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-lg flex flex-col gap-xl">
+<!-- Breadcrumbs -->
+<nav aria-label="Breadcrumb" class="flex items-center gap-xs text-on-surface-variant font-label-sm text-label-sm">
+<a class="hover:text-primary transition-colors" href="#">Imóveis</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-on-surface font-medium">Detalhes do Imóvel</span>
+</nav>
+<!-- Header Row: Title & Main Actions -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-md">
+<div class="flex items-center gap-md flex-wrap">
+<h1 class="font-h1 text-h1 text-on-surface tracking-tight">Edifício Horizonte Azul</h1>
+<span class="bg-primary-fixed text-on-primary-fixed-variant px-sm py-xs rounded-full font-label-sm text-label-sm flex items-center gap-xs border border-primary-fixed-dim">
+<span class="material-symbols-outlined text-[14px]">apartment</span>
+                    Residencial
+                </span>
+</div>
+<div class="flex items-center gap-sm">
+<button class="flex items-center gap-xs px-md py-sm bg-surface-container-lowest border border-outline-variant text-on-surface hover:bg-surface-container-low hover:border-outline transition-colors rounded-lg font-label-md text-label-md shadow-sm">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+                    Editar
+                </button>
+<button class="flex items-center gap-xs px-md py-sm bg-error text-on-error hover:opacity-90 transition-opacity rounded-lg font-label-md text-label-md shadow-sm">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+                    Excluir
+                </button>
+</div>
+</div>
+<!-- Bento Grid: Property Summary -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+<!-- Main Image Card -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col md:flex-row h-full">
+<div class="w-full md:w-2/5 h-48 md:h-auto bg-surface-container-high relative">
+<img alt="Modern residential apartment building exterior with large glass windows and minimalist architectural design against a clear blue sky" class="absolute inset-0 w-full h-full object-cover" data-alt="Modern residential apartment building exterior with large glass windows and minimalist architectural design against a clear blue sky" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0I8vpCooVa5nPcGcky6whkjsUdf-fkvTqeZe38Is9roPUvjt0o_96_Tcl7Kt0IxzU3noArEL1iDUXMHyKph1bb-k10SSDb38sD_w_5T_sc_FMq4a_FTTueweg6QSY8kbwIPXFHhmCx6BzulMce0lyfLCu0jj2biq4lt8IfZGJYi2jbHblpTshdC6u_NtFH542H6WKmcqLzlQkmIsDaRAVF-FY5vypJK_kf9YvGVUz5bMEodzGVnLcVIdIBFjblgRSRzdKIekPK5Q"/>
+</div>
+<div class="p-lg flex flex-col justify-center flex-1 gap-md">
+<div class="flex items-start gap-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-outline mt-1">location_on</span>
+<div>
+<p class="font-body-md text-body-md text-on-surface">Av. das Nações Unidas, 12551</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Brooklin Paulista, São Paulo - SP</p>
+<p class="font-label-sm text-label-sm text-outline mt-1">CEP: 04578-903</p>
+</div>
+</div>
+<hr class="border-surface-variant"/>
+<div class="flex items-center gap-lg">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Proprietário</p>
+<p class="font-label-md text-label-md text-on-surface mt-xs flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px] text-primary">person</span>
+                                Carlos Mendes
+                            </p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Construção</p>
+<p class="font-label-md text-label-md text-on-surface mt-xs flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px] text-primary">calendar_today</span>
+                                2018
+                            </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Stats Card -->
+<div class="bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] p-lg flex flex-col gap-md h-full">
+<h3 class="font-h2 text-h2 text-on-surface mb-xs">Ocupação</h3>
+<div class="flex-1 flex flex-col gap-md justify-center">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">meeting_room</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface-variant">Total Unidades</span>
+</div>
+<span class="font-h2 text-h2 text-on-surface">24</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">key</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface-variant">Ocupadas</span>
+</div>
+<span class="font-h2 text-h2 text-on-surface">22</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">door_open</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface-variant">Disponíveis</span>
+</div>
+<span class="font-h2 text-h2 text-primary font-bold">2</span>
+</div>
+</div>
+<!-- Progress bar -->
+<div class="mt-auto">
+<div class="flex justify-between font-label-sm text-label-sm mb-xs">
+<span class="text-on-surface-variant">Taxa de Ocupação</span>
+<span class="text-primary font-bold">91%</span>
+</div>
+<div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 91%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Units Table Section -->
+<div class="bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col">
+<!-- Table Header Area -->
+<div class="p-lg border-b border-surface-variant flex flex-col sm:flex-row sm:items-center justify-between gap-md bg-surface-bright">
+<div>
+<h2 class="font-h2 text-h2 text-on-surface">Unidades</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs">Gerencie os apartamentos e salas deste imóvel.</p>
+</div>
+<button class="flex items-center justify-center gap-xs px-md py-sm bg-primary-container text-on-primary-container hover:opacity-90 transition-opacity rounded-lg font-label-md text-label-md shadow-sm whitespace-nowrap">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                    Adicionar Unidade
+                </button>
+</div>
+<!-- Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-lowest border-b border-surface-variant">
+<th class="py-sm px-lg font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Identificação</th>
+<th class="py-sm px-lg font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Andar</th>
+<th class="py-sm px-lg font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Status</th>
+<th class="py-sm px-lg font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold text-right">Ações</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-bright transition-colors group">
+<td class="py-md px-lg">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-[18px]">meeting_room</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface">Apt 101</span>
+</div>
+</td>
+<td class="py-md px-lg font-body-md text-body-md text-on-surface-variant">1º Andar</td>
+<td class="py-md px-lg">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-primary-fixed text-on-primary-fixed-variant border border-primary-fixed-dim">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                    Ativo
+                                </span>
+</td>
+<td class="py-md px-lg text-right">
+<div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-on-surface-variant hover:text-primary rounded-md hover:bg-primary-fixed transition-colors" title="Editar">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:text-error rounded-md hover:bg-error-container transition-colors" title="Excluir">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-bright transition-colors group">
+<td class="py-md px-lg">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-[18px]">meeting_room</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface">Apt 102</span>
+</div>
+</td>
+<td class="py-md px-lg font-body-md text-body-md text-on-surface-variant">1º Andar</td>
+<td class="py-md px-lg">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-surface-container-high text-on-surface-variant border border-outline-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                                    Inativo
+                                </span>
+</td>
+<td class="py-md px-lg text-right">
+<div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-on-surface-variant hover:text-primary rounded-md hover:bg-primary-fixed transition-colors" title="Editar">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:text-error rounded-md hover:bg-error-container transition-colors" title="Excluir">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-bright transition-colors group">
+<td class="py-md px-lg">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-[18px]">meeting_room</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface">Apt 201</span>
+</div>
+</td>
+<td class="py-md px-lg font-body-md text-body-md text-on-surface-variant">2º Andar</td>
+<td class="py-md px-lg">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-primary-fixed text-on-primary-fixed-variant border border-primary-fixed-dim">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                    Ativo
+                                </span>
+</td>
+<td class="py-md px-lg text-right">
+<div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-on-surface-variant hover:text-primary rounded-md hover:bg-primary-fixed transition-colors" title="Editar">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:text-error rounded-md hover:bg-error-container transition-colors" title="Excluir">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Pagination/Footer -->
+<div class="p-md border-t border-surface-variant flex items-center justify-between bg-surface-container-lowest">
+<span class="font-body-md text-body-md text-on-surface-variant">Mostrando 3 de 24 unidades</span>
+<div class="flex gap-xs">
+<button class="p-1.5 rounded border border-outline-variant text-outline hover:bg-surface-container-low disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<button class="p-1.5 rounded border border-outline-variant text-on-surface hover:bg-surface-container-low">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Component -->
+<footer class="bg-white dark:bg-zinc-950 text-blue-600 dark:text-blue-500 text-sm font-['Inter'] w-full border-t border-zinc-200 dark:border-zinc-800 mt-auto transition-colors duration-200 flat no shadows">
+<div class="flex flex-col md:flex-row justify-between items-center py-8 px-6 max-w-7xl mx-auto gap-4 w-full">
+<div class="flex items-center gap-sm">
+<span class="text-lg font-bold text-zinc-900 dark:text-zinc-100">InquilinoTop</span>
+<span class="text-zinc-500 dark:text-zinc-400">© 2024 InquilinoTop. Gestão imobiliária moderna.</span>
+</div>
+<nav class="flex items-center gap-lg flex-wrap justify-center">
+<a class="text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 underline decoration-2 underline-offset-4 transition-colors duration-200" href="#">
+                    Termos de Uso
+                </a>
+<a class="text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 underline decoration-2 underline-offset-4 transition-colors duration-200" href="#">
+                    Privacidade
+                </a>
+<a class="text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 underline decoration-2 underline-offset-4 transition-colors duration-200" href="#">
+                    Suporte
+                </a>
+<a class="text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 underline decoration-2 underline-offset-4 transition-colors duration-200" href="#">
+                    Contato
+                </a>
+</nav>
+</div>
+</footer>
+</body></html>

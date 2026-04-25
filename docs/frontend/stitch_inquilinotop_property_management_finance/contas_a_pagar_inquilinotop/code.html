@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-container": "#fcfcfd",
+                    "on-secondary-fixed": "#2f1500",
+                    "inverse-on-surface": "#f1f1f1",
+                    "surface-container-highest": "#e2e2e2",
+                    "surface-variant": "#e2e2e2",
+                    "error-container": "#ffdad6",
+                    "on-primary-container": "#fefbff",
+                    "primary-fixed-dim": "#aec6ff",
+                    "on-primary-fixed": "#001a42",
+                    "primary": "#0057be",
+                    "secondary-container": "#fd8b00",
+                    "inverse-surface": "#303030",
+                    "secondary": "#904d00",
+                    "primary-container": "#006fee",
+                    "on-tertiary-fixed": "#1a1c1d",
+                    "on-secondary-container": "#603100",
+                    "on-tertiary-fixed-variant": "#454748",
+                    "on-secondary": "#ffffff",
+                    "tertiary-fixed-dim": "#c6c6c7",
+                    "tertiary-container": "#737475",
+                    "primary-fixed": "#d8e2ff",
+                    "tertiary-fixed": "#e2e2e3",
+                    "on-primary": "#ffffff",
+                    "on-surface": "#1b1b1b",
+                    "background": "#f9f9f9",
+                    "secondary-fixed-dim": "#ffb77d",
+                    "secondary-fixed": "#ffdcc3",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-primary": "#aec6ff",
+                    "surface": "#f9f9f9",
+                    "surface-container-low": "#f3f3f3",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#1b1b1b",
+                    "error": "#ba1a1a",
+                    "outline": "#727786",
+                    "surface-container-high": "#e8e8e8",
+                    "on-secondary-fixed-variant": "#6e3900",
+                    "on-error-container": "#93000a",
+                    "surface-dim": "#dadada",
+                    "on-primary-fixed-variant": "#004396",
+                    "surface-bright": "#f9f9f9",
+                    "on-error": "#ffffff",
+                    "tertiary": "#5a5c5d",
+                    "outline-variant": "#c1c6d7",
+                    "on-surface-variant": "#414754",
+                    "surface-tint": "#005ac3",
+                    "surface-container": "#eeeeee"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "2xl": "48px",
+                    "lg": "24px",
+                    "margin-desktop": "32px",
+                    "gutter": "16px",
+                    "xs": "4px",
+                    "margin-mobile": "16px",
+                    "xl": "32px",
+                    "sm": "8px",
+                    "md": "16px"
+            },
+            "fontFamily": {
+                    "h2": ["Inter"],
+                    "body-md": ["Inter"],
+                    "mono-sm": ["ui-monospace"],
+                    "label-md": ["Inter"],
+                    "h1": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "h2": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "mono-sm": ["13px", {"lineHeight": "1.4", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "1.4", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "h1": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "1.2", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full flex flex-col p-4 z-40 h-screen w-64 border-r border-zinc-200 bg-white shadow-none font-['Inter'] antialiased text-sm font-medium">
+<div class="mb-8 px-4 flex items-center gap-2">
+<span class="text-xl font-black tracking-tight text-zinc-900">InquilinoTop</span>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard Financeiro</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span>Contas a Receber</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-blue-600 bg-blue-50 rounded-lg font-semibold transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span>Contas a Pagar</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+<span>Conciliação Bancária</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span>Repasses</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="percent">percent</span>
+<span>Comissões</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+<span>Relatórios</span>
+</a>
+</nav>
+<div class="mt-auto p-4 border-t border-zinc-100">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="professional financial manager wearing a suit and glasses in a bright modern office setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpQE4Zk4qVYGEudFKXFFuYqUZ1SQEYhHfDp8bGT96cqopqOYTUoMnaCuNaLtiPj1Ged_qzOh0Hv0kZLGXXpMcRhJmXstkdrWG5Uo4SKeCPsYkimFjyp8Y8iAf-_xjJwda6FlCt7IvGweZHQbZPmgDsqHqado7r78dQw5Wf2iJKZADPDx293etcTRZ8YMLzvVIBQCaJBk9nCPVEkH_risjRpUM8iFR6nf2qGxVY6GuaqX4U6rbdXhIEB0YnY1HMb9EtuAaaMHKz8os"/>
+<div class="overflow-hidden">
+<p class="font-label-md text-zinc-900 truncate">Gestor Financeiro</p>
+<p class="text-xs text-zinc-500 truncate">inquilinotop@financas.com</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar -->
+<header class="sticky top-0 right-0 z-30 flex items-center justify-between px-8 py-3 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md shadow-sm font-['Inter'] antialiased">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" data-icon="search">search</span>
+<input class="w-full bg-zinc-100 border-none rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Buscar faturas, fornecedores ou imóveis..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-zinc-500 hover:bg-zinc-100 rounded-full transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-white"></span>
+</button>
+<button class="p-2 text-zinc-500 hover:bg-zinc-100 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</header>
+<!-- Page Header & Toolbar -->
+<div class="p-8">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+<div>
+<h1 class="font-h1 text-on-surface mb-2">Contas a Pagar</h1>
+<p class="text-on-surface-variant font-body-md">Gerencie as obrigações financeiras e despesas da sua carteira.</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex bg-white rounded-xl shadow-sm border border-zinc-200 p-1">
+<button class="px-4 py-2 text-sm font-semibold bg-zinc-100 text-zinc-900 rounded-lg">Pendentes</button>
+<button class="px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-700 rounded-lg">Pagas</button>
+<button class="px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-700 rounded-lg">Todas</button>
+</div>
+<button class="flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-xl font-label-md shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                        Nova Despesa
+                    </button>
+</div>
+</div>
+<!-- Dashboard Quick Stats (HeroUI Aesthetic) -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+<div class="bg-white p-6 rounded-2xl border border-zinc-200 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)]">
+<div class="flex items-center justify-between mb-4">
+<div class="p-2 bg-blue-50 text-blue-600 rounded-lg">
+<span class="material-symbols-outlined" data-icon="calendar_month">calendar_month</span>
+</div>
+<span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">ESTE MÊS</span>
+</div>
+<p class="text-sm text-zinc-500 font-medium">Total Pendente</p>
+<p class="text-2xl font-bold text-zinc-900 mt-1">R$ 12.450,00</p>
+</div>
+<div class="bg-white p-6 rounded-2xl border border-zinc-200 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)]">
+<div class="flex items-center justify-between mb-4">
+<div class="p-2 bg-error-container text-error rounded-lg">
+<span class="material-symbols-outlined" data-icon="error">error</span>
+</div>
+<span class="text-xs font-semibold text-error bg-error-container px-2 py-1 rounded-full">ATRASADOS</span>
+</div>
+<p class="text-sm text-zinc-500 font-medium">Total em Atraso</p>
+<p class="text-2xl font-bold text-error mt-1">R$ 1.230,50</p>
+</div>
+<div class="bg-white p-6 rounded-2xl border border-zinc-200 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)]">
+<div class="flex items-center justify-between mb-4">
+<div class="p-2 bg-secondary-container/10 text-secondary-container rounded-lg">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</div>
+<span class="text-xs font-semibold text-secondary-container bg-secondary-container/10 px-2 py-1 rounded-full">7 DIAS</span>
+</div>
+<p class="text-sm text-zinc-500 font-medium">Vencendo Logo</p>
+<p class="text-2xl font-bold text-zinc-900 mt-1">R$ 4.890,20</p>
+</div>
+<div class="bg-white p-6 rounded-2xl border border-zinc-200 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)]">
+<div class="flex items-center justify-between mb-4">
+<div class="p-2 bg-zinc-100 text-zinc-600 rounded-lg">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+</div>
+<span class="text-xs font-semibold text-zinc-500 bg-zinc-100 px-2 py-1 rounded-full">LIQUIDADO</span>
+</div>
+<p class="text-sm text-zinc-500 font-medium">Pago Hoje</p>
+<p class="text-2xl font-bold text-zinc-900 mt-1">R$ 2.100,00</p>
+</div>
+</div>
+<!-- Toolbar & Filter Area -->
+<div class="bg-white border border-zinc-200 rounded-2xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.05)] overflow-hidden">
+<div class="p-4 border-b border-zinc-100 flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-3">
+<div class="relative">
+<select class="appearance-none bg-zinc-50 border border-zinc-200 rounded-xl pl-4 pr-10 py-2 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer">
+<option>Categoria: Todas</option>
+<option>IPTU</option>
+<option>Condomínio</option>
+<option>Manutenção</option>
+<option>DARF</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" data-icon="expand_more">expand_more</span>
+</div>
+<div class="relative">
+<select class="appearance-none bg-zinc-50 border border-zinc-200 rounded-xl pl-4 pr-10 py-2 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer">
+<option>Status: Todos</option>
+<option>Pendente</option>
+<option>Atrasado</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<button class="flex items-center gap-2 bg-on-secondary-fixed text-on-secondary px-5 py-2.5 rounded-xl font-label-md hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+                        Pagar Selecionados
+                    </button>
+</div>
+<!-- Main Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-zinc-50/50">
+<th class="p-4 w-12">
+<input class="rounded-md border-zinc-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</th>
+<th class="p-4 font-label-sm text-zinc-500 uppercase tracking-wider">Vencimento</th>
+<th class="p-4 font-label-sm text-zinc-500 uppercase tracking-wider">Fornecedor/Imposto</th>
+<th class="p-4 font-label-sm text-zinc-500 uppercase tracking-wider">Categoria</th>
+<th class="p-4 font-label-sm text-zinc-500 uppercase tracking-wider text-right">Valor</th>
+<th class="p-4 font-label-sm text-zinc-500 uppercase tracking-wider">Imóvel Vinculado</th>
+<th class="p-4 font-label-sm text-zinc-500 uppercase tracking-wider">Status</th>
+<th class="p-4"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-zinc-100">
+<!-- Row 1 -->
+<tr class="hover:bg-zinc-50 transition-colors group">
+<td class="p-4">
+<input class="rounded-md border-zinc-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</td>
+<td class="p-4">
+<div class="flex flex-col">
+<span class="font-semibold text-zinc-900">10 Out 2023</span>
+<span class="text-xs text-error font-medium">Atrasado (3 dias)</span>
+</div>
+</td>
+<td class="p-4 font-medium text-zinc-900">Prefeitura de São Paulo (IPTU)</td>
+<td class="p-4">
+<span class="px-3 py-1 bg-zinc-100 text-zinc-600 rounded-full text-xs font-semibold">IPTU</span>
+</td>
+<td class="p-4 text-right font-bold text-zinc-900">R$ 450,00</td>
+<td class="p-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-zinc-400 text-lg" data-icon="apartment">apartment</span>
+<span class="text-sm text-zinc-600">Ed. Horizon - Ap 402</span>
+</div>
+</td>
+<td class="p-4">
+<span class="px-3 py-1 bg-error-container text-error rounded-full text-xs font-bold">ATRASADO</span>
+</td>
+<td class="p-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-zinc-200 rounded-lg text-zinc-400">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-zinc-50 transition-colors group">
+<td class="p-4">
+<input class="rounded-md border-zinc-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</td>
+<td class="p-4 text-zinc-900 font-medium">15 Out 2023</td>
+<td class="p-4 font-medium text-zinc-900">Adm. Central Condomínios</td>
+<td class="p-4">
+<span class="px-3 py-1 bg-zinc-100 text-zinc-600 rounded-full text-xs font-semibold">CONDOMÍNIO</span>
+</td>
+<td class="p-4 text-right font-bold text-zinc-900">R$ 1.200,00</td>
+<td class="p-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-zinc-400 text-lg" data-icon="house">house</span>
+<span class="text-sm text-zinc-600">Casa Jardim Europa</span>
+</div>
+</td>
+<td class="p-4">
+<span class="px-3 py-1 bg-secondary-container/10 text-secondary-container rounded-full text-xs font-bold">PENDENTE</span>
+</td>
+<td class="p-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-zinc-200 rounded-lg text-zinc-400">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-zinc-50 transition-colors group">
+<td class="p-4">
+<input class="rounded-md border-zinc-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</td>
+<td class="p-4 text-zinc-900 font-medium">18 Out 2023</td>
+<td class="p-4 font-medium text-zinc-900">João Reparos Hidráulicos</td>
+<td class="p-4">
+<span class="px-3 py-1 bg-zinc-100 text-zinc-600 rounded-full text-xs font-semibold">MANUTENÇÃO</span>
+</td>
+<td class="p-4 text-right font-bold text-zinc-900">R$ 380,00</td>
+<td class="p-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-zinc-400 text-lg" data-icon="apartment">apartment</span>
+<span class="text-sm text-zinc-600">Residencial Solar - Ap 11</span>
+</div>
+</td>
+<td class="p-4">
+<span class="px-3 py-1 bg-secondary-container/10 text-secondary-container rounded-full text-xs font-bold">PENDENTE</span>
+</td>
+<td class="p-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-zinc-200 rounded-lg text-zinc-400">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-zinc-50 transition-colors group">
+<td class="p-4">
+<input class="rounded-md border-zinc-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</td>
+<td class="p-4 text-zinc-900 font-medium">20 Out 2023</td>
+<td class="p-4 font-medium text-zinc-900">Receita Federal</td>
+<td class="p-4">
+<span class="px-3 py-1 bg-zinc-100 text-zinc-600 rounded-full text-xs font-semibold">DARF</span>
+</td>
+<td class="p-4 text-right font-bold text-zinc-900">R$ 2.450,50</td>
+<td class="p-4 text-zinc-400 text-sm italic">Múltiplos imóveis</td>
+<td class="p-4">
+<span class="px-3 py-1 bg-secondary-container/10 text-secondary-container rounded-full text-xs font-bold">PENDENTE</span>
+</td>
+<td class="p-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-zinc-200 rounded-lg text-zinc-400">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="p-4 border-t border-zinc-100 flex items-center justify-between">
+<p class="text-sm text-zinc-500">Mostrando <span class="font-semibold">1 a 4</span> de <span class="font-semibold">24</span> resultados</p>
+<div class="flex items-center gap-2">
+<button class="p-2 border border-zinc-200 rounded-lg text-zinc-400 hover:bg-zinc-50 transition-colors disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="w-10 h-10 bg-primary text-white rounded-lg font-semibold shadow-sm">1</button>
+<button class="w-10 h-10 hover:bg-zinc-50 text-zinc-600 rounded-lg font-semibold transition-colors">2</button>
+<button class="w-10 h-10 hover:bg-zinc-50 text-zinc-600 rounded-lg font-semibold transition-colors">3</button>
+<button class="p-2 border border-zinc-200 rounded-lg text-zinc-600 hover:bg-zinc-50 transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Contextual Floating Action Button -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-on-secondary-fixed text-on-secondary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-3xl" data-icon="receipt">receipt</span>
+</button>
+</body></html>

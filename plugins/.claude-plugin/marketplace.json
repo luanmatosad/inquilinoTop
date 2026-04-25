@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "inquilinoTop-plugins",
+  "description": "Local plugins for the inquilinoTop project",
+  "owner": {
+    "name": "aoki",
+    "email": "maycoaoki@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "tdd-enforcer",
+      "description": "Enforces TDD workflow with hooks and skills for test-driven development",
+      "category": "development",
+      "source": {
+        "source": "directory",
+        "path": "/home/aoki/workspace/inquilinoTop/plugins/tdd-enforcer"
+      }
+    }
+  ]
+}
