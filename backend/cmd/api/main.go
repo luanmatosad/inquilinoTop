@@ -242,9 +242,13 @@ func main() {
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
-	allowedOrigins := strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",")
-	for i, o := range allowedOrigins {
-		allowedOrigins[i] = strings.TrimSpace(o)
+	var allowedOrigins []string
+	if corsEnv := os.Getenv("CORS_ALLOWED_ORIGINS"); corsEnv != "" {
+		for _, o := range strings.Split(corsEnv, ",") {
+			if trimmed := strings.TrimSpace(o); trimmed != "" {
+				allowedOrigins = append(allowedOrigins, trimmed)
+			}
+		}
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
