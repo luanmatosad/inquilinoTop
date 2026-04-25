@@ -25,9 +25,6 @@ func (s *Service) CreateNotification(ctx context.Context, ownerID uuid.UUID, in 
 }
 
 func (s *Service) ListByOwner(ctx context.Context, ownerID uuid.UUID, status string) ([]Notification, error) {
-	if status == "pending" {
-		return s.repo.ListPending(ctx, 100)
-	}
 	return s.repo.ListByOwner(ctx, ownerID, status)
 }
 
