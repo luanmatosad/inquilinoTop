@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base32"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/FuLygon/go-totp/v2"
@@ -141,6 +142,14 @@ func tokenHash(raw string) string {
 	return fmt.Sprintf("%x", sum)
 }
 
+func (s *Service) Setup2FAByEmail(ctx context.Context, email string) (*TwoFactorSetup, error) {
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("identity.svc: setup 2fa: %w", err)
+	}
+	return s.Setup2FA(ctx, user.ID, email)
+}
+
 func (s *Service) Setup2FA(ctx context.Context, userID uuid.UUID, email string) (*TwoFactorSetup, error) {
 	secret := generateSecret()
 
@@ -224,7 +233,9 @@ func (s *Service) Require2FA(ctx context.Context, userID uuid.UUID) (bool, error
 
 func generateSecret() string {
 	secret := make([]byte, 20)
-	rand.Read(secret)
+	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
+		panic(fmt.Sprintf("identity: generateSecret: %v", err))
+	}
 	return base32.StdEncoding.EncodeToString(secret)[:32]
 }
 
@@ -232,7 +243,9 @@ func generateBackupCodes(count int) []string {
 	codes := make([]string, count)
 	for i := 0; i < count; i++ {
 		code := make([]byte, 4)
-		rand.Read(code)
+		if _, err := io.ReadFull(rand.Reader, code); err != nil {
+			panic(fmt.Sprintf("identity: generateBackupCodes: %v", err))
+		}
 		for j := range code {
 			code[j] = byte(int(code[j])%10 + '0')
 		}
