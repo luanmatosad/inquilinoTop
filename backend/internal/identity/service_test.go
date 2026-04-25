@@ -208,3 +208,62 @@ func TestService_Refresh_ExpiredToken(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "inválido")
 }
+
+type captureLogger struct {
+	loginCalls       []uuid.UUID
+	logoutCalls      []uuid.UUID
+	failedLoginCalls int
+}
+
+func (c *captureLogger) LogLogin(ctx context.Context, userID uuid.UUID) {
+	c.loginCalls = append(c.loginCalls, userID)
+}
+
+func (c *captureLogger) LogLogout(ctx context.Context, userID uuid.UUID) {
+	c.logoutCalls = append(c.logoutCalls, userID)
+}
+
+func (c *captureLogger) LogFailedLogin(ctx context.Context) {
+	c.failedLoginCalls++
+}
+
+func newTestServiceWithAudit(t *testing.T, logger identity.AuditLogger) *identity.Service {
+	t.Helper()
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	jwtSvc := auth.NewJWTService(privKey, &privKey.PublicKey, 15*time.Minute)
+	return identity.NewServiceWithAudit(newMockRepo(), jwtSvc, logger)
+}
+
+func TestService_Login_AuditsSuccess(t *testing.T) {
+	logger := &captureLogger{}
+	svc := newTestServiceWithAudit(t, logger)
+	svc.Register(context.Background(), "audit@test.com", "senha123")
+
+	result, err := svc.Login(context.Background(), "audit@test.com", "senha123")
+	require.NoError(t, err)
+	require.Len(t, logger.loginCalls, 1)
+	assert.Equal(t, result.User.ID, logger.loginCalls[0])
+}
+
+func TestService_Login_AuditsFailure(t *testing.T) {
+	logger := &captureLogger{}
+	svc := newTestServiceWithAudit(t, logger)
+	svc.Register(context.Background(), "fail@test.com", "correta")
+
+	_, err := svc.Login(context.Background(), "fail@test.com", "errada")
+	require.Error(t, err)
+	assert.Equal(t, 1, logger.failedLoginCalls)
+	assert.Empty(t, logger.loginCalls)
+}
+
+func TestService_Logout_AuditsLogout(t *testing.T) {
+	logger := &captureLogger{}
+	svc := newTestServiceWithAudit(t, logger)
+	reg, _ := svc.Register(context.Background(), "logout2@test.com", "senha123")
+
+	err := svc.Logout(context.Background(), reg.RefreshToken)
+	require.NoError(t, err)
+	require.Len(t, logger.logoutCalls, 1)
+	assert.Equal(t, reg.User.ID, logger.logoutCalls[0])
+}

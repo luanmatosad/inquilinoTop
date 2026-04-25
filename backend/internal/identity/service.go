@@ -28,12 +28,17 @@ func (a *AuthResult) GetUserID() uuid.UUID {
 }
 
 type Service struct {
-	repo   Repository
-	jwtSvc *auth.JWTService
+	repo        Repository
+	jwtSvc     *auth.JWTService
+	auditLogger AuditLogger
 }
 
 func NewService(repo Repository, jwtSvc *auth.JWTService) *Service {
-	return &Service{repo: repo, jwtSvc: jwtSvc}
+	return &Service{repo: repo, jwtSvc: jwtSvc, auditLogger: &NoopAuditLogger{}}
+}
+
+func NewServiceWithAudit(repo Repository, jwtSvc *auth.JWTService, logger AuditLogger) *Service {
+	return &Service{repo: repo, jwtSvc: jwtSvc, auditLogger: logger}
 }
 
 func (s *Service) Register(ctx context.Context, email, password string) (*AuthResult, error) {
@@ -53,9 +58,11 @@ func (s *Service) Login(ctx context.Context, email, password string) (*AuthResul
 
 	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
+		s.auditLogger.LogFailedLogin(ctx)
 		return nil, fmt.Errorf("identity.svc: credenciais inválidas")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		s.auditLogger.LogFailedLogin(ctx)
 		return nil, fmt.Errorf("identity.svc: credenciais inválidas")
 	}
 	if user.TwoFactorEnabled {
@@ -70,7 +77,12 @@ func (s *Service) Login(ctx context.Context, email, password string) (*AuthResul
 			TempToken:        tempToken,
 		}, nil
 	}
-	return s.issueTokens(ctx, user)
+	result, err := s.issueTokens(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	s.auditLogger.LogLogin(ctx, user.ID)
+	return result, nil
 }
 
 func (s *Service) LoginWith2FA(ctx context.Context, tempToken, code string) (*AuthResult, error) {
@@ -98,7 +110,12 @@ func (s *Service) LoginWith2FA(ctx context.Context, tempToken, code string) (*Au
 		return nil, fmt.Errorf("identity.svc: invalidate temp: %w", err)
 	}
 
-	return s.issueTokens(ctx, user)
+	result, err := s.issueTokens(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	s.auditLogger.LogLogin(ctx, user.ID)
+	return result, nil
 }
 
 func (s *Service) Refresh(ctx context.Context, rawRefreshToken string) (*AuthResult, error) {
@@ -121,7 +138,16 @@ func (s *Service) Refresh(ctx context.Context, rawRefreshToken string) (*AuthRes
 }
 
 func (s *Service) Logout(ctx context.Context, rawRefreshToken string) error {
-	return s.repo.RevokeRefreshToken(ctx, tokenHash(rawRefreshToken))
+	hash := tokenHash(rawRefreshToken)
+	rt, err := s.repo.GetRefreshToken(ctx, hash)
+	if err != nil {
+		return s.repo.RevokeRefreshToken(ctx, hash)
+	}
+	if err := s.repo.RevokeRefreshToken(ctx, hash); err != nil {
+		return err
+	}
+	s.auditLogger.LogLogout(ctx, rt.UserID)
+	return nil
 }
 
 func (s *Service) issueTokens(ctx context.Context, user *User) (*AuthResult, error) {

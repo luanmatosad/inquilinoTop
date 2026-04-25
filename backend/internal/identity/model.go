@@ -51,3 +51,15 @@ type TwoFactorSetup struct {
 	QRCodeURL    string `json:"qr_code_url"`
 	BackupCodes []string `json:"backup_codes"`
 }
+
+type AuditLogger interface {
+	LogLogin(ctx context.Context, userID uuid.UUID)
+	LogLogout(ctx context.Context, userID uuid.UUID)
+	LogFailedLogin(ctx context.Context)
+}
+
+type NoopAuditLogger struct{}
+
+func (n *NoopAuditLogger) LogLogin(_ context.Context, _ uuid.UUID)  {}
+func (n *NoopAuditLogger) LogLogout(_ context.Context, _ uuid.UUID) {}
+func (n *NoopAuditLogger) LogFailedLogin(_ context.Context)         {}

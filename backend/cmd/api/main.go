@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/inquilinotop/api/internal/audit"
@@ -70,8 +71,12 @@ func main() {
 	jwtSvc := auth.NewJWTService(privKey, &privKey.PublicKey, 15*time.Minute)
 	authMW := auth.Middleware(jwtSvc)
 
+	auditRepo := audit.NewRepository(database.Pool)
+	auditSvc := audit.NewService(auditRepo)
+	auditHandler := audit.NewHandler(auditSvc)
+
 	identityRepo := identity.NewRepository(database)
-	identitySvc := identity.NewService(identityRepo, jwtSvc)
+	identitySvc := identity.NewServiceWithAudit(identityRepo, jwtSvc, &identityAuditAdapter{auditSvc: auditSvc})
 	identityHandler := identity.NewHandler(identitySvc)
 
 	propertyRepo := property.NewRepository(database)
@@ -109,10 +114,6 @@ func main() {
 	supportRepo := support.NewRepository(database)
 	supportSvc := support.NewService(supportRepo)
 	supportHandler := support.NewHandler(supportSvc)
-
-	auditRepo := audit.NewRepository(database.Pool)
-	auditSvc := audit.NewService(auditRepo)
-	auditHandler := audit.NewHandler(auditSvc)
 
 	docStoragePath := envOr("DOCUMENT_STORAGE_PATH", "./documents")
 	docStorage := document.NewLocalStorage(docStoragePath)
@@ -331,6 +332,22 @@ func envOrInt(key string, fallback int) int {
 		}
 	}
 	return fallback
+}
+
+type identityAuditAdapter struct {
+	auditSvc *audit.Service
+}
+
+func (a *identityAuditAdapter) LogLogin(ctx context.Context, userID uuid.UUID) {
+	a.auditSvc.LogLogin(ctx, userID, userID, "")
+}
+
+func (a *identityAuditAdapter) LogLogout(ctx context.Context, userID uuid.UUID) {
+	a.auditSvc.LogLogout(ctx, userID, userID, "")
+}
+
+func (a *identityAuditAdapter) LogFailedLogin(ctx context.Context) {
+	a.auditSvc.LogFailedLogin(ctx, uuid.Nil, "")
 }
 
 func mustLoadPrivateKey(path string) *rsa.PrivateKey {
