@@ -28,6 +28,7 @@ import (
 	"github.com/inquilinotop/api/internal/notification"
 	"github.com/inquilinotop/api/internal/payment"
 	"github.com/inquilinotop/api/internal/property"
+	"github.com/inquilinotop/api/internal/rbac"
 	"github.com/inquilinotop/api/internal/ratelimit"
 	"github.com/inquilinotop/api/internal/support"
 	"github.com/inquilinotop/api/internal/tenant"
@@ -138,6 +139,9 @@ func main() {
 		UserBurst: 200,
 	})
 
+	rbacRepo := rbac.NewRepository(database.Pool)
+	rbacSvc := rbac.NewService(rbacRepo)
+
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -167,6 +171,18 @@ func main() {
 		auditHandler.Register(r2, authMW)
 		documentHandler.Register(r2, authMW)
 		notificationHandler.Register(r2, authMW)
+		r2.With(authMW).Get("/me/roles", func(w http.ResponseWriter, req *http.Request) {
+			ownerID := auth.OwnerIDFromCtx(req.Context())
+			roles, err := rbacSvc.GetUserRoles(req.Context(), ownerID)
+			if err != nil {
+				httputil.Err(w, http.StatusInternalServerError, "ROLES_FAILED", err.Error())
+				return
+			}
+			if roles == nil {
+				roles = []rbac.UserRole{}
+			}
+			httputil.OK(w, roles)
+		})
 	})
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
