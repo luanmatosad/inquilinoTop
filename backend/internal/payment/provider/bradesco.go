@@ -7,18 +7,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 )
 
 type BradescoProvider struct {
 	clientID     string
 	clientSecret string
-	certPath    string
-	pixKey      string
-	baseURL     string
-	token       string
-	tokenExpiry time.Time
-	client      *http.Client
+	certPath     string
+	pixKey       string
+	baseURL      string
+	token        string
+	tokenExpiry  time.Time
+	client       *http.Client
+	mu           sync.Mutex
 }
 
 func NewBradescoProvider(config map[string]string) (*BradescoProvider, error) {
@@ -37,9 +39,9 @@ func NewBradescoProvider(config map[string]string) (*BradescoProvider, error) {
 	return &BradescoProvider{
 		clientID:     clientID,
 		clientSecret: clientSecret,
-		certPath:    certPath,
-		pixKey:      pixKey,
-		baseURL:     "https://api.bradesco.com.br/open-banking/pix/v1",
+		certPath:     certPath,
+		pixKey:       pixKey,
+		baseURL:      "https://api.bradesco.com.br/open-banking/pix/v1",
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
@@ -50,6 +52,9 @@ func NewBradescoProvider(config map[string]string) (*BradescoProvider, error) {
 }
 
 func (b *BradescoProvider) ensureToken(ctx context.Context) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	if b.token != "" && time.Now().Before(b.tokenExpiry) {
 		return nil
 	}
@@ -75,7 +80,7 @@ func (b *BradescoProvider) ensureToken(ctx context.Context) error {
 
 	var tokenResp struct {
 		AccessToken string `json:"access_token"`
-		ExpiresIn  int    `json:"expires_in"`
+		ExpiresIn   int    `json:"expires_in"`
 	}
 	json.NewDecoder(resp.Body).Decode(&tokenResp)
 
@@ -99,16 +104,16 @@ func (b *BradescoProvider) CreatePIXCharge(ctx context.Context, req ChargeReques
 
 	devedor := map[string]string{
 		"nome": req.Customer.Name,
-		"cpf": req.Customer.Document,
+		"cpf":  req.Customer.Document,
 	}
 
 	cob := map[string]interface{}{
 		"calendario":         calendario,
-		"txid":              req.Reference,
-		"valor":             valor,
-		"devedor":           devedor,
+		"txid":               req.Reference,
+		"valor":              valor,
+		"devedor":            devedor,
 		"solicitacaoPagador": req.Description,
-		"chave":             b.pixKey,
+		"chave":              b.pixKey,
 	}
 
 	jsonBody, _ := json.Marshal(cob)
@@ -137,8 +142,8 @@ func (b *BradescoProvider) CreatePIXCharge(ctx context.Context, req ChargeReques
 
 	return &ChargeResponse{
 		ChargeID: result.TXID,
-		Status:  "ATIVA",
-		QRLink: "https://pix.bradesco.com.br/pay/" + result.TXID,
+		Status:   "ATIVA",
+		QRLink:   "https://pix.bradesco.com.br/pay/" + result.TXID,
 	}, nil
 }
 
@@ -167,7 +172,7 @@ func (b *BradescoProvider) GetChargeStatus(ctx context.Context, chargeID string)
 
 	return &ChargeStatus{
 		ChargeID: chargeID,
-		Status:  result.Status,
+		Status:   result.Status,
 	}, nil
 }
 
