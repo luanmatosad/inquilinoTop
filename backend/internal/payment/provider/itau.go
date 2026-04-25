@@ -15,9 +15,9 @@ type ItauProvider struct {
 	accessToken string
 	certPath    string
 	pixKey      string
-	baseURL    string
+	baseURL     string
 	tokenExpiry time.Time
-	client     *http.Client
+	client      *http.Client
 }
 
 func NewItauProvider(config map[string]string) (*ItauProvider, error) {
@@ -32,9 +32,9 @@ func NewItauProvider(config map[string]string) (*ItauProvider, error) {
 	return &ItauProvider{
 		clientID:    clientID,
 		accessToken: accessToken,
-		certPath:   certPath,
-		pixKey:     pixKey,
-		baseURL:    "https://api.itau.com.br/open-banking/pix/v1",
+		certPath:    certPath,
+		pixKey:      pixKey,
+		baseURL:     "https://api.itau.com.br/open-banking/pix/v1",
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
@@ -55,16 +55,16 @@ func (i *ItauProvider) CreatePIXCharge(ctx context.Context, req ChargeRequest) (
 
 	devedor := map[string]string{
 		"nome": req.Customer.Name,
-		"cpf": req.Customer.Document,
+		"cpf":  req.Customer.Document,
 	}
 
 	cob := map[string]interface{}{
 		"calendario":         calendario,
-		"txid":              req.Reference,
-		"valor":             valor,
-		"devedor":           devedor,
+		"txid":               req.Reference,
+		"valor":              valor,
+		"devedor":            devedor,
 		"solicitacaoPagador": req.Description,
-		"chave":             i.pixKey,
+		"chave":              i.pixKey,
 	}
 
 	jsonBody, _ := json.Marshal(cob)
@@ -94,7 +94,7 @@ func (i *ItauProvider) CreatePIXCharge(ctx context.Context, req ChargeRequest) (
 	return &ChargeResponse{
 		ChargeID: result.TXID,
 		Status:   "ATIVA",
-		QRLink:  "https://pix.itau.com.br/pay/" + result.TXID,
+		QRLink:   "https://pix.itau.com.br/pay/" + result.TXID,
 	}, nil
 }
 
@@ -123,7 +123,7 @@ func (i *ItauProvider) GetChargeStatus(ctx context.Context, chargeID string) (*C
 
 	return &ChargeStatus{
 		ChargeID: chargeID,
-		Status:  result.Status,
+		Status:   result.Status,
 	}, nil
 }
 

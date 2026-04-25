@@ -24,11 +24,11 @@ type PaymentProvider interface {
 }
 
 type ChargeRequest struct {
-	Amount       float64
+	Amount      float64
 	Currency    string
 	DueDate     *time.Time
 	Customer    Customer
-	Reference  string
+	Reference   string
 	Description string
 }
 
@@ -39,47 +39,47 @@ type Customer struct {
 }
 
 type ChargeResponse struct {
-	ChargeID      string
+	ChargeID     string
 	Status       string
 	QRCode       string
 	QRLink       string
 	BarCode      string
 	PixCopiaCola string
-	ExpiresAt   *time.Time
-	PaidAt      *time.Time
+	ExpiresAt    *time.Time
+	PaidAt       *time.Time
 }
 
 type ChargeStatus struct {
 	ChargeID string
-	Status  string
-	PaidAt  *time.Time
-	Amount  float64
+	Status   string
+	PaidAt   *time.Time
+	Amount   float64
 }
 
 type PayoutRequest struct {
-	Amount        float64
+	Amount       float64
 	Currency     string
 	Destination  Destination
-	Reference   string
+	Reference    string
 	ScheduleDate *time.Time
 }
 
 type Destination struct {
 	Type        string
-	PixKey     string
-	PixKeyType string
-	BankCode   string
-	Agency    string
-	Account   string
+	PixKey      string
+	PixKeyType  string
+	BankCode    string
+	Agency      string
+	Account     string
 	AccountType string
-	OwnerName string
-	Document  string
+	OwnerName   string
+	Document    string
 }
 
 type PayoutResponse struct {
 	PayoutID    string
-	Status     string
-	CreatedAt  time.Time
+	Status      string
+	CreatedAt   time.Time
 	ArrivalDate *time.Time
 }
 

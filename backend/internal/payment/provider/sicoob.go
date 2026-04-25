@@ -14,13 +14,13 @@ import (
 type SicoobProvider struct {
 	clientID     string
 	clientSecret string
-	certPath    string
-	pixKey      string
-	cooperative string
-	baseURL     string
-	token       string
-	tokenExpiry time.Time
-	client      *http.Client
+	certPath     string
+	pixKey       string
+	cooperative  string
+	baseURL      string
+	token        string
+	tokenExpiry  time.Time
+	client       *http.Client
 }
 
 func NewSicoobProvider(config map[string]string) (*SicoobProvider, error) {
@@ -40,10 +40,10 @@ func NewSicoobProvider(config map[string]string) (*SicoobProvider, error) {
 	return &SicoobProvider{
 		clientID:     clientID,
 		clientSecret: clientSecret,
-		certPath:    certPath,
-		pixKey:      pixKey,
-		cooperative: cooperative,
-		baseURL:    "https://cobranca.sicoob.com.br/coordenacao_banparc_api/pix/v1",
+		certPath:     certPath,
+		pixKey:       pixKey,
+		cooperative:  cooperative,
+		baseURL:      "https://cobranca.sicoob.com.br/coordenacao_banparc_api/pix/v1",
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
@@ -84,7 +84,7 @@ func (s *SicoobProvider) ensureToken(ctx context.Context) error {
 
 	var tokenResp struct {
 		AccessToken string `json:"access_token"`
-		ExpiresIn  int    `json:"expires_in"`
+		ExpiresIn   int    `json:"expires_in"`
 	}
 	json.NewDecoder(resp.Body).Decode(&tokenResp)
 
@@ -107,17 +107,17 @@ func (s *SicoobProvider) CreatePIXCharge(ctx context.Context, req ChargeRequest)
 	}
 
 	devedor := map[string]string{
-		"nome":  req.Customer.Name,
+		"nome": req.Customer.Name,
 		"cpf":  req.Customer.Document,
 	}
 
 	cob := map[string]interface{}{
 		"calendario":         calendario,
-		"txid":              req.Reference,
-		"valor":             valor,
-		"devedor":           devedor,
+		"txid":               req.Reference,
+		"valor":              valor,
+		"devedor":            devedor,
 		"solicitacaoPagador": req.Description,
-		"chave":             s.pixKey,
+		"chave":              s.pixKey,
 	}
 
 	jsonBody, _ := json.Marshal(cob)
@@ -150,7 +150,7 @@ func (s *SicoobProvider) CreatePIXCharge(ctx context.Context, req ChargeRequest)
 	}
 
 	return &ChargeResponse{
-		ChargeID:      result.TXID,
+		ChargeID:     result.TXID,
 		Status:       "ATIVA",
 		QRCode:       qrCode,
 		PixCopiaCola: qrCode,
@@ -201,7 +201,7 @@ func (s *SicoobProvider) GetChargeStatus(ctx context.Context, chargeID string) (
 
 	return &ChargeStatus{
 		ChargeID: chargeID,
-		Status:  result.Status,
+		Status:   result.Status,
 	}, nil
 }
 

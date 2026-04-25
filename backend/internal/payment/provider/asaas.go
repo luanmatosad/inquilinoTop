@@ -11,7 +11,7 @@ import (
 )
 
 type AsaasProvider struct {
-	apiKey       string
+	apiKey      string
 	environment string
 	walletID    string
 	baseURL     string
@@ -35,22 +35,22 @@ func NewAsaasProvider(config map[string]string) (*AsaasProvider, error) {
 	}
 
 	return &AsaasProvider{
-		apiKey:       apiKey,
+		apiKey:      apiKey,
 		environment: env,
 		walletID:    walletID,
 		baseURL:     baseURL,
-		client:     &http.Client{Timeout: 30 * time.Second},
+		client:      &http.Client{Timeout: 30 * time.Second},
 	}, nil
 }
 
 func (a *AsaasProvider) CreatePIXCharge(ctx context.Context, req ChargeRequest) (*ChargeResponse, error) {
 	body := map[string]interface{}{
-		"name":         req.Customer.Name,
+		"name":        req.Customer.Name,
 		"cpfCnpj":     req.Customer.Document,
-		"email":        req.Customer.Email,
-		"value":        req.Amount,
-		"paymentType":  "PIX",
-		"billingType":  "PIX",
+		"email":       req.Customer.Email,
+		"value":       req.Amount,
+		"paymentType": "PIX",
+		"billingType": "PIX",
 		"externalRef": req.Reference,
 		"description": req.Description,
 	}
@@ -63,12 +63,12 @@ func (a *AsaasProvider) CreatePIXCharge(ctx context.Context, req ChargeRequest) 
 
 func (a *AsaasProvider) CreateBoletoCharge(ctx context.Context, req ChargeRequest) (*ChargeResponse, error) {
 	body := map[string]interface{}{
-		"name":         req.Customer.Name,
+		"name":        req.Customer.Name,
 		"cpfCnpj":     req.Customer.Document,
-		"email":        req.Customer.Email,
+		"email":       req.Customer.Email,
 		"value":       req.Amount,
-		"paymentType":  "BOLETO",
-		"billingType":  "BOLETO",
+		"paymentType": "BOLETO",
+		"billingType": "BOLETO",
 		"externalRef": req.Reference,
 		"description": req.Description,
 	}
@@ -110,8 +110,8 @@ func (a *AsaasProvider) createCharge(ctx context.Context, body map[string]interf
 
 	response := &ChargeResponse{
 		ChargeID: result.ID,
-		Status:  result.Status,
-		QRLink:  result.InvoiceURL,
+		Status:   result.Status,
+		QRLink:   result.InvoiceURL,
 	}
 
 	if result.PixCode != "" {
@@ -157,8 +157,8 @@ func (a *AsaasProvider) GetChargeStatus(ctx context.Context, chargeID string) (*
 
 	status := &ChargeStatus{
 		ChargeID: result.ID,
-		Status:  result.Status,
-		Amount:  result.Value,
+		Status:   result.Status,
+		Amount:   result.Value,
 	}
 
 	if result.PaymentDate != "" {
@@ -209,14 +209,14 @@ func (a *AsaasProvider) CreatePayout(ctx context.Context, req PayoutRequest) (*P
 
 	return &PayoutResponse{
 		PayoutID: result.ID,
-		Status:  result.Status,
+		Status:   result.Status,
 	}, nil
 }
 
 func (a *AsaasProvider) RegisterWebhook(ctx context.Context, url string, events []string) error {
 	body := map[string]interface{}{
-		"url":   url,
-		"email": "true",
+		"url":    url,
+		"email":  "true",
 		"events": events,
 	}
 
@@ -252,9 +252,9 @@ type AsaasChargeResponse struct {
 	Value          float64 `json:"value"`
 	PixCode        string  `json:"pixCode,omitempty"`
 	BankSlipLink   string  `json:"bankSlipLink,omitempty"`
-	InvoiceURL    string  `json:"invoiceUrl,omitempty"`
+	InvoiceURL     string  `json:"invoiceUrl,omitempty"`
 	DueDateApprove string  `json:"dueDate"`
-	PaymentDate   string  `json:"paymentDate"`
+	PaymentDate    string  `json:"paymentDate"`
 }
 
 type AsaasTransferResponse struct {
