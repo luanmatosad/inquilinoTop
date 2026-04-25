@@ -123,11 +123,17 @@ func (m *mockPaymentRepo) GetActiveFinancialConfig(_ context.Context, ownerID uu
 }
 
 func (m *mockPaymentRepo) CreateFinancialConfig(_ context.Context, ownerID uuid.UUID, in payment.CreateFinancialConfigInput) (*payment.FinancialConfig, error) {
-	return nil, errors.New("not implemented")
+	cfg := &payment.FinancialConfig{
+		ID:       uuid.New(),
+		OwnerID:  ownerID,
+		Provider: in.Provider,
+		IsActive: true,
+	}
+	return cfg, nil
 }
 
 func (m *mockPaymentRepo) DeleteFinancialConfig(_ context.Context, id, ownerID uuid.UUID) error {
-	return errors.New("not implemented")
+	return nil
 }
 
 func (m *mockPaymentRepo) GetByChargeID(_ context.Context, chargeID string) (*payment.Payment, error) {

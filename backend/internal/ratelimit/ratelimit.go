@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/httputil"
 )
 
@@ -151,7 +152,8 @@ func getIP(r *http.Request) string {
 }
 
 func getUserID(r *http.Request) string {
-	if id, ok := r.Context().Value("owner_id").(uuid.UUID); ok && id != uuid.Nil {
+	id := auth.OwnerIDFromCtx(r.Context())
+	if id != uuid.Nil {
 		return id.String()
 	}
 	return ""

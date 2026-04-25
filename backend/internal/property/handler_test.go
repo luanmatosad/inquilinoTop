@@ -298,6 +298,52 @@ func TestHandler_UpdateUnit_Válido(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code)
 }
 
+func TestHandler_GetUnit_RequiresOwnerMatch(t *testing.T) {
+	ownerA := uuid.New()
+	ownerB := uuid.New()
+	unitID := uuid.New()
+
+	mock := newMockRepo()
+	mock.units[unitID] = &property.Unit{ID: unitID, PropertyID: uuid.New(), Label: "A101", IsActive: true}
+	mock.unitOwners[unitID] = ownerA
+
+	svc := property.NewService(mock)
+	h := property.NewHandler(svc)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/units/"+unitID.String(), nil)
+	req = req.WithContext(auth.WithOwnerID(req.Context(), ownerB))
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusNotFound, rr.Code, "ownerB não deve acessar unit de ownerA")
+}
+
+func TestHandler_GetUnit_AllowsCorrectOwner(t *testing.T) {
+	ownerA := uuid.New()
+	unitID := uuid.New()
+	propID := uuid.New()
+
+	mock := newMockRepo()
+	mock.units[unitID] = &property.Unit{ID: unitID, PropertyID: propID, Label: "A101", IsActive: true}
+	mock.unitOwners[unitID] = ownerA
+
+	svc := property.NewService(mock)
+	h := property.NewHandler(svc)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/units/"+unitID.String(), nil)
+	req = req.WithContext(auth.WithOwnerID(req.Context(), ownerA))
+	rr := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code, "ownerA deve acessar sua própria unit")
+}
+
 func TestHandler_DeleteUnit_Válido(t *testing.T) {
 	mock := newMockRepo()
 	svc := property.NewService(mock)

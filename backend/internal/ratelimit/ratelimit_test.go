@@ -1,13 +1,13 @@
 package ratelimit_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/ratelimit"
+	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +29,7 @@ func TestMiddleware_AppliesUserRateLimitWhenAuthenticated(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req = req.WithContext(context.WithValue(req.Context(), "owner_id", ownerID))
+		req = req.WithContext(auth.WithOwnerID(req.Context(), ownerID))
 		rr := httptest.NewRecorder()
 		mw.Middleware(next).ServeHTTP(rr, req)
 	}
