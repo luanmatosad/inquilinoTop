@@ -142,6 +142,7 @@ func main() {
 
 	rbacRepo := rbac.NewRepository(database.Pool)
 	rbacSvc := rbac.NewService(rbacRepo)
+	rbacHandler := rbac.NewHandler(rbacSvc)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -172,18 +173,7 @@ func main() {
 		auditHandler.Register(r2, authMW)
 		documentHandler.Register(r2, authMW)
 		notificationHandler.Register(r2, authMW)
-		r2.With(authMW).Get("/me/roles", func(w http.ResponseWriter, req *http.Request) {
-			ownerID := auth.OwnerIDFromCtx(req.Context())
-			roles, err := rbacSvc.GetUserRoles(req.Context(), ownerID)
-			if err != nil {
-				httputil.Err(w, http.StatusInternalServerError, "ROLES_FAILED", err.Error())
-				return
-			}
-			if roles == nil {
-				roles = []rbac.UserRole{}
-			}
-			httputil.OK(w, roles)
-		})
+		rbacHandler.Register(r2, authMW)
 	})
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
@@ -221,6 +211,10 @@ func main() {
 	idxScheduler := lease.NewIndexScheduler(leaseSvc)
 	idxScheduler.Start(context.Background(), 24*time.Hour)
 
+	notifWorkerCtx, notifWorkerCancel := context.WithCancel(context.Background())
+	notifWorker := notification.NewWorker(notificationSvc, time.Minute)
+	notifWorker.Start(notifWorkerCtx)
+
 	port := envOr("PORT", "8080")
 	slog.Info("server starting", "port", port)
 	srv := &http.Server{
@@ -238,6 +232,7 @@ func main() {
 		<-sigCh
 
 		slog.Info("shutting down server...")
+		notifWorkerCancel()
 		idxScheduler.Stop()
 		
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

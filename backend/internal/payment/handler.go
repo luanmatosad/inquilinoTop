@@ -26,6 +26,7 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
 	r.With(authMW).Get("/api/v1/leases/{leaseId}/payments", h.listByLease)
 	r.With(authMW).Post("/api/v1/leases/{leaseId}/payments", h.create)
+	r.With(authMW).Get("/api/v1/payments", h.listByOwner)
 	r.With(authMW).Get("/api/v1/payments/{id}", h.get)
 	r.With(authMW).Put("/api/v1/payments/{id}", h.update)
 	r.With(authMW).Post("/api/v1/leases/{leaseId}/payments/generate", h.Generate)
@@ -34,6 +35,27 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 	r.With(authMW).Get("/api/v1/payments/{id}/charge", h.handleGetChargeStatus)
 	r.With(authMW).Post("/api/v1/payments/{id}/payout", h.handleCreatePayout)
 	r.Post("/webhook/{provider}", h.handleWebhook)
+}
+
+// @Summary Lista todos os pagamentos do owner autenticado
+// @Tags payments
+// @Security BearerAuth
+// @Produce json
+// @Param status query string false "Filtro de status (PENDING|PAID|LATE)"
+// @Success 200 {object} map[string]interface{}
+// @Router /payments [get]
+func (h *Handler) listByOwner(w http.ResponseWriter, r *http.Request) {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+	statusFilter := r.URL.Query().Get("status")
+	list, err := h.svc.ListByOwner(r.Context(), ownerID, statusFilter)
+	if err != nil {
+		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
+		return
+	}
+	if list == nil {
+		list = []Payment{}
+	}
+	httputil.OK(w, list)
 }
 
 // @Summary Lista pagamentos de um contrato

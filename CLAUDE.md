@@ -56,12 +56,18 @@ Integração exige `-p 1` (um pacote por vez) para não paralelizar acesso ao DB
 | Módulo | Docs | Status Frontend |
 |---|---|---|
 | Backend geral | [backend/CLAUDE.md](backend/CLAUDE.md) | — |
-| identity | [backend/internal/identity/CLAUDE.md](backend/internal/identity/CLAUDE.md) | Supabase Auth (não migrado) |
+| identity | [backend/internal/identity/CLAUDE.md](backend/internal/identity/CLAUDE.md) | **MIGRADO** — Go API |
 | property + unit | [backend/internal/property/CLAUDE.md](backend/internal/property/CLAUDE.md) | Supabase (TODO migrar) |
 | tenant | [backend/internal/tenant/CLAUDE.md](backend/internal/tenant/CLAUDE.md) | Supabase (TODO migrar) |
 | lease | [backend/internal/lease/CLAUDE.md](backend/internal/lease/CLAUDE.md) | Supabase (TODO migrar) |
 | payment | [backend/internal/payment/CLAUDE.md](backend/internal/payment/CLAUDE.md) | Supabase (TODO migrar) |
 | expense | [backend/internal/expense/CLAUDE.md](backend/internal/expense/CLAUDE.md) | Supabase (TODO migrar) |
 | fiscal | [backend/internal/fiscal/CLAUDE.md](backend/internal/fiscal/CLAUDE.md) | — |
+| audit | [backend/internal/audit/CLAUDE.md](backend/internal/audit/CLAUDE.md) | — |
+| rbac | [backend/internal/rbac/CLAUDE.md](backend/internal/rbac/CLAUDE.md) | — |
+| notification | [backend/internal/notification/CLAUDE.md](backend/internal/notification/CLAUDE.md) | — |
+| support | [backend/internal/support/CLAUDE.md](backend/internal/support/CLAUDE.md) | Frontend stub |
+| document | [backend/internal/document/CLAUDE.md](backend/internal/document/CLAUDE.md) | — |
+| ratelimit | [backend/internal/ratelimit/CLAUDE.md](backend/internal/ratelimit/CLAUDE.md) | — |
 | pkg/ | [backend/pkg/CLAUDE.md](backend/pkg/CLAUDE.md) | — |
 | Frontend | [frontend/CLAUDE.md](frontend/CLAUDE.md) | Next.js 16 App Router |

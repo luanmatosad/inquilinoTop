@@ -24,6 +24,8 @@ docs/                    # gerado por swag init — não editar manualmente
 | `MIGRATIONS_PATH` | Diretório de migrations (default: `./migrations`) |
 | `PORT` | Porta HTTP (default: `8080`) |
 | `TEST_DATABASE_URL` | DB para testes de integração (default: localhost:5433) |
+| `CORS_ALLOWED_ORIGINS` | Lista separada por vírgula de origens CORS (default: vazio) |
+| `PAYMENT_PROVIDER` | Provider de pagamento: `asaas`, `sicoob`, `bradesco`, `itau`, `mock` |
 
 ## Rotas Públicas
 
@@ -34,7 +36,14 @@ POST /api/v1/auth/register
 POST /api/v1/auth/login
 POST /api/v1/auth/refresh
 POST /api/v1/auth/logout
+POST /api/v1/auth/2fa/verify
+POST /api/v1/payments/webhook   # webhook do provider de pagamento
 ```
+
+## Middlewares Globais (aplicados em main.go)
+
+- `ratelimit.NewMiddleware` — token bucket por IP (100/s) e por usuário (200/s)
+- CORS com `CORS_ALLOWED_ORIGINS`
 
 ## Padrão de Domínio (todos os módulos seguem)
 
@@ -57,7 +66,9 @@ Sempre via `httputil`. Envelope: `{"data": ..., "error": null}` ou `{"data": nul
 
 ## Migrations
 
-Numeradas `000001_..._name.up.sql` / `.down.sql`. Rodam automaticamente na startup via `db.RunMigrations`. Tabelas: `users`, `refresh_tokens`, `properties`, `units`, `tenants`, `leases`, `payments`, `expenses`.
+Numeradas `000001_..._name.up.sql` / `.down.sql`. Rodam automaticamente na startup via `db.RunMigrations`. Última: `000025_create_index_values`.
+
+Tabelas adicionadas (000009–000025): `tenant.person_type`, `lease.fiscal_fields`, `payment.breakdown`, `lease_readjustments`, `irrf_brackets`, `financial_config`, `payment.charge_fields`, `lease.payment_day`, `support_tickets`, `audit_logs`, `user_roles`, `2fa_fields`, `temp_2fa_tokens`, `documents`, `notifications`, `index_values`.
 
 ## Módulos
 
@@ -70,4 +81,10 @@ Numeradas `000001_..._name.up.sql` / `.down.sql`. Rodam automaticamente na start
 | payment | [internal/payment/CLAUDE.md](internal/payment/CLAUDE.md) |
 | expense | [internal/expense/CLAUDE.md](internal/expense/CLAUDE.md) |
 | fiscal | [internal/fiscal/CLAUDE.md](internal/fiscal/CLAUDE.md) |
+| audit | [internal/audit/CLAUDE.md](internal/audit/CLAUDE.md) |
+| rbac | [internal/rbac/CLAUDE.md](internal/rbac/CLAUDE.md) |
+| notification | [internal/notification/CLAUDE.md](internal/notification/CLAUDE.md) |
+| support | [internal/support/CLAUDE.md](internal/support/CLAUDE.md) |
+| document | [internal/document/CLAUDE.md](internal/document/CLAUDE.md) |
+| ratelimit | [internal/ratelimit/CLAUDE.md](internal/ratelimit/CLAUDE.md) |
 | pkg/ | [pkg/CLAUDE.md](pkg/CLAUDE.md) |

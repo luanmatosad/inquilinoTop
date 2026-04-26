@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { getRepasses, Repasse } from '@/data/financeiro/dal';
+import { getRepasses, Repasse } from '../actions';
 import { Search, RefreshCw, FileText, Send } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';

@@ -26,6 +26,10 @@ func (s *Service) ListByUnit(ctx context.Context, unitID, ownerID uuid.UUID) ([]
 	return s.repo.ListByUnit(ctx, unitID, ownerID)
 }
 
+func (s *Service) ListByOwner(ctx context.Context, ownerID uuid.UUID) ([]Expense, error) {
+	return s.repo.ListByOwner(ctx, ownerID)
+}
+
 func (s *Service) Update(ctx context.Context, id, ownerID uuid.UUID, in CreateExpenseInput) (*Expense, error) {
 	return s.repo.Update(ctx, id, ownerID, in)
 }

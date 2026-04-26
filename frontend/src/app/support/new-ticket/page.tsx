@@ -18,7 +18,7 @@ export default function NewTicketPage() {
   const [formData, setFormData] = useState({
     tipo: '',
     asunto: '',
-    descripcion: '',
+    descricao: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -29,7 +29,7 @@ export default function NewTicketPage() {
 
     if (!formData.tipo) newErrors.tipo = 'Selecione o tipo de chamado';
     if (!formData.asunto.trim()) newErrors.asunto = 'Preencha o assunto';
-    if (!formData.descripcion.trim()) newErrors.descripcion = 'Preencha a descrição';
+    if (!formData.descricao.trim()) newErrors.descricao = 'Preencha a descrição';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -40,7 +40,7 @@ export default function NewTicketPage() {
     const result = await createTicket({
       tipo: formData.tipo,
       assunto: formData.asunto,
-      descripcion: formData.descripcion,
+      descricao: formData.descricao,
     });
 
     setLoading(false);
@@ -98,14 +98,14 @@ export default function NewTicketPage() {
             <div>
               <label className="block text-sm font-medium text-on-surface mb-2">Descrição</label>
               <textarea
-                value={formData.descripcion}
-                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                value={formData.descricao}
+                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                 placeholder="Detalhe máximo sua situação..."
                 rows={6}
                 required
                 className="w-full px-4 py-3 bg-surface border border-outline rounded-lg text-on-surface focus:ring-2 focus:ring-primary outline-none resize-none"
               />
-              {errors.descripcion && <p className="text-sm text-error mt-1">{errors.descripcion}</p>}
+              {errors.descricao && <p className="text-sm text-error mt-1">{errors.descricao}</p>}
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>

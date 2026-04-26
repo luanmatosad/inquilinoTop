@@ -177,3 +177,19 @@ func TestHandler_Delete_Válido(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
+
+func TestHandler_ListByOwner_Vazio(t *testing.T) {
+	svc := expense.NewService(newMockExpenseRepo())
+	h := expense.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/expenses", nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	var body map[string]interface{}
+	json.NewDecoder(rr.Body).Decode(&body)
+	assert.NotNil(t, body["data"])
+}

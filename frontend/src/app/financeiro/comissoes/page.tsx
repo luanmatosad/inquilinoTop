@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { getComissoes, Comissao } from '@/data/financeiro/dal';
+import { getComissoes, Comissao } from '../actions';
 import { Search, Percent, SplitSquareHorizontal } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';

@@ -145,6 +145,20 @@ func (m *mockPaymentRepo) GetByChargeID(_ context.Context, chargeID string) (*pa
 	return nil, errors.New("not found")
 }
 
+func (m *mockPaymentRepo) ListByOwner(_ context.Context, ownerID uuid.UUID, statusFilter string) ([]payment.Payment, error) {
+	var list []payment.Payment
+	for _, p := range m.payments {
+		if p.OwnerID != ownerID {
+			continue
+		}
+		if statusFilter != "" && p.Status != statusFilter {
+			continue
+		}
+		list = append(list, *p)
+	}
+	return list, nil
+}
+
 type mockLeaseReader struct {
 	leases map[uuid.UUID]*lease.Lease
 }

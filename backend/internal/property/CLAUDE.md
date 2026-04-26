@@ -33,6 +33,6 @@ Um módulo trata Property + Unit juntos. Repository interface tem 10 métodos (5
 
 ## Gotchas
 
-- `GetUnit` não recebe `ownerID` — acesso não filtrado por owner. Cuidado ao expor diretamente.
-- `CreatePropertyInput` é reutilizado em Update (sem campo `type` — type não muda após criação na prática, mas a struct permite).
-- `handler.createUnit` passa `ownerID` ao service, mas o repo ignora — a verificação é feita pelo service via `GetByID`.
+- `GetUnit`, `UpdateUnit`, `DeleteUnit` AGORA recebem `ownerID` e fazem o JOIN com `properties` para validar owner (IDOR corrigido em commit `6269ffa`).
+- `CreatePropertyInput` é reutilizado em Update (sem campo `type` — type não muda após criação).
+- `handler.createUnit` passa `ownerID` ao service, verificação via JOIN em property.

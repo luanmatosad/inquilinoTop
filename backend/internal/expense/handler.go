@@ -22,10 +22,30 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
+	r.With(authMW).Get("/api/v1/expenses", h.listByOwner)
 	r.With(authMW).Get("/api/v1/units/{unitId}/expenses", h.listByUnit)
 	r.With(authMW).Post("/api/v1/units/{unitId}/expenses", h.create)
 	r.With(authMW).Put("/api/v1/expenses/{id}", h.update)
 	r.With(authMW).Delete("/api/v1/expenses/{id}", h.delete)
+}
+
+// @Summary Lista todas as despesas do owner autenticado
+// @Tags expenses
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /expenses [get]
+func (h *Handler) listByOwner(w http.ResponseWriter, r *http.Request) {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+	list, err := h.svc.ListByOwner(r.Context(), ownerID)
+	if err != nil {
+		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
+		return
+	}
+	if list == nil {
+		list = []Expense{}
+	}
+	httputil.OK(w, list)
 }
 
 // @Summary Lista despesas de uma unidade

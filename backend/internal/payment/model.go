@@ -83,6 +83,7 @@ type Repository interface {
 	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Payment, error)
 	GetByChargeID(ctx context.Context, chargeID string) (*Payment, error)
 	ListByLease(ctx context.Context, leaseID, ownerID uuid.UUID) ([]Payment, error)
+	ListByOwner(ctx context.Context, ownerID uuid.UUID, statusFilter string) ([]Payment, error)
 	Update(ctx context.Context, id, ownerID uuid.UUID, in UpdatePaymentInput) (*Payment, error)
 	MarkPaid(ctx context.Context, id, ownerID uuid.UUID, paidDate time.Time,
 		lateFee, interest, irrf, netAmount float64) (*Payment, error)

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getDashboardMetrics, getRecebimentos } from '@/data/financeiro/dal';
+import { getDashboardMetrics, getRecebimentos } from '../actions';
 import { ArrowUpRight, ArrowDownRight, TrendingUp, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 

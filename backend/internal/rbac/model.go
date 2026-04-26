@@ -29,6 +29,18 @@ type CreateInput struct {
 	PropertyID *uuid.UUID
 }
 
+type AssignRoleInput struct {
+	UserID     uuid.UUID  `json:"user_id" validate:"required"`
+	Role       RoleType   `json:"role" validate:"required,oneof=owner admin viewer"`
+	PropertyID *uuid.UUID `json:"property_id,omitempty"`
+}
+
+type RemoveRoleInput struct {
+	UserID     uuid.UUID  `json:"user_id" validate:"required"`
+	Role       RoleType   `json:"role" validate:"required,oneof=owner admin viewer"`
+	PropertyID *uuid.UUID `json:"property_id,omitempty"`
+}
+
 type Repository interface {
 	Create(ctx context.Context, in CreateInput) (*UserRole, error)
 	Delete(ctx context.Context, userID uuid.UUID, role RoleType, propertyID *uuid.UUID) error

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { getRecebimentos, Recebimento, TransactionStatus } from '@/data/financeiro/dal';
+import { getRecebimentos, Recebimento, TransactionStatus } from '../actions';
 import { Search, Plus, Filter, MoreVertical, FileText, Send, CheckCircle, FilePlus2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';

@@ -4,7 +4,7 @@ CRUD padrão + operações de negócio: `End`, `Renew`, `Readjust`. Vincula Tena
 
 ## Modelo
 
-`Lease`: id, owner_id, unit_id, tenant_id, start_date, end_date?, rent_amount, deposit_amount?, status (ACTIVE|ENDED|CANCELED), is_active, late_fee_percent, daily_interest_percent, iptu_reimbursable, annual_iptu_amount?, iptu_year?
+`Lease`: id, owner_id, unit_id, tenant_id, start_date, end_date?, rent_amount, deposit_amount?, **payment_day** (1–31), status (ACTIVE|ENDED|CANCELED), is_active, late_fee_percent, daily_interest_percent, iptu_reimbursable, annual_iptu_amount?, iptu_year?
 
 Inputs:
 - `CreateLeaseInput`: unit_id, tenant_id, start_date, end_date?, rent_amount, deposit_amount?, late_fee_percent?, daily_interest_percent?, iptu_reimbursable?, annual_iptu_amount?, iptu_year?
@@ -32,3 +32,7 @@ Inputs:
 - `Renew` pode omitir `rent_amount` (zero value no JSON); service decide se atualiza.
 - Deleção é soft-delete (`is_active=false`), distinto de `End` (muda apenas status).
 - `Readjust` exige percentage ∈ (0, 1] e lease ACTIVE. Não retroage sobre payments já gerados.
+- `payment_day` (migration 000017): obrigatório em `CreateLeaseInput` (1–31), usado pelo scheduler para gerar pagamentos.
+- `scheduler.go`: geração automática de pagamentos mensais baseada em `payment_day` — não exposto via API diretamente.
+- `index_repository.go`: repositório para tabela `index_values` (IGPM, IPCA etc.) — consumido em `Readjust`.
+- `errors.Is` (não `strings.Contains`) para roteamento de erros (corrigido em `fix/payment,lease` commit).

@@ -66,6 +66,30 @@ func (r *pgRepository) ListByUnit(ctx context.Context, unitID, ownerID uuid.UUID
 	return list, nil
 }
 
+func (r *pgRepository) ListByOwner(ctx context.Context, ownerID uuid.UUID) ([]Expense, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT id, owner_id, unit_id, description, amount, due_date, category, is_active, created_at, updated_at
+		 FROM expenses WHERE owner_id=$1 AND is_active=true ORDER BY due_date DESC`,
+		ownerID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("expense.repo: list by owner: %w", err)
+	}
+	defer rows.Close()
+	var list []Expense
+	for rows.Next() {
+		var e Expense
+		if err := rows.Scan(&e.ID, &e.OwnerID, &e.UnitID, &e.Description, &e.Amount, &e.DueDate, &e.Category, &e.IsActive, &e.CreatedAt, &e.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("expense.repo: list by owner scan: %w", err)
+		}
+		list = append(list, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("expense.repo: list by owner rows: %w", err)
+	}
+	return list, nil
+}
+
 func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in CreateExpenseInput) (*Expense, error) {
 	var e Expense
 	err := r.db.Pool.QueryRow(ctx,

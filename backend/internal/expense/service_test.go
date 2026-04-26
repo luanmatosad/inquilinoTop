@@ -64,6 +64,16 @@ func (m *mockExpenseRepo) Update(_ context.Context, id, ownerID uuid.UUID, in ex
 	return e, nil
 }
 
+func (m *mockExpenseRepo) ListByOwner(_ context.Context, ownerID uuid.UUID) ([]expense.Expense, error) {
+	var list []expense.Expense
+	for _, e := range m.expenses {
+		if e.OwnerID == ownerID && e.IsActive {
+			list = append(list, *e)
+		}
+	}
+	return list, nil
+}
+
 func (m *mockExpenseRepo) Delete(_ context.Context, id, ownerID uuid.UUID) error {
 	e, err := m.GetByID(context.Background(), id, ownerID)
 	if err != nil {

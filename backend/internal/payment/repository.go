@@ -116,6 +116,34 @@ func (r *pgRepository) ListByLease(ctx context.Context, leaseID, ownerID uuid.UU
 	return list, nil
 }
 
+func (r *pgRepository) ListByOwner(ctx context.Context, ownerID uuid.UUID, statusFilter string) ([]Payment, error) {
+	query := `SELECT ` + paymentCols + ` FROM payments WHERE owner_id=$1`
+	args := []interface{}{ownerID}
+	if statusFilter != "" {
+		query += ` AND status=$2`
+		args = append(args, statusFilter)
+	}
+	query += ` ORDER BY due_date DESC`
+
+	rows, err := r.db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("payment.repo: list by owner: %w", err)
+	}
+	defer rows.Close()
+	var list []Payment
+	for rows.Next() {
+		var p Payment
+		if err := scanPaymentRows(rows, &p); err != nil {
+			return nil, fmt.Errorf("payment.repo: list by owner scan: %w", err)
+		}
+		list = append(list, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("payment.repo: list by owner rows: %w", err)
+	}
+	return list, nil
+}
+
 func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in UpdatePaymentInput) (*Payment, error) {
 	var p Payment
 	err := scanPayment(r.db.Pool.QueryRow(ctx,

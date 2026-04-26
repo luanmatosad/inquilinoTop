@@ -38,3 +38,11 @@ d.Close()                         // fechar pool
 ```
 
 Usar `d.Pool.Exec / QueryRow / Query` nas implementações de repositório.
+
+## validator
+
+```go
+validator.Validate(struct)  // singleton go-playground/validator/v10, inicializado uma vez
+```
+
+Usado para validar structs de input com tags `validate:"required,oneof=..."`. Singleton thread-safe via `sync.Once`.

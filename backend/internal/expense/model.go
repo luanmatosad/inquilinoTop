@@ -32,6 +32,7 @@ type Repository interface {
 	Create(ctx context.Context, ownerID uuid.UUID, in CreateExpenseInput) (*Expense, error)
 	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Expense, error)
 	ListByUnit(ctx context.Context, unitID, ownerID uuid.UUID) ([]Expense, error)
+	ListByOwner(ctx context.Context, ownerID uuid.UUID) ([]Expense, error)
 	Update(ctx context.Context, id, ownerID uuid.UUID, in CreateExpenseInput) (*Expense, error)
 	Delete(ctx context.Context, id, ownerID uuid.UUID) error
 }

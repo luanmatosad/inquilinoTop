@@ -60,6 +60,10 @@ func (s *Service) ListByLease(ctx context.Context, leaseID, ownerID uuid.UUID) (
 	return list, nil
 }
 
+func (s *Service) ListByOwner(ctx context.Context, ownerID uuid.UUID, statusFilter string) ([]Payment, error) {
+	return s.repo.ListByOwner(ctx, ownerID, statusFilter)
+}
+
 func (s *Service) Enrich(ctx context.Context, p Payment) Payment {
 	if p.PaidDate != nil {
 		return p

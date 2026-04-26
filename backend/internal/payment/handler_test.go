@@ -274,3 +274,30 @@ func TestHandler_HandleWebhook_AcceptsWithCorrectSecret(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
+
+func TestHandler_ListByOwner_Vazio(t *testing.T) {
+	h := newTestHandler()
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/payments", nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	var body map[string]interface{}
+	json.NewDecoder(rr.Body).Decode(&body)
+	assert.NotNil(t, body["data"])
+}
+
+func TestHandler_ListByOwner_ComFiltroStatus(t *testing.T) {
+	h := newTestHandler()
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/payments?status=PENDING", nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
