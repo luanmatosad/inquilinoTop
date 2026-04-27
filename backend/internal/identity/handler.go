@@ -20,17 +20,17 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router) {
-	r.Post("/api/v1/auth/register", h.register)
-	r.Post("/api/v1/auth/login", h.login)
-	r.Post("/api/v1/auth/2fa/login", h.login2FA)
-	r.Post("/api/v1/auth/refresh", h.refresh)
-	r.Post("/api/v1/auth/logout", h.logout)
+	r.Post("/auth/register", h.register)
+	r.Post("/auth/login", h.login)
+	r.Post("/auth/2fa/login", h.login2FA)
+	r.Post("/auth/refresh", h.refresh)
+	r.Post("/auth/logout", h.logout)
 }
 
 func (h *Handler) RegisterProtected(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Post("/api/v1/auth/2fa/setup", h.setup2FA)
-	r.With(authMW).Post("/api/v1/auth/2fa/verify", h.verify2FA)
-	r.With(authMW).Post("/api/v1/auth/2fa/disable", h.disable2FA)
+	r.With(authMW).Post("/auth/2fa/setup", h.setup2FA)
+	r.With(authMW).Post("/auth/2fa/verify", h.verify2FA)
+	r.With(authMW).Post("/auth/2fa/disable", h.disable2FA)
 }
 
 type credentialsInput struct {

@@ -45,6 +45,7 @@ services:
       JWT_PRIVATE_KEY_PATH: /app/keys/private.pem
       JWT_PUBLIC_KEY_PATH: /app/keys/public.pem
       APP_ENV: development
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
       PORT: 8080
     depends_on:
       postgres:

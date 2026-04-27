@@ -356,10 +356,22 @@ func mustLoadPrivateKey(path string) *rsa.PrivateKey {
 		slog.Error("failed to decode PEM block", "path", path)
 		os.Exit(1)
 	}
-	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+
+	if key, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
+		return key
+	}
+
+	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		slog.Error("failed to parse private key", "error", err)
 		os.Exit(1)
 	}
-	return key
+
+	rsaKey, ok := key.(*rsa.PrivateKey)
+	if !ok {
+		slog.Error("not an RSA private key")
+		os.Exit(1)
+	}
+
+	return rsaKey
 }
