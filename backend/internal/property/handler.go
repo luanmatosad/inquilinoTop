@@ -22,16 +22,16 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/api/v1/properties", h.list)
-	r.With(authMW).Post("/api/v1/properties", h.create)
-	r.With(authMW).Get("/api/v1/properties/{id}", h.get)
-	r.With(authMW).Put("/api/v1/properties/{id}", h.update)
-	r.With(authMW).Delete("/api/v1/properties/{id}", h.delete)
-	r.With(authMW).Get("/api/v1/properties/{id}/units", h.listUnits)
-	r.With(authMW).Post("/api/v1/properties/{id}/units", h.createUnit)
-	r.With(authMW).Get("/api/v1/units/{id}", h.getUnit)
-	r.With(authMW).Put("/api/v1/units/{id}", h.updateUnit)
-	r.With(authMW).Delete("/api/v1/units/{id}", h.deleteUnit)
+	r.With(authMW).Get("/properties", h.list)
+	r.With(authMW).Post("/properties", h.create)
+	r.With(authMW).Get("/properties/{id}", h.get)
+	r.With(authMW).Put("/properties/{id}", h.update)
+	r.With(authMW).Delete("/properties/{id}", h.delete)
+	r.With(authMW).Get("/properties/{id}/units", h.listUnits)
+	r.With(authMW).Post("/properties/{id}/units", h.createUnit)
+	r.With(authMW).Get("/units/{id}", h.getUnit)
+	r.With(authMW).Put("/units/{id}", h.updateUnit)
+	r.With(authMW).Delete("/units/{id}", h.deleteUnit)
 }
 
 // @Summary Lista imóveis

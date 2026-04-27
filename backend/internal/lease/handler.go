@@ -22,17 +22,17 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/api/v1/leases", h.list)
-	r.With(authMW).Post("/api/v1/leases", h.create)
-	r.With(authMW).Get("/api/v1/leases/{id}", h.get)
-	r.With(authMW).Put("/api/v1/leases/{id}", h.update)
-	r.With(authMW).Delete("/api/v1/leases/{id}", h.delete)
-	r.With(authMW).Post("/api/v1/leases/{id}/end", h.end)
-	r.With(authMW).Post("/api/v1/leases/{id}/renew", h.renew)
-	r.With(authMW).Post("/api/v1/leases/{id}/readjust", h.readjust)
-	r.With(authMW).Get("/api/v1/leases/{id}/readjustments", h.listReadjustments)
-	r.With(authMW).Get("/api/v1/indices/{type}/history", h.getIndexHistory)
-	r.With(authMW).Post("/api/v1/leases/{id}/adjust", h.autoAdjust)
+	r.With(authMW).Get("/leases", h.list)
+	r.With(authMW).Post("/leases", h.create)
+	r.With(authMW).Get("/leases/{id}", h.get)
+	r.With(authMW).Put("/leases/{id}", h.update)
+	r.With(authMW).Delete("/leases/{id}", h.delete)
+	r.With(authMW).Post("/leases/{id}/end", h.end)
+	r.With(authMW).Post("/leases/{id}/renew", h.renew)
+	r.With(authMW).Post("/leases/{id}/readjust", h.readjust)
+	r.With(authMW).Get("/leases/{id}/readjustments", h.listReadjustments)
+	r.With(authMW).Get("/indices/{type}/history", h.getIndexHistory)
+	r.With(authMW).Post("/leases/{id}/adjust", h.autoAdjust)
 }
 
 // @Summary Lista contratos

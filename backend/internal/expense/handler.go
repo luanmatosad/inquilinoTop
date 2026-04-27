@@ -22,11 +22,11 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/api/v1/expenses", h.listByOwner)
-	r.With(authMW).Get("/api/v1/units/{unitId}/expenses", h.listByUnit)
-	r.With(authMW).Post("/api/v1/units/{unitId}/expenses", h.create)
-	r.With(authMW).Put("/api/v1/expenses/{id}", h.update)
-	r.With(authMW).Delete("/api/v1/expenses/{id}", h.delete)
+	r.With(authMW).Get("/expenses", h.listByOwner)
+	r.With(authMW).Get("/units/{unitId}/expenses", h.listByUnit)
+	r.With(authMW).Post("/units/{unitId}/expenses", h.create)
+	r.With(authMW).Put("/expenses/{id}", h.update)
+	r.With(authMW).Delete("/expenses/{id}", h.delete)
 }
 
 // @Summary Lista todas as despesas do owner autenticado

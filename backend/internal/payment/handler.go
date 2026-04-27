@@ -24,16 +24,16 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/api/v1/leases/{leaseId}/payments", h.listByLease)
-	r.With(authMW).Post("/api/v1/leases/{leaseId}/payments", h.create)
-	r.With(authMW).Get("/api/v1/payments", h.listByOwner)
-	r.With(authMW).Get("/api/v1/payments/{id}", h.get)
-	r.With(authMW).Put("/api/v1/payments/{id}", h.update)
-	r.With(authMW).Post("/api/v1/leases/{leaseId}/payments/generate", h.Generate)
-	r.With(authMW).Get("/api/v1/payments/{id}/receipt", h.Receipt)
-	r.With(authMW).Post("/api/v1/payments/{id}/charge", h.handleCreateCharge)
-	r.With(authMW).Get("/api/v1/payments/{id}/charge", h.handleGetChargeStatus)
-	r.With(authMW).Post("/api/v1/payments/{id}/payout", h.handleCreatePayout)
+	r.With(authMW).Get("/leases/{leaseId}/payments", h.listByLease)
+	r.With(authMW).Post("/leases/{leaseId}/payments", h.create)
+	r.With(authMW).Get("/payments", h.listByOwner)
+	r.With(authMW).Get("/payments/{id}", h.get)
+	r.With(authMW).Put("/payments/{id}", h.update)
+	r.With(authMW).Post("/leases/{leaseId}/payments/generate", h.Generate)
+	r.With(authMW).Get("/payments/{id}/receipt", h.Receipt)
+	r.With(authMW).Post("/payments/{id}/charge", h.handleCreateCharge)
+	r.With(authMW).Get("/payments/{id}/charge", h.handleGetChargeStatus)
+	r.With(authMW).Post("/payments/{id}/payout", h.handleCreatePayout)
 	r.Post("/webhook/{provider}", h.handleWebhook)
 }
 

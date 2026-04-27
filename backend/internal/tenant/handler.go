@@ -22,11 +22,11 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/api/v1/tenants", h.list)
-	r.With(authMW).Post("/api/v1/tenants", h.create)
-	r.With(authMW).Get("/api/v1/tenants/{id}", h.get)
-	r.With(authMW).Put("/api/v1/tenants/{id}", h.update)
-	r.With(authMW).Delete("/api/v1/tenants/{id}", h.delete)
+	r.With(authMW).Get("/tenants", h.list)
+	r.With(authMW).Post("/tenants", h.create)
+	r.With(authMW).Get("/tenants/{id}", h.get)
+	r.With(authMW).Put("/tenants/{id}", h.update)
+	r.With(authMW).Delete("/tenants/{id}", h.delete)
 }
 
 // @Summary Lista inquilinos

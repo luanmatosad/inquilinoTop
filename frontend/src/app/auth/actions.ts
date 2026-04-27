@@ -36,15 +36,20 @@ export async function login(prevState: ActionState, formData: FormData) {
     }
   }
 
+  let success = false
   try {
     const res = await goLogin(email, password)
     await setTokens(res.access_token, res.refresh_token)
     revalidatePath('/', 'layout')
-    redirect('/')
+    success = true
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Erro ao fazer login',
     }
+  }
+
+  if (success) {
+    redirect('/')
   }
 }
 
@@ -61,15 +66,20 @@ export async function signup(prevState: ActionState, formData: FormData) {
     }
   }
 
+  let success = false
   try {
     const res = await goRegister(email, password)
     await setTokens(res.access_token, res.refresh_token)
     revalidatePath('/', 'layout')
-    redirect('/')
+    success = true
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Erro ao criar conta',
     }
+  }
+
+  if (success) {
+    redirect('/')
   }
 }
 
