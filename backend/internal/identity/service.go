@@ -41,7 +41,24 @@ func NewServiceWithAudit(repo Repository, jwtSvc *auth.JWTService, logger AuditL
 	return &Service{repo: repo, jwtSvc: jwtSvc, auditLogger: logger}
 }
 
+func (s *Service) GetProfile(ctx context.Context, userID uuid.UUID) (*UserProfile, error) {
+	return s.repo.GetProfile(ctx, userID)
+}
+
+func (s *Service) UpdateProfile(ctx context.Context, userID uuid.UUID, in UpsertProfileInput) (*UserProfile, error) {
+	return s.repo.UpsertProfile(ctx, userID, in)
+}
+
+func (s *Service) GetNotificationPreferences(ctx context.Context, userID uuid.UUID) (*NotificationPreferences, error) {
+	return s.repo.GetNotificationPreferences(ctx, userID)
+}
+
+func (s *Service) UpdateNotificationPreferences(ctx context.Context, userID uuid.UUID, in UpsertNotificationPreferencesInput) (*NotificationPreferences, error) {
+	return s.repo.UpsertNotificationPreferences(ctx, userID, in)
+}
+
 func (s *Service) Register(ctx context.Context, email, password string) (*AuthResult, error) {
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("identity.svc: hash password: %w", err)
