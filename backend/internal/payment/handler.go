@@ -3,6 +3,7 @@ package payment
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -49,6 +50,7 @@ func (h *Handler) listByOwner(w http.ResponseWriter, r *http.Request) {
 	statusFilter := r.URL.Query().Get("status")
 	list, err := h.svc.ListByOwner(r.Context(), ownerID, statusFilter)
 	if err != nil {
+		slog.Error("payment: list by owner failed", "owner_id", ownerID, "status_filter", statusFilter, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
 	}
@@ -74,6 +76,7 @@ func (h *Handler) listByLease(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.svc.ListByLease(r.Context(), leaseID, ownerID)
 	if err != nil {
+		slog.Error("payment: list by lease failed", "lease_id", leaseID, "owner_id", ownerID, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
 	}
@@ -103,6 +106,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "pagamento não encontrado")
 			return
 		}
+		slog.Error("payment: get failed", "payment_id", id, "owner_id", ownerID, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "GET_FAILED", err.Error())
 		return
 	}

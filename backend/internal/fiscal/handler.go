@@ -1,6 +1,7 @@
 package fiscal
 
 import (
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -56,6 +57,7 @@ func (h *Handler) AnnualReport(w http.ResponseWriter, r *http.Request) {
 			httputil.Err(w, http.StatusBadRequest, "INVALID_YEAR", err.Error())
 			return
 		}
+		slog.Error("fiscal: annual report failed", "owner_id", ownerID, "year", year, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "REPORT_FAILED", err.Error())
 		return
 	}

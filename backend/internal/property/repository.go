@@ -214,3 +214,22 @@ func (r *pgRepository) ListUnitsByPropertyIDs(ctx context.Context, propertyIDs [
 	}
 	return list, nil
 }
+
+func (r *pgRepository) GetByField(ctx context.Context, ownerID uuid.UUID, field string, value string) (*Property, error) {
+	if field != "name" {
+		return nil, fmt.Errorf("property.repo: unsupported field %s", field)
+	}
+	var p Property
+	err := r.db.Pool.QueryRow(ctx,
+		`SELECT id, owner_id, type, name, address_line, city, state, is_active, created_at, updated_at
+		 FROM properties WHERE owner_id=$1 AND LOWER(name)=LOWER($2) AND is_active=true`,
+		ownerID, value,
+	).Scan(&p.ID, &p.OwnerID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("property.repo: get by field: %w", err)
+	}
+	return &p, nil
+}

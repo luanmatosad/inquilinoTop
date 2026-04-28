@@ -34,4 +34,5 @@ type Repository interface {
 	List(ctx context.Context, ownerID uuid.UUID) ([]Tenant, error)
 	Update(ctx context.Context, id, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error)
 	Delete(ctx context.Context, id, ownerID uuid.UUID) error
+	GetByField(ctx context.Context, ownerID uuid.UUID, field string, value string) (*Tenant, error)
 }

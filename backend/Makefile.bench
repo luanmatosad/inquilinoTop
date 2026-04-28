@@ -1,0 +1,38 @@
+.PHONY: bench bench-jwt bench-auth bench-db help
+
+help:
+	@echo "Available targets:"
+	@echo "  bench         - Run all benchmarks"
+	@echo "  bench-jwt     - JWT benchmarks (pkg/auth)"
+	@echo "  bench-auth    - Auth bcrypt benchmarks (internal/identity)"
+	@echo "  bench-db      - Database benchmarks"
+
+bench:
+	@echo "=== Running all benchmarks ==="
+	docker compose exec backend go test -run=^$$ -bench=. -benchtime=5s ./pkg/... ./internal/... 2>&1 | grep -E "^(Benchmark|PASS|ok)"
+
+bench-jwt:
+	@echo "=== JWT Benchmarks ==="
+	docker compose exec backend go test -bench=BenchmarkJWT -benchtime=5s -benchmem ./pkg/auth/...
+
+bench-auth:
+	@echo "=== Auth/BCrypt Benchmarks ==="
+	docker compose exec backend go test -run=^$$ -bench=BenchmarkBCrypt -benchtime=5s -benchmem ./internal/identity/... 2>&1 | grep -E "^(Benchmark|PASS|ok)"
+
+bench-db:
+	@echo "=== DB Benchmarks ==="
+	docker compose exec backend go test -run=^$$ -bench=. -benchtime=5s -benchmem ./pkg/db/... 2>&1 | grep -E "^(Benchmark|PASS|ok)"
+
+load-test:
+	@echo "=== Running load test (requires k6) ==="
+	@if command -v k6 >/dev/null 2>&1; then \
+		k6 run load-test.js; \
+	else \
+		echo "k6 not installed. Install from: https://k6.io/docs/getting-started/installation/"; \
+	fi
+
+bench-quick:
+	docker compose exec backend go test -bench=. -benchtime=1s ./pkg/auth/... 2>&1 | grep -E "^Benchmark"
+
+bench-mem:
+	docker compose exec backend go test -bench=. -benchmem -benchtime=3s ./pkg/auth/... 2>&1 | grep -E "^(Benchmark|Mem)"

@@ -3,6 +3,7 @@ package lease
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -45,6 +46,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	list, err := h.svc.List(r.Context(), ownerID)
 	if err != nil {
+		slog.Error("lease: list failed", "owner_id", ownerID, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
 	}
@@ -101,6 +103,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "contrato não encontrado")
 			return
 		}
+		slog.Error("lease: get failed", "lease_id", id, "owner_id", ownerID, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "GET_FAILED", err.Error())
 		return
 	}

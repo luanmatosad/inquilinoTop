@@ -25,6 +25,7 @@ import (
 	_ "github.com/inquilinotop/api/docs"
 	"github.com/inquilinotop/api/internal/fiscal"
 	"github.com/inquilinotop/api/internal/identity"
+	"github.com/inquilinotop/api/internal/importexport"
 	"github.com/inquilinotop/api/internal/lease"
 	"github.com/inquilinotop/api/internal/notification"
 	"github.com/inquilinotop/api/internal/payment"
@@ -36,6 +37,8 @@ import (
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/db"
 	"github.com/inquilinotop/api/pkg/httputil"
+	"github.com/inquilinotop/api/pkg/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 //	@title			InquilinoTop API
@@ -50,7 +53,7 @@ import (
 //	@description				JWT token no formato: Bearer <token>
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := createLogger()
 	slog.SetDefault(logger)
 
 	databaseURL := mustEnv("DATABASE_URL")
@@ -144,17 +147,33 @@ func main() {
 	rbacSvc := rbac.NewService(rbacRepo)
 	rbacHandler := rbac.NewHandler(rbacSvc)
 
+	importRepo := importexport.NewRepository(database)
+	importSvc := importexport.NewService(importRepo, propertyRepo, tenantRepo)
+	importHandler := importexport.NewHandler(importSvc)
+
+	reg := prometheus.NewRegistry()
+	if err := metrics.Init(reg); err != nil {
+		slog.Error("failed to initialize metrics", "error", err)
+	}
+
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
+r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(rateLimiter.Middleware)
 	r.Use(corsMiddleware)
-
-	// r.Route() adiciona prefixo de path ao subrouter, quebrando handlers que já
-	// registram paths absolutos (ex: "/api/v1/properties"). Usamos middleware no
-	// root router para aplicar o header de deprecação sem alterar o roteamento.
+	r.Use(securityHeadersMW)
+	r.Use(metrics.HTTPMetricsMiddleware())
+	// Rewrite /api/v1/* to /* before routing
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/api/v1") {
+				r.URL.Path = strings.Replace(r.URL.Path, "/api/v1", "", 1)
+			}
+			next.ServeHTTP(w, r)
+		})
+	})
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			if strings.HasPrefix(req.URL.Path, "/api/v1/") {
@@ -179,7 +198,10 @@ func main() {
 	notificationHandler.Register(r, authMW)
 	rbacHandler.Register(r, authMW)
 
+	importHandler.Register(r, authMW)
+
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
+	r.Get("/metrics", metrics.Handler(reg).ServeHTTP)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		if err := database.Pool.Ping(r.Context()); err != nil {

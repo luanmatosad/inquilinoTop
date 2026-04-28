@@ -62,4 +62,5 @@ type Repository interface {
 	ListUnitsByPropertyIDs(ctx context.Context, propertyIDs []uuid.UUID) ([]Unit, error)
 	UpdateUnit(ctx context.Context, id, ownerID uuid.UUID, in CreateUnitInput) (*Unit, error)
 	DeleteUnit(ctx context.Context, id, ownerID uuid.UUID) error
+	GetByField(ctx context.Context, ownerID uuid.UUID, field string, value string) (*Property, error)
 }

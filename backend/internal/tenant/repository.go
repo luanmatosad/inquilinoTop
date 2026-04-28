@@ -109,3 +109,25 @@ func (r *pgRepository) Delete(ctx context.Context, id, ownerID uuid.UUID) error 
 	}
 	return nil
 }
+
+func (r *pgRepository) GetByField(ctx context.Context, ownerID uuid.UUID, field string, value string) (*Tenant, error) {
+	var t Tenant
+	var err error
+	switch field {
+	case "document":
+		err = r.db.Pool.QueryRow(ctx,
+			`SELECT id, owner_id, name, email, phone, document, person_type, is_active, created_at, updated_at
+			 FROM tenants WHERE owner_id=$1 AND document=$2 AND is_active=true`,
+			ownerID, value,
+		).Scan(&t.ID, &t.OwnerID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
+	default:
+		return nil, fmt.Errorf("tenant.repo: unsupported field %s", field)
+	}
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("tenant.repo: get by field: %w", err)
+	}
+	return &t, nil
+}
