@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 
-import { LayoutDashboard, Building2, Users, Menu, X, Plus, Wallet, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Send, Percent, BarChart3, Headphones, Phone, FileText, Receipt, CreditCard, Upload } from 'lucide-react'
+import { LayoutDashboard, Building2, Users, Menu, X, Plus, Wallet, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Send, Percent, BarChart3, Headphones, Phone, FileText, Receipt, CreditCard, Upload, UserCircle, Settings, Bell } from 'lucide-react'
 
 const publicRoutes = ['/login', '/auth/callback']
 
@@ -34,6 +34,12 @@ const supportItems = [
   { href: '/support/contacts', label: 'Contatos', icon: 'contacts' },
 ]
 
+const settingsItems = [
+  { href: '/settings/profile', label: 'Meu Perfil', icon: 'user' },
+  { href: '/settings/financial', label: 'Config. Financeira', icon: 'settings' },
+  { href: '/owner/settings', label: 'Notificações', icon: 'bell' },
+]
+
 function getIconComponent(icon: string) {
   switch (icon) {
     case 'dashboard': return LayoutDashboard
@@ -53,6 +59,9 @@ function getIconComponent(icon: string) {
     case 'newticket': return Plus
     case 'contacts': return Phone
     case 'importar': return Upload
+    case 'settings': return Settings
+    case 'user': return UserCircle
+    case 'bell': return Bell
     default: return LayoutDashboard
   }
 }
@@ -166,6 +175,30 @@ export function Sidebar() {
             Suporte
           </div>
           {supportItems.map((item) => {
+            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
+            const IconComponent = getIconComponent(item.icon)
+            
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'mx-3 my-1 flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-lg',
+                  isActive
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                )}
+              >
+                <IconComponent className="mr-3 w-5 h-5" />
+                {item.label}
+              </Link>
+            )
+          })}
+
+          <div className="px-4 py-2 mt-4 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
+            Configurações
+          </div>
+          {settingsItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
             const IconComponent = getIconComponent(item.icon)
             

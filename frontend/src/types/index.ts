@@ -70,3 +70,54 @@ export interface Expense {
   notes?: string | null
   created_at: string
 }
+
+export interface UserProfile {
+  user_id: string
+  full_name?: string | null
+  document?: string | null
+  person_type?: 'PF' | 'PJ' | null
+  phone?: string | null
+  address_line?: string | null
+  city?: string | null
+  state?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface UpsertProfileInput {
+  full_name?: string | null
+  document?: string | null
+  person_type?: 'PF' | 'PJ' | null
+  phone?: string | null
+  address_line?: string | null
+  city?: string | null
+  state?: string | null
+}
+
+export interface BankInfo {
+  bank_code: string
+  agency: string
+  account: string
+  account_type: 'CC' | 'CP'
+  owner_name: string
+  document: string
+}
+
+export interface FinancialConfig {
+  id: string
+  owner_id: string
+  provider: 'ASAAS' | 'BRADESCO' | 'ITAU' | 'SICOOB' | 'MOCK'
+  config?: Record<string, any>
+  pix_key?: string | null
+  bank_info?: BankInfo | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface UpsertFinancialConfigInput {
+  provider: string
+  config: Record<string, any>
+  pix_key?: string | null
+  bank_info?: BankInfo | null
+}

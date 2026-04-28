@@ -120,7 +120,7 @@ func TestFinancialRepository_DeleteFinancialConfig_SoftDelete(t *testing.T) {
 
 	cfg, err := repo.CreateFinancialConfig(context.Background(), ownerID, payment.CreateFinancialConfigInput{
 		Provider: "MOCK",
-		Config:   map[string]string{},
+		Config:   map[string]any{"token": "123"},
 	})
 	require.NoError(t, err)
 	require.NotNil(t, cfg)

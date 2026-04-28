@@ -35,6 +35,9 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 	r.With(authMW).Post("/payments/{id}/charge", h.handleCreateCharge)
 	r.With(authMW).Get("/payments/{id}/charge", h.handleGetChargeStatus)
 	r.With(authMW).Post("/payments/{id}/payout", h.handleCreatePayout)
+	r.With(authMW).Get("/payments/config", h.getFinancialConfig)
+	r.With(authMW).Put("/payments/config", h.updateFinancialConfig)
+	
 	r.Post("/webhook/{provider}", h.handleWebhook)
 }
 

@@ -150,6 +150,24 @@ func (s *Service) IsNotPaid(err error) bool {
 	return errors.Is(err, errNotPaid)
 }
 
+func (s *Service) getProvider(fc *FinancialConfig) (provider.PaymentProvider, error) {
+	if fc == nil {
+		return nil, errors.New("financial config is missing")
+	}
+	
+	// Convert map[string]any to map[string]string for provider config
+	stringConfig := make(map[string]string)
+	for k, v := range fc.Config {
+		if strVal, ok := v.(string); ok {
+			stringConfig[k] = strVal
+		} else {
+			stringConfig[k] = fmt.Sprintf("%v", v)
+		}
+	}
+	
+	return provider.NewProvider(fc.Provider, stringConfig)
+}
+
 func (s *Service) GenerateMonth(ctx context.Context, leaseID, ownerID uuid.UUID, month string) ([]Payment, error) {
 	monthStart, err := time.Parse("2006-01", month)
 	if err != nil {
@@ -321,7 +339,7 @@ func (s *Service) CreateCharge(ctx context.Context, paymentID, ownerID uuid.UUID
 		return nil, errNoFinancialConfig
 	}
 
-	prov, err := provider.NewProvider(fc.Provider, fc.Config)
+	prov, err := s.getProvider(fc)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: new provider: %w", err)
 	}
@@ -379,7 +397,7 @@ func (s *Service) GetChargeStatus(ctx context.Context, paymentID, ownerID uuid.U
 		return nil, errNoFinancialConfig
 	}
 
-	prov, err := provider.NewProvider(fc.Provider, fc.Config)
+	prov, err := s.getProvider(fc)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: new provider: %w", err)
 	}
@@ -406,7 +424,7 @@ func (s *Service) CreatePayout(ctx context.Context, paymentID, ownerID uuid.UUID
 		return nil, errNoFinancialConfig
 	}
 
-	prov, err := provider.NewProvider(fc.Provider, fc.Config)
+	prov, err := s.getProvider(fc)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: new provider: %w", err)
 	}
@@ -465,6 +483,15 @@ func (s *Service) ProcessWebhook(ctx context.Context, providerName string, event
 	}
 
 	return nil
+}
+
+func (s *Service) GetFinancialConfig(ctx context.Context, ownerID uuid.UUID) (*FinancialConfig, error) {
+	return s.repo.GetFinancialConfig(ctx, ownerID)
+}
+
+func (s *Service) UpdateFinancialConfig(ctx context.Context, ownerID uuid.UUID, in UpsertFinancialConfigInput) (*FinancialConfig, error) {
+	// Simple validation, let repo handle strict types
+	return s.repo.UpsertFinancialConfig(ctx, ownerID, in)
 }
 
 func (s *Service) getActiveFinancialConfig(ctx context.Context, ownerID uuid.UUID) (*FinancialConfig, error) {

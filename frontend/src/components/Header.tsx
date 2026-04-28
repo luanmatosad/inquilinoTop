@@ -3,12 +3,21 @@ import { cookies } from 'next/headers'
 import { Button } from '@/components/ui/button'
 import { logout } from '@/app/auth/actions'
 import { Sidebar } from '@/components/Sidebar'
+import { getProfile } from '@/app/settings/profile/actions'
 
 import { Search, Bell, Settings, UserCircle } from 'lucide-react'
 
 export default async function Header() {
   const cookieStore = await cookies()
   const accessToken = cookieStore.get('access_token')?.value
+  let profileName = ''
+
+  if (accessToken) {
+    const profile = await getProfile()
+    if (profile?.full_name) {
+      profileName = profile.full_name
+    }
+  }
 
   return (
     <>
@@ -44,9 +53,12 @@ export default async function Header() {
                 <Settings className="w-5 h-5" />
               </button>
               
-              <button className="text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-full p-2 transition-colors">
-                <UserCircle className="w-5 h-5" />
-              </button>
+              <Link href="/settings/profile">
+                <button className="flex items-center gap-2 text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-full py-1.5 px-3 transition-colors">
+                  <UserCircle className="w-5 h-5" />
+                  {profileName && <span className="text-sm font-medium hidden md:block">{profileName}</span>}
+                </button>
+              </Link>
               
               <form action={logout} className="ml-2">
                 <Button variant="outline" size="sm">Sair</Button>

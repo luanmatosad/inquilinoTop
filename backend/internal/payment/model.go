@@ -90,7 +90,9 @@ type Repository interface {
 	UpdateChargeInfo(ctx context.Context, id, ownerID uuid.UUID, in UpdateChargeInfoInput) error
 	UpdatePayoutInfo(ctx context.Context, id, ownerID uuid.UUID, payoutID, status string) error
 	GetActiveFinancialConfig(ctx context.Context, ownerID uuid.UUID) (*FinancialConfig, error)
+	GetFinancialConfig(ctx context.Context, ownerID uuid.UUID) (*FinancialConfig, error)
 	CreateFinancialConfig(ctx context.Context, ownerID uuid.UUID, in CreateFinancialConfigInput) (*FinancialConfig, error)
+	UpsertFinancialConfig(ctx context.Context, ownerID uuid.UUID, in UpsertFinancialConfigInput) (*FinancialConfig, error)
 	DeleteFinancialConfig(ctx context.Context, id, ownerID uuid.UUID) error
 }
 
@@ -146,29 +148,36 @@ type Amounts struct {
 }
 
 type FinancialConfig struct {
-	ID         uuid.UUID            `json:"id"`
-	OwnerID    uuid.UUID           `json:"owner_id"`
-	Provider  string              `json:"provider" validate:"required,oneof=ASAAS BRADESCO ITAU SICOOB MOCK"`
-	Config    map[string]string   `json:"config,omitempty"`
-	PixKey    *string             `json:"pix_key,omitempty" validate:"omitempty,max=100"`
-	BankInfo  *BankInfo           `json:"bank_info,omitempty"`
-	IsActive  bool                `json:"is_active"`
-	CreatedAt time.Time           `json:"created_at"`
-	UpdatedAt time.Time           `json:"updated_at"`
+	ID        uuid.UUID         `json:"id"`
+	OwnerID   uuid.UUID         `json:"owner_id"`
+	Provider  string            `json:"provider" validate:"required,oneof=ASAAS BRADESCO ITAU SICOOB MOCK"`
+	Config    map[string]any    `json:"config,omitempty"`
+	PixKey    *string           `json:"pix_key,omitempty" validate:"omitempty,max=100"`
+	BankInfo  *BankInfo         `json:"bank_info,omitempty"`
+	IsActive  bool              `json:"is_active"`
+	CreatedAt time.Time         `json:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at"`
 }
 
 type BankInfo struct {
 	BankCode    string `json:"bank_code" validate:"required,numeric,len=3"`
 	Agency      string `json:"agency" validate:"required,max=10"`
-	Account    string `json:"account" validate:"required,max=20"`
+	Account     string `json:"account" validate:"required,max=20"`
 	AccountType string `json:"account_type" validate:"required,oneof=CC CP"`
-	OwnerName  string `json:"owner_name" validate:"required,max=200"`
-	Document   string `json:"document" validate:"required,max=20"`
+	OwnerName   string `json:"owner_name" validate:"required,max=200"`
+	Document    string `json:"document" validate:"required,max=20"`
 }
 
 type CreateFinancialConfigInput struct {
-	Provider string              `json:"provider" validate:"required,oneof=ASAAS BRADESCO ITAU SICOOB MOCK"`
-	Config   map[string]string  `json:"config" validate:"required"`
-	PixKey   *string             `json:"pix_key,omitempty" validate:"omitempty,max=100"`
-	BankInfo *BankInfo            `json:"bank_info,omitempty"`
+	Provider string         `json:"provider" validate:"required,oneof=ASAAS BRADESCO ITAU SICOOB MOCK"`
+	Config   map[string]any `json:"config" validate:"required"`
+	PixKey   *string        `json:"pix_key,omitempty" validate:"omitempty,max=100"`
+	BankInfo *BankInfo      `json:"bank_info,omitempty"`
+}
+
+type UpsertFinancialConfigInput struct {
+	Provider string         `json:"provider" validate:"required,oneof=ASAAS BRADESCO ITAU SICOOB MOCK"`
+	Config   map[string]any `json:"config" validate:"required"`
+	PixKey   *string        `json:"pix_key,omitempty" validate:"omitempty,max=100"`
+	BankInfo *BankInfo      `json:"bank_info,omitempty"`
 }
