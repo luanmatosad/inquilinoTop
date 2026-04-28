@@ -91,7 +91,11 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	}
 	t, err := h.svc.Get(r.Context(), id, ownerID)
 	if err != nil {
-		httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "inquilino não encontrado")
+		if errors.Is(err, apierr.ErrNotFound) {
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "inquilino não encontrado")
+			return
+		}
+		httputil.Err(w, http.StatusInternalServerError, "GET_FAILED", err.Error())
 		return
 	}
 	httputil.OK(w, t)
@@ -124,6 +128,10 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	}
 	t, err := h.svc.Update(r.Context(), id, ownerID, in)
 	if err != nil {
+		if errors.Is(err, apierr.ErrNotFound) {
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "inquilino não encontrado")
+			return
+		}
 		httputil.Err(w, http.StatusBadRequest, "UPDATE_FAILED", err.Error())
 		return
 	}

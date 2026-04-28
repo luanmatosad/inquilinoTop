@@ -22,14 +22,21 @@ interface Tenant {
   document?: string | null
 }
 
+interface Property {
+  id: string
+  name: string
+  units: { id: string; label: string }[]
+}
+
 interface LeaseFormProps {
-  unitId: string
+  unitId?: string
   tenants: Tenant[]
+  properties?: Property[]
   onSuccess?: () => void
   onCancel?: () => void
 }
 
-export function LeaseForm({ unitId, tenants, onSuccess, onCancel }: LeaseFormProps) {
+export function LeaseForm({ unitId, tenants, properties = [], onSuccess, onCancel }: LeaseFormProps) {
   const [state, formAction, isPending] = useActionState(createLease, null)
 
   useEffect(() => {
@@ -44,7 +51,30 @@ export function LeaseForm({ unitId, tenants, onSuccess, onCancel }: LeaseFormPro
 
   return (
     <form action={formAction} className="space-y-4">
-      <input type="hidden" name="unit_id" value={unitId} />
+      {unitId ? (
+        <input type="hidden" name="unit_id" value={unitId} />
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor="unit_id">Unidade *</Label>
+          <Select name="unit_id" required>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione uma unidade" />
+            </SelectTrigger>
+            <SelectContent>
+              {properties.map((property) => (
+                property.units && property.units.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id}>
+                    {property.name} - {unit.label}
+                  </SelectItem>
+                ))
+              ))}
+            </SelectContent>
+          </Select>
+          {state?.fieldErrors?.unit_id && (
+            <p className="text-sm text-red-500">{state.fieldErrors.unit_id[0]}</p>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="tenant_id">Inquilino *</Label>
@@ -108,6 +138,20 @@ export function LeaseForm({ unitId, tenants, onSuccess, onCancel }: LeaseFormPro
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="deposit_amount">Caução (R$) (Opcional)</Label>
+          <Input
+            id="deposit_amount"
+            name="deposit_amount"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
           <Label htmlFor="payment_day">Dia de Vencimento *</Label>
           <Input
             id="payment_day"
@@ -121,6 +165,15 @@ export function LeaseForm({ unitId, tenants, onSuccess, onCancel }: LeaseFormPro
           {state?.fieldErrors?.payment_day && (
             <p className="text-sm text-red-500">{state.fieldErrors.payment_day[0]}</p>
           )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="contract_url">URL do Contrato</Label>
+          <Input
+            id="contract_url"
+            name="contract_url"
+            type="url"
+            placeholder="https://..."
+          />
         </div>
       </div>
 

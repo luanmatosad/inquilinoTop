@@ -2,9 +2,11 @@ package property
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/db"
 )
@@ -37,6 +39,9 @@ func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Pro
 		id, ownerID,
 	).Scan(&p.ID, &p.OwnerID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
 		return nil, fmt.Errorf("property.repo: get by id: %w", err)
 	}
 	return &p, nil
@@ -117,6 +122,9 @@ func (r *pgRepository) GetUnit(ctx context.Context, id, ownerID uuid.UUID) (*Uni
 		id, ownerID,
 	).Scan(&u.ID, &u.PropertyID, &u.Label, &u.Floor, &u.Notes, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
 		return nil, fmt.Errorf("property.repo: get unit: %w", err)
 	}
 	return &u, nil
@@ -156,6 +164,9 @@ func (r *pgRepository) UpdateUnit(ctx context.Context, id, ownerID uuid.UUID, in
 		in.Label, in.Floor, in.Notes, id, ownerID,
 	).Scan(&u.ID, &u.PropertyID, &u.Label, &u.Floor, &u.Notes, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
 		return nil, fmt.Errorf("property.repo: update unit: %w", err)
 	}
 	return &u, nil

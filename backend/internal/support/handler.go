@@ -2,10 +2,12 @@ package support
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/httputil"
 	"github.com/inquilinotop/api/pkg/validator"
@@ -87,7 +89,11 @@ func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) {
 	}
 	ticket, err := h.svc.Get(r.Context(), id, userID)
 	if err != nil {
-		httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "ticket não encontrado")
+		if errors.Is(err, apierr.ErrNotFound) {
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "ticket não encontrado")
+			return
+		}
+		httputil.Err(w, http.StatusInternalServerError, "GET_FAILED", err.Error())
 		return
 	}
 	httputil.OK(w, ticket)

@@ -2,7 +2,9 @@ package support_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -98,6 +100,30 @@ func TestHandler_GetByID_NãoEncontrado(t *testing.T) {
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+// mockRepoInternalErr overrides GetByID to return a generic (non-NotFound) error,
+// simulating a DB failure. Used to verify the handler returns 500, not 404.
+type mockRepoInternalErr struct {
+	*mockRepo
+}
+
+func (m *mockRepoInternalErr) GetByID(_ context.Context, _ uuid.UUID, _ uuid.UUID) (*support.Ticket, error) {
+	return nil, errors.New("database connection reset")
+}
+
+func TestHandler_GetByID_ErroInterno_Retorna500(t *testing.T) {
+	mock := &mockRepoInternalErr{newMockRepo()}
+	svc := support.NewService(mock)
+	h := support.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tickets/"+uuid.New().String(), nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }
 
 func TestHandler_GetByID_Válido(t *testing.T) {

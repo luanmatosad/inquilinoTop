@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/expense"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,6 +103,37 @@ func TestHandler_Create_Válido(t *testing.T) {
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusCreated, rr.Code)
+}
+
+// mockExpenseRepoNotFound overrides Update to return apierr.ErrNotFound,
+// verifying the handler returns 404 (not 400) when the expense is not found.
+type mockExpenseRepoNotFound struct {
+	*mockExpenseRepo
+}
+
+func (m *mockExpenseRepoNotFound) Update(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ expense.CreateExpenseInput) (*expense.Expense, error) {
+	return nil, apierr.ErrNotFound
+}
+
+func TestHandler_Update_NãoEncontrado_Retorna404(t *testing.T) {
+	mock := &mockExpenseRepoNotFound{newMockExpenseRepo()}
+	svc := expense.NewService(mock)
+	h := expense.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"description": "Água",
+		"amount":      100.0,
+		"due_date":    time.Now(),
+		"category":    "WATER",
+	})
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/expenses/"+uuid.New().String(), bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
 func TestHandler_Update_IDInválido(t *testing.T) {

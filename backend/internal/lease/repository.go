@@ -2,10 +2,12 @@ package lease
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/db"
 )
@@ -46,6 +48,9 @@ func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Lea
 		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear,
 		&l.CreatedAt, &l.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
 		return nil, fmt.Errorf("lease.repo: get by id: %w", err)
 	}
 	return &l, nil

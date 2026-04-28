@@ -25,7 +25,7 @@ type CreateTenantInput struct {
 	Email      *string `json:"email,omitempty" validate:"omitempty,email,max=255"`
 	Phone      *string `json:"phone,omitempty" validate:"omitempty,max=20"`
 	Document   *string `json:"document,omitempty" validate:"omitempty,max=20"`
-	PersonType *string `json:"person_type,omitempty" validate:"omitempty,oneof=PF PJ"`
+	PersonType *string `json:"person_type" validate:"required,oneof=PF PJ"`
 }
 
 type Repository interface {

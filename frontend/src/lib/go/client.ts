@@ -46,9 +46,13 @@ export async function setTokens(accessToken: string, refreshToken: string) {
 }
 
 async function clearTokens() {
-  const cookieStore = await cookies()
-  cookieStore.delete('access_token')
-  cookieStore.delete('refresh_token')
+  try {
+    const cookieStore = await cookies()
+    cookieStore.delete('access_token')
+    cookieStore.delete('refresh_token')
+  } catch {
+    // Cookies not available in this context (will be called from Route Handler)
+  }
 }
 
 export { clearTokens }

@@ -69,9 +69,13 @@ func (s *Service) ListPropertiesWithUnits(ctx context.Context, ownerID uuid.UUID
 
 	result := make([]PropertyWithUnits, len(properties))
 	for i, p := range properties {
+		units := unitsByProperty[p.ID]
+		if units == nil {
+			units = []Unit{}
+		}
 		result[i] = PropertyWithUnits{
 			Property: p,
-			Units:    unitsByProperty[p.ID],
+			Units:    units,
 		}
 	}
 	return result, nil

@@ -1,31 +1,31 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { getPagamentos, Pagamento, TransactionStatus } from '../actions';
+import { getPayables, Payable, TransactionStatus } from '../actions';
 import { Search, Plus, Filter, MoreVertical, CheckCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 function StatusBadge({ status }: { status: TransactionStatus }) {
-  if (status === 'Pago') {
+  if (status === 'PAID') {
     return <span className="px-2 py-1 bg-success/10 text-success text-xs rounded-full font-medium">Pago</span>;
   }
-  if (status === 'Pendente') {
+  if (status === 'PENDING') {
     return <span className="px-2 py-1 bg-warning/10 text-warning text-xs rounded-full font-medium">Pendente</span>;
   }
   return <span className="px-2 py-1 bg-error/10 text-error text-xs rounded-full font-medium">Atrasado</span>;
 }
 
-export default function ContasPagar() {
-  const [data, setData] = useState<Pagamento[]>([]);
+export default function PayablesPage() {
+  const [data, setData] = useState<Payable[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterCategory, setFilterCategory] = useState<string>('Todas');
+  const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    getPagamentos().then(res => {
+    getPayables().then(res => {
       setData(res);
       setLoading(false);
     });
@@ -56,9 +56,9 @@ export default function ContasPagar() {
   };
 
   const filtered = data.filter(item => {
-    const matchCategory = filterCategory === 'Todas' || item.categoria === filterCategory;
-    const matchSearch = item.fornecedor.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        item.imovelVinculado.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchCategory = filterCategory === 'ALL' || item.category === filterCategory;
+    const matchSearch = item.supplier.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        item.relatedProperty.toLowerCase().includes(searchTerm.toLowerCase());
     return matchCategory && matchSearch;
   });
 
@@ -99,12 +99,12 @@ export default function ContasPagar() {
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
           >
-            <option value="Todas">Todas Categorias</option>
-            <option value="IPTU">IPTU</option>
-            <option value="Condomínio">Condomínio</option>
-            <option value="Manutenção">Manutenção</option>
-            <option value="DARF">DARF</option>
-            <option value="Outro">Outro</option>
+            <option value="ALL">Todas Categorias</option>
+            <option value="PROPERTY_TAX">IPTU</option>
+            <option value="CONDO_FEE">Condomínio</option>
+            <option value="MAINTENANCE">Manutenção</option>
+            <option value="TAX">DARF/Impostos</option>
+            <option value="OTHER">Outro</option>
           </select>
         </div>
       </div>
@@ -142,11 +142,16 @@ export default function ContasPagar() {
                       onChange={() => toggleSelect(item.id)}
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{formatDate(item.vencimento)}</td>
-                  <td className="px-6 py-4 font-medium text-on-surface">{item.fornecedor}</td>
-                  <td className="px-6 py-4 text-on-surface-variant">{item.categoria}</td>
-                  <td className="px-6 py-4 font-semibold">{formatBRL(item.valor)}</td>
-                  <td className="px-6 py-4 text-on-surface-variant">{item.imovelVinculado}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{formatDate(item.dueDate)}</td>
+                  <td className="px-6 py-4 font-medium text-on-surface">{item.supplier}</td>
+                  <td className="px-6 py-4 text-on-surface-variant">
+                    {item.category === 'PROPERTY_TAX' ? 'IPTU' :
+                     item.category === 'CONDO_FEE' ? 'Condomínio' :
+                     item.category === 'MAINTENANCE' ? 'Manutenção' :
+                     item.category === 'TAX' ? 'Imposto' : 'Outro'}
+                  </td>
+                  <td className="px-6 py-4 font-semibold">{formatBRL(item.amount)}</td>
+                  <td className="px-6 py-4 text-on-surface-variant">{item.relatedProperty}</td>
                   <td className="px-6 py-4"><StatusBadge status={item.status} /></td>
                   <td className="px-6 py-4 text-right">
                     <button className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Opções">

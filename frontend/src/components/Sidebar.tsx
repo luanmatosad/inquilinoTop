@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 
-import { LayoutDashboard, Building2, Users, Menu, X, Plus, Wallet, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Send, Percent, BarChart3, Headphones, Phone } from 'lucide-react'
+import { LayoutDashboard, Building2, Users, Menu, X, Plus, Wallet, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Send, Percent, BarChart3, Headphones, Phone, FileText, Receipt, CreditCard } from 'lucide-react'
 
 const publicRoutes = ['/login', '/auth/callback']
 
@@ -13,16 +13,18 @@ const navItems = [
   { href: '/', label: 'Dashboard', icon: 'dashboard' },
   { href: '/properties', label: 'Imóveis', icon: 'home_work' },
   { href: '/tenants', label: 'Inquilinos', icon: 'groups' },
+  { href: '/leases', label: 'Contratos', icon: 'description' },
+  { href: '/payments', label: 'Pagamentos', icon: 'payments' },
+  { href: '/expenses', label: 'Despesas', icon: 'receipt' },
 ]
 
-const financeiroItems = [
-  { href: '/financeiro/dashboard', label: 'Dashboard Financeiro', icon: 'wallet' },
-  { href: '/financeiro/receber', label: 'Contas a Receber', icon: 'receber' },
-  { href: '/financeiro/pagar', label: 'Contas a Pagar', icon: 'pagar' },
-  { href: '/financeiro/conciliacao', label: 'Conciliação Bancária', icon: 'conciliacao' },
-  { href: '/financeiro/repasses', label: 'Repasses', icon: 'repasses' },
-  { href: '/financeiro/comissoes', label: 'Comissões', icon: 'comissoes' },
-  { href: '/financeiro/relatorios', label: 'Relatórios', icon: 'relatorios' },
+const financialItems = [
+  { href: '/financial/dashboard', label: 'Dashboard', icon: 'wallet' },
+  { href: '/financial/receivables', label: 'Contas a Receber', icon: 'receber' },
+  { href: '/financial/payables', label: 'Contas a Pagar', icon: 'pagar' },
+  { href: '/financial/reconciliation', label: 'Conciliação Bancária', icon: 'conciliacao' },
+  { href: '/financial/transfers', label: 'Repasses', icon: 'repasses' },
+  { href: '/financial/commissions', label: 'Comissões', icon: 'comissoes' },
 ]
 
 const supportItems = [
@@ -36,6 +38,9 @@ function getIconComponent(icon: string) {
     case 'dashboard': return LayoutDashboard
     case 'home_work': return Building2
     case 'groups': return Users
+    case 'description': return FileText
+    case 'payments': return CreditCard
+    case 'receipt': return Receipt
     case 'wallet': return Wallet
     case 'receber': return ArrowDownRight
     case 'pagar': return ArrowUpRight
@@ -134,7 +139,7 @@ export function Sidebar() {
           <div className="px-4 py-2 mt-4 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
             Financeiro
           </div>
-          {financeiroItems.map((item) => {
+          {financialItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
             const IconComponent = getIconComponent(item.icon)
             

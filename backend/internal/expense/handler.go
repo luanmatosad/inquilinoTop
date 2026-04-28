@@ -134,7 +134,11 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	}
 	e, err := h.svc.Update(r.Context(), id, ownerID, in)
 	if err != nil {
-		httputil.Err(w, http.StatusBadRequest, "UPDATE_FAILED", err.Error())
+		if errors.Is(err, apierr.ErrNotFound) {
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "despesa não encontrada")
+			return
+		}
+		httputil.Err(w, http.StatusInternalServerError, "UPDATE_FAILED", err.Error())
 		return
 	}
 	httputil.OK(w, e)

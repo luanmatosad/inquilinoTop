@@ -99,7 +99,11 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	}
 	p, err := h.svc.Get(r.Context(), id, ownerID)
 	if err != nil {
-		httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "pagamento não encontrado")
+		if errors.Is(err, apierr.ErrNotFound) {
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "pagamento não encontrado")
+			return
+		}
+		httputil.Err(w, http.StatusInternalServerError, "GET_FAILED", err.Error())
 		return
 	}
 	httputil.OK(w, p)

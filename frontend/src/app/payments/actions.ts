@@ -1,4 +1,12 @@
 "use server"
+export async function getActiveLeases() {
+  try {
+    const leases = await goFetch<{ id: string; unit_id: string; tenant_id: string }[]>("/api/v1/leases", {})
+    return leases || []
+  } catch {
+    return []
+  }
+}
 
 import { revalidatePath } from "next/cache"
 import { goFetch } from "@/lib/go/client"
@@ -61,6 +69,46 @@ export async function generateInitialPayments(
   }
 
   return { success: true }
+}
+
+export async function createPayment(prevState: PaymentActionState, formData: FormData) {
+  const leaseId = formData.get("lease_id") as string
+  const description = formData.get("description") as string
+  const type = formData.get("type") as string
+  const grossAmount = parseFloat(formData.get("gross_amount") as string)
+  const dueDate = formData.get("due_date") as string
+
+  if (!description || !type || isNaN(grossAmount) || !dueDate) {
+    return { error: "Preencha todos os campos obrigatórios." }
+  }
+
+  try {
+    const body: any = {
+      description,
+      type,
+      gross_amount: grossAmount,
+      due_date: dueDate,
+      status: "PENDING",
+    }
+    
+    // In actual implementation this endpoint might differ depending on if it's tied to a lease
+    // If there is no specific endpoint for generic payments, assume /api/v1/payments
+    let endpoint = "/api/v1/payments"
+    if (leaseId) {
+      endpoint = `/api/v1/leases/${leaseId}/payments`
+    }
+
+    await goFetch<Payment>(endpoint, {
+      method: "POST",
+      body: JSON.stringify(body),
+    })
+
+    revalidatePath("/payments")
+    if (leaseId) revalidatePath(`/units/${leaseId}`)
+    return { success: "Pagamento registrado com sucesso!" }
+  } catch (error) {
+    return { error: "Erro ao registrar pagamento: " + (error instanceof Error ? error.message : "unknown") }
+  }
 }
 
 export async function markAsPaid(paymentId: string, leaseId: string) {

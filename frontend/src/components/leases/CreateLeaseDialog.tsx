@@ -7,11 +7,12 @@ import { Plus } from 'lucide-react'
 import { LeaseForm } from './LeaseForm'
 
 interface CreateLeaseDialogProps {
-  unitId: string
+  unitId?: string
   tenants: any[] // Pode tipar melhor se quiser importar a interface
+  properties?: any[]
 }
 
-export function CreateLeaseDialog({ unitId, tenants }: CreateLeaseDialogProps) {
+export function CreateLeaseDialog({ unitId, tenants, properties }: CreateLeaseDialogProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -28,6 +29,7 @@ export function CreateLeaseDialog({ unitId, tenants }: CreateLeaseDialogProps) {
         <LeaseForm 
             unitId={unitId} 
             tenants={tenants} 
+            properties={properties}
             onSuccess={() => setOpen(false)} 
             onCancel={() => setOpen(false)} 
         />

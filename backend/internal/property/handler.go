@@ -98,13 +98,20 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	}
 	p, err := h.svc.GetProperty(r.Context(), id, ownerID)
 	if err != nil {
-		httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "imóvel não encontrado")
+		if errors.Is(err, apierr.ErrNotFound) {
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "imóvel não encontrado")
+			return
+		}
+		httputil.Err(w, http.StatusInternalServerError, "GET_FAILED", err.Error())
 		return
 	}
 	units, err := h.svc.ListUnits(r.Context(), id)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "LIST_UNITS_FAILED", err.Error())
 		return
+	}
+	if units == nil {
+		units = []Unit{}
 	}
 	resp := PropertyWithUnits{
 		Property: *p,
@@ -179,9 +186,18 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /properties/{id}/units [get]
 func (h *Handler) listUnits(w http.ResponseWriter, r *http.Request) {
+	ownerID := auth.OwnerIDFromCtx(r.Context())
 	propertyID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+	if _, err := h.svc.GetProperty(r.Context(), propertyID, ownerID); err != nil {
+		if errors.Is(err, apierr.ErrNotFound) {
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "imóvel não encontrado")
+			return
+		}
+		httputil.Err(w, http.StatusInternalServerError, "GET_FAILED", err.Error())
 		return
 	}
 	list, err := h.svc.ListUnits(r.Context(), propertyID)

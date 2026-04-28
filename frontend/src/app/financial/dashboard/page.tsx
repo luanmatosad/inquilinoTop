@@ -1,13 +1,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getDashboardMetrics, getRecebimentos } from '../actions';
+import { getDashboardMetrics, getReceivables } from '../actions';
 import { ArrowUpRight, ArrowDownRight, TrendingUp, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
-export default async function DashboardFinanceiro() {
+export default async function FinancialDashboard() {
   const metrics = await getDashboardMetrics();
-  const recebimentos = await getRecebimentos();
-  const atrasados = recebimentos.filter(r => r.status === 'Atrasado').slice(0, 3);
+  const receivables = await getReceivables();
+  const overdue = receivables.filter(r => r.status === 'OVERDUE').slice(0, 3);
 
   const formatBRL = (val: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -32,12 +32,12 @@ export default async function DashboardFinanceiro() {
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatBRL(metrics.receitaRealizada)}</div>
-            <p className="text-xs text-on-surface-variant">de {formatBRL(metrics.receitaPrevista)} previsto</p>
+            <div className="text-2xl font-bold">{formatBRL(metrics.realizedRevenue)}</div>
+            <p className="text-xs text-on-surface-variant">de {formatBRL(metrics.expectedRevenue)} previsto</p>
             <div className="mt-4 h-2 w-full bg-surface-variant rounded-full overflow-hidden">
               <div 
                 className="h-full bg-primary" 
-                style={{ width: `${(metrics.receitaRealizada / metrics.receitaPrevista) * 100}%` }}
+                style={{ width: `${(metrics.realizedRevenue / (metrics.expectedRevenue || 1)) * 100}%` }}
               />
             </div>
           </CardContent>
@@ -46,12 +46,12 @@ export default async function DashboardFinanceiro() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Índice de Inadimplência</CardTitle>
-            <AlertTriangle className={`h-4 w-4 ${metrics.inadimplenciaPerc > 5 ? 'text-error' : 'text-success'}`} />
+            <AlertTriangle className={`h-4 w-4 ${metrics.defaultRate > 5 ? 'text-error' : 'text-success'}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-error">{metrics.inadimplenciaPerc}%</div>
+            <div className="text-2xl font-bold text-error">{metrics.defaultRate}%</div>
             <p className="text-xs text-on-surface-variant">
-              {metrics.inadimplenciaPerc > 5 ? 'Acima do ideal' : 'Dentro do esperado'}
+              {metrics.defaultRate > 5 ? 'Acima do ideal' : 'Dentro do esperado'}
             </p>
           </CardContent>
         </Card>
@@ -62,7 +62,7 @@ export default async function DashboardFinanceiro() {
             <ArrowUpRight className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatBRL(metrics.valorGeralAluguel)}</div>
+            <div className="text-2xl font-bold">{formatBRL(metrics.totalRentValue)}</div>
             <p className="text-xs text-on-surface-variant">Volume total de aluguéis geridos</p>
           </CardContent>
         </Card>
@@ -73,7 +73,7 @@ export default async function DashboardFinanceiro() {
             <ArrowDownRight className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatBRL(metrics.totalRepassar)}</div>
+            <div className="text-2xl font-bold">{formatBRL(metrics.totalToTransfer)}</div>
             <p className="text-xs text-on-surface-variant">Para proprietários este mês</p>
           </CardContent>
         </Card>
@@ -107,17 +107,17 @@ export default async function DashboardFinanceiro() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {atrasados.length === 0 ? (
+              {overdue.length === 0 ? (
                 <div className="text-sm text-center py-4 text-on-surface-variant">Nenhum atraso registrado</div>
-              ) : atrasados.map((item) => (
+              ) : overdue.map((item) => (
                 <div key={item.id} className="flex items-center justify-between border-b border-outline pb-2 last:border-0 last:pb-0">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">{item.pagador}</p>
+                    <p className="text-sm font-medium leading-none">{item.payer}</p>
                     <p className="text-xs text-on-surface-variant">
-                      {item.imovel}
+                      {item.property}
                     </p>
                     <p className="text-xs font-semibold text-error">
-                      {formatBRL(item.valor)}
+                      {formatBRL(item.amount)}
                     </p>
                   </div>
                   <button className="text-xs px-3 py-1 bg-[#25D366]/10 text-[#25D366] rounded-full hover:bg-[#25D366]/20 transition-colors font-medium">

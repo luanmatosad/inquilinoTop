@@ -121,6 +121,19 @@ export async function cancelLease(id: string, unitId: string) {
   }
 }
 
+export async function getActivePropertiesWithUnits() {
+  try {
+    const properties = await goFetch<{
+      id: string
+      name: string
+      units: { id: string; label: string }[]
+    }[]>("/api/v1/properties", {})
+    return properties || []
+  } catch {
+    return []
+  }
+}
+
 export async function getActiveTenants() {
   try {
     const tenants = await goFetch<{ id: string; name: string; document?: string }[]>(

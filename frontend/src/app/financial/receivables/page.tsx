@@ -1,32 +1,32 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { getRecebimentos, Recebimento, TransactionStatus } from '../actions';
+import { getReceivables, Receivable, TransactionStatus } from '../actions';
 import { Search, Plus, Filter, MoreVertical, FileText, Send, CheckCircle, FilePlus2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 function StatusBadge({ status }: { status: TransactionStatus }) {
-  if (status === 'Pago') {
+  if (status === 'PAID') {
     return <span className="px-2 py-1 bg-success/10 text-success text-xs rounded-full font-medium">Pago</span>;
   }
-  if (status === 'Pendente') {
+  if (status === 'PENDING') {
     return <span className="px-2 py-1 bg-warning/10 text-warning text-xs rounded-full font-medium">Pendente</span>;
   }
   return <span className="px-2 py-1 bg-error/10 text-error text-xs rounded-full font-medium">Atrasado</span>;
 }
 
-export default function ContasReceber() {
-  const [data, setData] = useState<Recebimento[]>([]);
+export default function ReceivablesPage() {
+  const [data, setData] = useState<Receivable[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<TransactionStatus | 'Todos'>('Todos');
+  const [filterStatus, setFilterStatus] = useState<TransactionStatus | 'ALL'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'Aluguel' | 'Parcela de Venda' | 'Taxa Condominial'>('Aluguel');
+  const [activeTab, setActiveTab] = useState<'RENT' | 'SALE_INSTALLMENT' | 'CONDO_FEE'>('RENT');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    getRecebimentos().then(res => {
+    getReceivables().then(res => {
       setData(res);
       setLoading(false);
     });
@@ -42,10 +42,10 @@ export default function ContasReceber() {
   };
 
   const filtered = data.filter(item => {
-    const matchStatus = filterStatus === 'Todos' || item.status === filterStatus;
-    const matchTab = item.tipo === activeTab;
-    const matchSearch = item.pagador.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        item.imovel.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = filterStatus === 'ALL' || item.status === filterStatus;
+    const matchTab = item.type === activeTab;
+    const matchSearch = item.payer.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        item.property.toLowerCase().includes(searchTerm.toLowerCase());
     return matchStatus && matchTab && matchSearch;
   });
 
@@ -62,13 +62,17 @@ export default function ContasReceber() {
       </div>
 
       <div className="flex gap-4 border-b border-outline-variant">
-        {['Aluguel', 'Parcela de Venda', 'Taxa Condominial'].map(tab => (
+        {[
+          { id: 'RENT', label: 'Aluguel' },
+          { id: 'SALE_INSTALLMENT', label: 'Parcela de Venda' },
+          { id: 'CONDO_FEE', label: 'Taxa Condominial' }
+        ].map(tab => (
           <button
-            key={tab}
-            className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === tab ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
-            onClick={() => setActiveTab(tab as any)}
+            key={tab.id}
+            className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === tab.id ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
+            onClick={() => setActiveTab(tab.id as any)}
           >
-            {tab}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -91,10 +95,10 @@ export default function ContasReceber() {
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as any)}
           >
-            <option value="Todos">Todos os Status</option>
-            <option value="Pago">Pago</option>
-            <option value="Pendente">Pendente</option>
-            <option value="Atrasado">Atrasado</option>
+            <option value="ALL">Todos os Status</option>
+            <option value="PAID">Pago</option>
+            <option value="PENDING">Pendente</option>
+            <option value="OVERDUE">Atrasado</option>
           </select>
         </div>
       </div>
@@ -120,11 +124,13 @@ export default function ContasReceber() {
                 <tr><td colSpan={7} className="px-6 py-8 text-center text-on-surface-variant">Nenhuma cobrança encontrada.</td></tr>
               ) : filtered.map(item => (
                 <tr key={item.id} className="hover:bg-surface-container-low transition-colors group">
-                  <td className="px-6 py-4 whitespace-nowrap">{formatDate(item.vencimento)}</td>
-                  <td className="px-6 py-4 font-medium text-on-surface">{item.pagador}</td>
-                  <td className="px-6 py-4 text-on-surface-variant">{item.imovel}</td>
-                  <td className="px-6 py-4 font-semibold">{formatBRL(item.valor)}</td>
-                  <td className="px-6 py-4 text-on-surface-variant">{item.formaPagto}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{formatDate(item.dueDate)}</td>
+                  <td className="px-6 py-4 font-medium text-on-surface">{item.payer}</td>
+                  <td className="px-6 py-4 text-on-surface-variant">{item.property}</td>
+                  <td className="px-6 py-4 font-semibold">{formatBRL(item.amount)}</td>
+                  <td className="px-6 py-4 text-on-surface-variant">
+                    {item.paymentMethod === 'CREDIT_CARD' ? 'Cartão' : item.paymentMethod}
+                  </td>
                   <td className="px-6 py-4"><StatusBadge status={item.status} /></td>
                   <td className="px-6 py-4 text-right">
                     <button className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Opções">

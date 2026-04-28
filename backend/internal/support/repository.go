@@ -2,11 +2,14 @@ package support
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/db"
+	"github.com/jackc/pgx/v5"
 )
 
 type pgRepository struct {
@@ -54,6 +57,9 @@ func (r *pgRepository) GetByID(ctx context.Context, id, userID uuid.UUID) (*Tick
 	).Scan(&ticket.ID, &ticket.UserID, &ticket.Tipo, &ticket.Assunto,
 		&ticket.Descricao, &ticket.Status, &ticket.CreatedAt, &ticket.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
 		return nil, fmt.Errorf("support.repo: get by id: %w", err)
 	}
 

@@ -1,19 +1,19 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { getComissoes, Comissao } from '../actions';
+import { getCommissions, Commission } from '../actions';
 import { Search, Percent, SplitSquareHorizontal } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 export default function ComissoesCorretores() {
-  const [data, setData] = useState<Comissao[]>([]);
+  const [data, setData] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    getComissoes().then(res => {
+    getCommissions().then(res => {
       setData(res);
       setLoading(false);
     });
@@ -24,8 +24,8 @@ export default function ComissoesCorretores() {
   };
 
   const filtered = data.filter(item => 
-    item.corretor.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    item.imovel.toLowerCase().includes(searchTerm.toLowerCase())
+    item.broker.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    item.property.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -75,29 +75,29 @@ export default function ComissoesCorretores() {
                   <td className="px-6 py-4 font-medium text-on-surface">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
-                        {item.corretor.charAt(0)}
+                        {item.broker.charAt(0)}
                       </div>
-                      {item.corretor}
+                      {item.broker}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-on-surface font-medium">{item.imovel}</p>
-                    <p className="text-xs text-on-surface-variant">{item.tipo}</p>
+                    <p className="text-on-surface font-medium">{item.property}</p>
+                    <p className="text-xs text-on-surface-variant">{item.type}</p>
                   </td>
-                  <td className="px-6 py-4">{formatBRL(item.valorBase)}</td>
+                  <td className="px-6 py-4">{formatBRL(item.baseValue)}</td>
                   <td className="px-6 py-4">
                     <span className="flex items-center gap-1 text-primary font-medium">
-                      <Percent className="w-3 h-3" /> {item.percentual}%
+                      <Percent className="w-3 h-3" /> {item.percentage}%
                     </span>
                   </td>
                   <td className="px-6 py-4 text-error">
                     <div className="flex flex-col text-xs space-y-1">
-                      {item.retencaoISS > 0 && <span>ISS: -{formatBRL(item.retencaoISS)}</span>}
-                      {item.retencaoIRRF > 0 && <span>IRRF: -{formatBRL(item.retencaoIRRF)}</span>}
-                      {item.retencaoISS === 0 && item.retencaoIRRF === 0 && <span className="text-on-surface-variant">Nenhuma</span>}
+                      {item.taxRetentionISS > 0 && <span>ISS: -{formatBRL(item.taxRetentionISS)}</span>}
+                      {item.taxRetentionIRRF > 0 && <span>IRRF: -{formatBRL(item.taxRetentionIRRF)}</span>}
+                      {item.taxRetentionISS === 0 && item.taxRetentionIRRF === 0 && <span className="text-on-surface-variant">Nenhuma</span>}
                     </div>
                   </td>
-                  <td className="px-6 py-4 font-bold text-success">{formatBRL(item.valorPagar)}</td>
+                  <td className="px-6 py-4 font-bold text-success">{formatBRL(item.amountToPay)}</td>
                   <td className="px-6 py-4 text-right">
                     <Button variant="outline" size="sm" className="text-xs">
                       Gerar Pagamento

@@ -30,8 +30,6 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
-	_ = ownerID
-
 	status := r.URL.Query().Get("status")
 	if status == "" {
 		status = "pending"

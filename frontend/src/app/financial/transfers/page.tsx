@@ -1,20 +1,20 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { getRepasses, Repasse } from '../actions';
+import { getTransfers, Transfer } from '../actions';
 import { Search, RefreshCw, FileText, Send } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 export default function RepassesProprietarios() {
-  const [data, setData] = useState<Repasse[]>([]);
+  const [data, setData] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRepasse, setSelectedRepasse] = useState<Repasse | null>(null);
+  const [selectedRepasse, setSelectedRepasse] = useState<Transfer | null>(null);
 
   useEffect(() => {
-    getRepasses().then(res => {
+    getTransfers().then(res => {
       setData(res);
       setLoading(false);
     });
@@ -25,8 +25,8 @@ export default function RepassesProprietarios() {
   };
 
   const filtered = data.filter(item => 
-    item.proprietario.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    item.imoveis.toLowerCase().includes(searchTerm.toLowerCase())
+    item.owner.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    item.properties.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -74,16 +74,16 @@ export default function RepassesProprietarios() {
                 <tr><td colSpan={8} className="px-6 py-8 text-center text-on-surface-variant">Nenhum repasse encontrado.</td></tr>
               ) : filtered.map(item => (
                 <tr key={item.id} className="hover:bg-surface-container-low transition-colors">
-                  <td className="px-6 py-4 font-medium text-on-surface">{item.proprietario}</td>
-                  <td className="px-6 py-4 text-on-surface-variant max-w-[200px] truncate" title={item.imoveis}>{item.imoveis}</td>
-                  <td className="px-6 py-4">{formatBRL(item.recebimentoBruto)}</td>
-                  <td className="px-6 py-4 text-error">-{formatBRL(item.taxaAdmValor)} ({item.taxaAdmPerc}%)</td>
-                  <td className="px-6 py-4 text-error">-{formatBRL(item.descontos)}</td>
-                  <td className="px-6 py-4 font-bold text-success">{formatBRL(item.valorLiquido)}</td>
+                  <td className="px-6 py-4 font-medium text-on-surface">{item.owner}</td>
+                  <td className="px-6 py-4 text-on-surface-variant max-w-[200px] truncate" title={item.properties}>{item.properties}</td>
+                  <td className="px-6 py-4">{formatBRL(item.grossReceipt)}</td>
+                  <td className="px-6 py-4 text-error">-{formatBRL(item.adminFeeAmount)} ({item.adminFeePerc}%)</td>
+                  <td className="px-6 py-4 text-error">-{formatBRL(item.discounts)}</td>
+                  <td className="px-6 py-4 font-bold text-success">{formatBRL(item.netValue)}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                      item.status === 'Transferido' ? 'bg-success/10 text-success' :
-                      item.status === 'Processado' ? 'bg-primary/10 text-primary' :
+                      item.status === 'TRANSFERRED' ? 'bg-success/10 text-success' :
+                      item.status === 'PROCESSED' ? 'bg-primary/10 text-primary' :
                       'bg-warning/10 text-warning'
                     }`}>
                       {item.status}
@@ -116,35 +116,35 @@ export default function RepassesProprietarios() {
             <div className="p-6">
               <div className="mb-6 pb-4 border-b border-outline-variant">
                 <p className="text-sm font-medium text-on-surface-variant">Proprietário</p>
-                <p className="text-lg font-bold">{selectedRepasse.proprietario}</p>
-                <p className="text-sm text-on-surface-variant mt-1">{selectedRepasse.imoveis}</p>
+                <p className="text-lg font-bold">{selectedRepasse.owner}</p>
+                <p className="text-sm text-on-surface-variant mt-1">{selectedRepasse.properties}</p>
               </div>
 
               <div className="space-y-3 font-mono text-sm">
                 <div className="flex justify-between text-success">
                   <span>(+) Valor Recebido</span>
-                  <span>{formatBRL(selectedRepasse.recebimentoBruto)}</span>
+                  <span>{formatBRL(selectedRepasse.grossReceipt)}</span>
                 </div>
                 <div className="flex justify-between text-error">
-                  <span>(-) Taxa ADM ({selectedRepasse.taxaAdmPerc}%)</span>
-                  <span>{formatBRL(selectedRepasse.taxaAdmValor)}</span>
+                  <span>(-) Taxa ADM ({selectedRepasse.adminFeePerc}%)</span>
+                  <span>{formatBRL(selectedRepasse.adminFeeAmount)}</span>
                 </div>
-                {selectedRepasse.descontos > 0 && (
+                {selectedRepasse.discounts > 0 && (
                   <div className="flex justify-between text-error">
                     <span>(-) Descontos (Retenções/Taxas)</span>
-                    <span>{formatBRL(selectedRepasse.descontos)}</span>
+                    <span>{formatBRL(selectedRepasse.discounts)}</span>
                   </div>
                 )}
                 <div className="pt-3 border-t border-dashed border-outline-variant flex justify-between font-bold text-base mt-2">
                   <span>(=) Total a Repassar</span>
-                  <span className="text-success">{formatBRL(selectedRepasse.valorLiquido)}</span>
+                  <span className="text-success">{formatBRL(selectedRepasse.netValue)}</span>
                 </div>
               </div>
             </div>
 
             <div className="px-6 py-4 border-t border-outline-variant bg-surface-container-lowest flex justify-end gap-3">
               <Button variant="outline" onClick={() => setSelectedRepasse(null)}>Fechar</Button>
-              <Button onClick={() => setSelectedRepasse(null)} disabled={selectedRepasse.status === 'Transferido'} className="gap-2">
+              <Button onClick={() => setSelectedRepasse(null)} disabled={selectedRepasse.status === 'TRANSFERRED'} className="gap-2">
                 <Send className="w-4 h-4" /> Aprovar e Transferir
               </Button>
             </div>

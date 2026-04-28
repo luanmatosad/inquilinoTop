@@ -31,13 +31,23 @@ const EXPENSE_CATEGORIES = [
   { value: 'OTHER', label: 'Outros' },
 ]
 
-interface ExpenseDialogProps {
-  unitId: string
+interface Property {
+  id: string
+  name: string
+  units: { id: string; label: string }[]
 }
 
-export function ExpenseDialog({ unitId }: ExpenseDialogProps) {
+interface ExpenseDialogProps {
+  unitId?: string
+  properties?: Property[]
+}
+
+export function ExpenseDialog({ unitId, properties = [] }: ExpenseDialogProps) {
   const [open, setOpen] = useState(false)
   const [state, formAction, isPending] = useActionState(createExpense, null)
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('')
+
+  const selectedProperty = properties.find(p => p.id === selectedPropertyId)
 
   useEffect(() => {
     if (state?.success) {
@@ -52,7 +62,7 @@ export function ExpenseDialog({ unitId }: ExpenseDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button>
           <Plus className="mr-2 h-4 w-4" /> Nova Despesa
         </Button>
       </DialogTrigger>
@@ -62,7 +72,39 @@ export function ExpenseDialog({ unitId }: ExpenseDialogProps) {
         </DialogHeader>
         
         <form action={formAction} className="space-y-4">
-          <input type="hidden" name="unit_id" value={unitId} />
+          {unitId ? (
+            <input type="hidden" name="unit_id" value={unitId} />
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Propriedade *</Label>
+                <Select required value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {properties.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="unit_id">Unidade (Opcional)</Label>
+                <Select name="unit_id" disabled={!selectedPropertyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectedProperty?.units.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>{u.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="category">Categoria *</Label>

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { getBankRecords, getRecebimentos, getPagamentos, BankRecord, Recebimento, Pagamento } from '../actions';
+import { getBankRecords, getReceivables, getPayables, BankRecord, Receivable, Payable } from '../actions';
 import { Upload, Link2, AlertTriangle, Check, FileDown } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,22 +22,22 @@ export default function ConciliacaoBancaria() {
   const [conciliatedIds, setConciliatedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    Promise.all([getBankRecords(), getRecebimentos(), getPagamentos()]).then(([banks, recs, pags]) => {
+    Promise.all([getBankRecords(), getReceivables(), getPayables()]).then(([banks, recs, pags]) => {
       setBankRecords(banks);
       
       const sys: SystemRecord[] = [
-        ...recs.filter(r => r.status !== 'Pago').map(r => ({
+        ...recs.filter(r => r.status !== 'PAID').map(r => ({
           id: `r-${r.id}`,
-          data: r.vencimento,
-          descricao: `Cobrança: ${r.pagador} (${r.imovel})`,
-          valor: r.valor,
+          data: r.dueDate,
+          descricao: `Cobrança: ${r.payer} (${r.property})`,
+          valor: r.amount,
           tipo: 'Recebimento' as const
         })),
-        ...pags.filter(p => p.status !== 'Pago').map(p => ({
+        ...pags.filter(p => p.status !== 'PAID').map(p => ({
           id: `p-${p.id}`,
-          data: p.vencimento,
-          descricao: `Despesa: ${p.fornecedor} (${p.categoria})`,
-          valor: -p.valor,
+          data: p.dueDate,
+          descricao: `Despesa: ${p.supplier} (${p.category})`,
+          valor: -p.amount,
           tipo: 'Pagamento' as const
         }))
       ];
@@ -99,17 +99,17 @@ export default function ConciliacaoBancaria() {
                 {bankRecords.map(br => {
                   const isConciliated = conciliatedIds.has(br.id);
                   // Find a potential match in system
-                  const match = systemRecords.find(sr => sr.valor === br.valor && !isConciliated);
+                  const match = systemRecords.find(sr => sr.valor === br.amount && !isConciliated);
                   
                   return (
                     <li key={br.id} className={`p-4 transition-all ${isConciliated ? 'opacity-40 bg-surface-container-lowest' : 'hover:bg-surface-container-low'}`}>
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <span className="text-xs font-medium text-on-surface-variant">{formatDate(br.data)}</span>
-                          <p className="text-sm font-medium text-on-surface mt-1">{br.descricao}</p>
+                          <span className="text-xs font-medium text-on-surface-variant">{formatDate(br.date)}</span>
+                          <p className="text-sm font-medium text-on-surface mt-1">{br.description}</p>
                         </div>
-                        <div className={`text-sm font-bold ${br.valor > 0 ? 'text-success' : 'text-on-surface'}`}>
-                          {br.valor > 0 ? '+' : ''}{formatBRL(br.valor)}
+                        <div className={`text-sm font-bold ${br.amount > 0 ? 'text-success' : 'text-on-surface'}`}>
+                          {br.amount > 0 ? '+' : ''}{formatBRL(br.amount)}
                         </div>
                       </div>
 

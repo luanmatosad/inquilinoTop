@@ -2,11 +2,13 @@ package expense
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/db"
+	"github.com/jackc/pgx/v5"
 )
 
 type pgRepository struct{ db *db.DB }
@@ -37,6 +39,9 @@ func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Exp
 		id, ownerID,
 	).Scan(&e.ID, &e.OwnerID, &e.UnitID, &e.Description, &e.Amount, &e.DueDate, &e.Category, &e.IsActive, &e.CreatedAt, &e.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
 		return nil, fmt.Errorf("expense.repo: get by id: %w", err)
 	}
 	return &e, nil
@@ -99,6 +104,9 @@ func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in Cre
 		in.Description, in.Amount, in.DueDate, in.Category, id, ownerID,
 	).Scan(&e.ID, &e.OwnerID, &e.UnitID, &e.Description, &e.Amount, &e.DueDate, &e.Category, &e.IsActive, &e.CreatedAt, &e.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
 		return nil, fmt.Errorf("expense.repo: update: %w", err)
 	}
 	return &e, nil

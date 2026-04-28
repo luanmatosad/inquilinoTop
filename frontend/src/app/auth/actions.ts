@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { login as goLogin, register as goRegister, logout as goLogout, setTokens } from '@/lib/go/client'
 import { z } from 'zod'
 
+import { isRedirectError } from 'next/dist/client/components/redirect-error'
+
 const authSchema = z.object({
   email: z.string().email({ message: 'Email inválido' }),
   password: z.string().min(6, { message: 'A senha deve ter no mínimo 6 caracteres' }),
@@ -43,6 +45,7 @@ export async function login(prevState: ActionState, formData: FormData) {
     revalidatePath('/', 'layout')
     success = true
   } catch (error) {
+    if (isRedirectError(error)) throw error;
     return {
       error: error instanceof Error ? error.message : 'Erro ao fazer login',
     }
@@ -73,6 +76,7 @@ export async function signup(prevState: ActionState, formData: FormData) {
     revalidatePath('/', 'layout')
     success = true
   } catch (error) {
+    if (isRedirectError(error)) throw error;
     return {
       error: error instanceof Error ? error.message : 'Erro ao criar conta',
     }

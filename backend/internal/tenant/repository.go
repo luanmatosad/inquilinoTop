@@ -2,9 +2,11 @@ package tenant
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/db"
 )
@@ -41,6 +43,9 @@ func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Ten
 		id, ownerID,
 	).Scan(&t.ID, &t.OwnerID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
 		return nil, fmt.Errorf("tenant.repo: get by id: %w", err)
 	}
 	return &t, nil
@@ -83,6 +88,9 @@ func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in Cre
 		in.Name, in.Email, in.Phone, in.Document, pt, id, ownerID,
 	).Scan(&t.ID, &t.OwnerID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
 		return nil, fmt.Errorf("tenant.repo: update: %w", err)
 	}
 	return &t, nil

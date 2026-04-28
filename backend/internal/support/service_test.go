@@ -2,11 +2,11 @@ package support_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/support"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,7 +35,7 @@ func (m *mockRepo) Create(_ context.Context, userID uuid.UUID, in support.Create
 func (m *mockRepo) GetByID(_ context.Context, id, userID uuid.UUID) (*support.Ticket, error) {
 	t, ok := m.tickets[id]
 	if !ok || t.UserID != userID {
-		return nil, errors.New("not found")
+		return nil, apierr.ErrNotFound
 	}
 	return t, nil
 }

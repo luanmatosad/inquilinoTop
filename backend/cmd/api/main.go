@@ -152,29 +152,33 @@ func main() {
 	r.Use(rateLimiter.Middleware)
 	r.Use(corsMiddleware)
 
-	// API v2 group com header
-	r.Route("/api/v2", func(r2 chi.Router) {
-		r2.Use(func(next http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				w.Header().Set("API-Version", "2.0")
-				next.ServeHTTP(w, req)
-			})
+	// r.Route() adiciona prefixo de path ao subrouter, quebrando handlers que já
+	// registram paths absolutos (ex: "/api/v1/properties"). Usamos middleware no
+	// root router para aplicar o header de deprecação sem alterar o roteamento.
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if strings.HasPrefix(req.URL.Path, "/api/v1/") {
+				w.Header().Set("Deprecation", "true")
+				w.Header().Set("Warning", "299 - \"This API v1 is deprecated and will be removed. Please migrate to /api/v2.\"")
+			}
+			next.ServeHTTP(w, req)
 		})
-
-		identityHandler.Register(r2)
-		identityHandler.RegisterProtected(r2, authMW)
-		propertyHandler.Register(r2, authMW)
-		tenantHandler.Register(r2, authMW)
-		leaseHandler.Register(r2, authMW)
-		paymentHandler.Register(r2, authMW)
-		expenseHandler.Register(r2, authMW)
-		fiscalHandler.Register(r2, authMW)
-		supportHandler.Register(r2, authMW)
-		auditHandler.Register(r2, authMW)
-		documentHandler.Register(r2, authMW)
-		notificationHandler.Register(r2, authMW)
-		rbacHandler.Register(r2, authMW)
 	})
+
+	identityHandler.Register(r)
+	identityHandler.RegisterProtected(r, authMW)
+	propertyHandler.Register(r, authMW)
+	tenantHandler.Register(r, authMW)
+	leaseHandler.Register(r, authMW)
+	paymentHandler.Register(r, authMW)
+	expenseHandler.Register(r, authMW)
+	fiscalHandler.Register(r, authMW)
+	supportHandler.Register(r, authMW)
+	auditHandler.Register(r, authMW)
+	documentHandler.Register(r, authMW)
+	notificationHandler.Register(r, authMW)
+	rbacHandler.Register(r, authMW)
+
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -183,29 +187,6 @@ func main() {
 			return
 		}
 		httputil.OK(w, map[string]string{"status": "ok"})
-	})
-
-	r.Route("/api/v1", func(r1 chi.Router) {
-		r1.Use(func(next http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				w.Header().Set("Deprecation", "true")
-				w.Header().Set("Warning", "299 - \"This API v1 is deprecated and will be removed. Please migrate to /api/v2.\"")
-				next.ServeHTTP(w, req)
-			})
-		})
-
-		identityHandler.Register(r1)
-		identityHandler.RegisterProtected(r1, authMW)
-		propertyHandler.Register(r1, authMW)
-		tenantHandler.Register(r1, authMW)
-		leaseHandler.Register(r1, authMW)
-		paymentHandler.Register(r1, authMW)
-		expenseHandler.Register(r1, authMW)
-		fiscalHandler.Register(r1, authMW)
-		supportHandler.Register(r1, authMW)
-		auditHandler.Register(r1, authMW)
-		documentHandler.Register(r1, authMW)
-		notificationHandler.Register(r1, authMW)
 	})
 
 	idxScheduler := lease.NewIndexScheduler(leaseSvc)

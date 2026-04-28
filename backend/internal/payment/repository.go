@@ -88,6 +88,9 @@ func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Pay
 		id, ownerID,
 	), &p)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
 		return nil, fmt.Errorf("payment.repo: get by id: %w", err)
 	}
 	return &p, nil
