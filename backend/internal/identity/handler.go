@@ -28,9 +28,13 @@ func (h *Handler) Register(r chi.Router) {
 }
 
 func (h *Handler) RegisterProtected(r chi.Router, authMW func(http.Handler) http.Handler) {
+	r.With(authMW).Get("/auth/profile", h.getProfile)
+	r.With(authMW).Put("/auth/profile", h.updateProfile)
 	r.With(authMW).Post("/auth/2fa/setup", h.setup2FA)
 	r.With(authMW).Post("/auth/2fa/verify", h.verify2FA)
 	r.With(authMW).Post("/auth/2fa/disable", h.disable2FA)
+	r.With(authMW).Get("/auth/notification-preferences", h.getNotificationPreferences)
+	r.With(authMW).Put("/auth/notification-preferences", h.updateNotificationPreferences)
 }
 
 type credentialsInput struct {
