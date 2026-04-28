@@ -28,6 +28,50 @@ type RefreshToken struct {
 	CreatedAt time.Time  `json:"created_at"`
 }
 
+type UserProfile struct {
+	UserID      uuid.UUID `json:"user_id"`
+	FullName    *string   `json:"full_name,omitempty"`
+	Document    *string   `json:"document,omitempty"`
+	PersonType  *string   `json:"person_type,omitempty"`
+	Phone       *string   `json:"phone,omitempty"`
+	AddressLine *string   `json:"address_line,omitempty"`
+	City        *string   `json:"city,omitempty"`
+	State       *string   `json:"state,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type UpsertProfileInput struct {
+	FullName    *string `json:"full_name,omitempty" validate:"omitempty,max=255"`
+	Document    *string `json:"document,omitempty" validate:"omitempty,max=20"`
+	PersonType  *string `json:"person_type,omitempty" validate:"omitempty,oneof=PF PJ"`
+	Phone       *string `json:"phone,omitempty" validate:"omitempty,max=20"`
+	AddressLine *string `json:"address_line,omitempty" validate:"omitempty,max=500"`
+	City        *string `json:"city,omitempty" validate:"omitempty,max=100"`
+	State       *string `json:"state,omitempty" validate:"omitempty,max=2"`
+}
+
+type NotificationPreferences struct {
+	UserID                   uuid.UUID `json:"user_id"`
+	NotifyPaymentOverdue     bool      `json:"notify_payment_overdue"`
+	NotifyLeaseExpiring      bool      `json:"notify_lease_expiring"`
+	NotifyLeaseExpiringDays  int       `json:"notify_lease_expiring_days"`
+	NotifyNewMessage         bool      `json:"notify_new_message"`
+	NotifyMaintenanceRequest bool      `json:"notify_maintenance_request"`
+	NotifyPaymentReceived    bool      `json:"notify_payment_received"`
+	CreatedAt                time.Time `json:"created_at"`
+	UpdatedAt                time.Time `json:"updated_at"`
+}
+
+type UpsertNotificationPreferencesInput struct {
+	NotifyPaymentOverdue     bool `json:"notify_payment_overdue"`
+	NotifyLeaseExpiring      bool `json:"notify_lease_expiring"`
+	NotifyLeaseExpiringDays  int  `json:"notify_lease_expiring_days" validate:"min=1,max=365"`
+	NotifyNewMessage         bool `json:"notify_new_message"`
+	NotifyMaintenanceRequest bool `json:"notify_maintenance_request"`
+	NotifyPaymentReceived    bool `json:"notify_payment_received"`
+}
+
 type Repository interface {
 	CreateUser(ctx context.Context, email, passwordHash string) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
@@ -44,6 +88,10 @@ type Repository interface {
 	GetTempTokenUser(ctx context.Context, token string) (uuid.UUID, error)
 	InvalidateTempToken(ctx context.Context, token string) error
 	CleanupExpiredTempTokens(ctx context.Context) (int64, error)
+	GetProfile(ctx context.Context, userID uuid.UUID) (*UserProfile, error)
+	UpsertProfile(ctx context.Context, userID uuid.UUID, in UpsertProfileInput) (*UserProfile, error)
+	GetNotificationPreferences(ctx context.Context, userID uuid.UUID) (*NotificationPreferences, error)
+	UpsertNotificationPreferences(ctx context.Context, userID uuid.UUID, in UpsertNotificationPreferencesInput) (*NotificationPreferences, error)
 }
 
 type TwoFactorSetup struct {
