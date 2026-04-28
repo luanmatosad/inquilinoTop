@@ -157,3 +157,18 @@ func BenchmarkService_Register(b *testing.B) {
 		}
 	}
 }
+func (r *benchRepo) GetProfile(ctx context.Context, userID uuid.UUID) (*UserProfile, error) {
+	return nil, nil
+}
+
+func (r *benchRepo) UpsertProfile(ctx context.Context, userID uuid.UUID, in UpsertProfileInput) (*UserProfile, error) {
+	return nil, nil
+}
+
+func (r *benchRepo) GetNotificationPreferences(ctx context.Context, userID uuid.UUID) (*NotificationPreferences, error) {
+	return nil, nil
+}
+
+func (r *benchRepo) UpsertNotificationPreferences(ctx context.Context, userID uuid.UUID, in UpsertNotificationPreferencesInput) (*NotificationPreferences, error) {
+	return nil, nil
+}

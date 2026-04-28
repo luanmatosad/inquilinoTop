@@ -120,6 +120,22 @@ func (m *mock2FARepo) CleanupExpiredTempTokens(_ context.Context) (int64, error)
 	return 0, nil
 }
 
+func (m *mock2FARepo) GetProfile(_ context.Context, userID uuid.UUID) (*identity.UserProfile, error) {
+	return nil, nil
+}
+
+func (m *mock2FARepo) UpsertProfile(_ context.Context, userID uuid.UUID, in identity.UpsertProfileInput) (*identity.UserProfile, error) {
+	return nil, nil
+}
+
+func (m *mock2FARepo) GetNotificationPreferences(_ context.Context, userID uuid.UUID) (*identity.NotificationPreferences, error) {
+	return nil, nil
+}
+
+func (m *mock2FARepo) UpsertNotificationPreferences(_ context.Context, userID uuid.UUID, in identity.UpsertNotificationPreferencesInput) (*identity.NotificationPreferences, error) {
+	return nil, nil
+}
+
 func TestService_Setup2FA(t *testing.T) {
 	privKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 	jwtSvc := auth.NewJWTService(privKey, &privKey.PublicKey, 15*time.Minute)

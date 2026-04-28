@@ -139,6 +139,22 @@ func (m *mockRepo) CleanupExpiredTempTokens(_ context.Context) (int64, error) {
 	return 0, nil
 }
 
+func (m *mockRepo) GetProfile(_ context.Context, userID uuid.UUID) (*identity.UserProfile, error) {
+	return nil, nil
+}
+
+func (m *mockRepo) UpsertProfile(_ context.Context, userID uuid.UUID, in identity.UpsertProfileInput) (*identity.UserProfile, error) {
+	return nil, nil
+}
+
+func (m *mockRepo) GetNotificationPreferences(_ context.Context, userID uuid.UUID) (*identity.NotificationPreferences, error) {
+	return nil, nil
+}
+
+func (m *mockRepo) UpsertNotificationPreferences(_ context.Context, userID uuid.UUID, in identity.UpsertNotificationPreferencesInput) (*identity.NotificationPreferences, error) {
+	return nil, nil
+}
+
 func newTestService(t *testing.T) *identity.Service {
 	t.Helper()
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
