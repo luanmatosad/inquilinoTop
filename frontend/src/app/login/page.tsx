@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react'
 import { login, signup, type ActionState } from '@/app/auth/actions'
-import { Button, Input, Card } from '@heroui/react'
+import { Button, Card, TextField, Label, InputGroup, FieldError } from '@heroui/react'
 import { useState } from 'react'
 import { Mail, Lock, Eye, EyeOff, Building2, User } from 'lucide-react'
 
@@ -61,92 +61,71 @@ export default function LoginPage() {
             </Card.Description>
           </Card.Header>
           <Card.Content>
-            <form action={formAction} className="flex flex-col gap-4">
+            <form action={formAction} className="flex flex-col gap-6">
               {!isLogin && (
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-on-surface-variant ml-1" htmlFor="fullName">
-                    Nome Completo
-                  </label>
-                  <div className="relative flex items-center">
-                    <User className="absolute left-3 text-outline w-5 h-5" />
-                    <Input
-                      id="fullName"
-                      name="fullName"
-                      type="text"
-                      placeholder="João da Silva"
-                      required
-                      minLength={3}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
+                <TextField name="fullName" isRequired minLength={3}>
+                  <Label>Nome Completo</Label>
+                  <InputGroup>
+                    <InputGroup.Prefix>
+                      <User className="text-outline w-5 h-5" />
+                    </InputGroup.Prefix>
+                    <InputGroup.Input placeholder="João da Silva" />
+                  </InputGroup>
+                </TextField>
               )}
 
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-on-surface-variant ml-1" htmlFor="email">
-                  E-mail
-                </label>
-                <div className="relative flex items-center">
-                  <Mail className="absolute left-3 text-outline w-5 h-5" />
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="voce@exemplo.com"
-                    required
-                    className="pl-10"
-                  />
-                </div>
-              </div>
+              <TextField name="email" isRequired type="email">
+                <Label>E-mail</Label>
+                <InputGroup>
+                  <InputGroup.Prefix>
+                    <Mail className="text-outline w-5 h-5" />
+                  </InputGroup.Prefix>
+                  <InputGroup.Input placeholder="voce@exemplo.com" />
+                </InputGroup>
+              </TextField>
 
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-center ml-1">
-                  <label className="text-xs text-on-surface-variant" htmlFor="password">
-                    Senha
-                  </label>
+              <TextField name="password" isRequired minLength={6}>
+                <div className="flex justify-between items-center">
+                  <Label>Senha</Label>
                   {isLogin && (
                     <a className="text-xs text-primary-container hover:underline" href="#">
                       Esqueceu a senha?
                     </a>
                   )}
                 </div>
-                <div className="relative flex items-center">
-                  <Lock className="absolute left-3 text-outline w-5 h-5" />
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    className="pl-10 pr-10"
+                <InputGroup>
+                  <InputGroup.Prefix>
+                    <Lock className="text-outline w-5 h-5" />
+                  </InputGroup.Prefix>
+                  <InputGroup.Input 
+                    type={showPassword ? 'text' : 'password'} 
+                    placeholder="••••••••"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 text-outline hover:text-on-surface transition-colors flex items-center justify-center"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
+                  <InputGroup.Suffix>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-outline hover:text-on-surface transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </InputGroup.Suffix>
+                </InputGroup>
+              </TextField>
 
               {!isLogin && (
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-on-surface-variant ml-1" htmlFor="confirmPassword">
-                    Confirmar Senha
-                  </label>
-                  <div className="relative flex items-center">
-                    <Lock className="absolute left-3 text-outline w-5 h-5" />
-                    <Input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      minLength={6}
-                      className="pl-10 pr-10"
+                <TextField name="confirmPassword" isRequired minLength={6}>
+                  <Label>Confirmar Senha</Label>
+                  <InputGroup>
+                    <InputGroup.Prefix>
+                      <Lock className="text-outline w-5 h-5" />
+                    </InputGroup.Prefix>
+                    <InputGroup.Input 
+                      type={showPassword ? 'text' : 'password'} 
+                      placeholder="••••••••"
                     />
-                  </div>
-                </div>
+                  </InputGroup>
+                </TextField>
               )}
 
               {state?.error && (
