@@ -66,12 +66,14 @@ export function PropertyForm({ initialData }: PropertyFormProps) {
         } else {
           toast.success("Imóvel criado com sucesso!")
           
-          if (data.type === "RESIDENTIAL") {
-            // Se for residencial, redireciona para criar unidade
-            router.push(`/properties/${result.data.id}?addUnit=true`)
-          } else {
-            // Se for single, já criou a unidade automática
-            router.push(`/properties/${result.data.id}`)
+          if (result.data) {
+            if (data.type === "RESIDENTIAL") {
+              // Se for residencial, redireciona para criar unidade
+              router.push(`/properties/${result.data.id}?addUnit=true`)
+            } else {
+              // Se for single, já criou a unidade automática
+              router.push(`/properties/${result.data.id}`)
+            }
           }
           router.refresh()
         }

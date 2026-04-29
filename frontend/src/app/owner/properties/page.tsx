@@ -1,20 +1,8 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import { Plus, Search, MapPin, Building2 } from "lucide-react"
-import { listProperties } from "@/data/owner/properties-dal"
+import { listProperties, type PropertyWithUnits } from "@/data/owner/properties-dal"
 import { Button, Input, Card, Badge } from "@heroui/react"
-
-interface PropertyWithUnits {
-  id: string
-  name: string
-  type: string
-  address_line?: string
-  city?: string
-  state?: string
-  is_active: boolean
-  created_at: string
-  units: { id: string }[]
-}
+import { Plus, Search, MapPin, Building2 } from "lucide-react"
 
 const PROPERTY_TYPE_LABELS: Record<string, string> = {
   RESIDENTIAL: 'Residencial',

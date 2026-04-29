@@ -92,7 +92,7 @@ async function SettingsForm() {
       </Card>
 
       <div className="flex justify-end">
-        <Button type="submit" color="primary">
+        <Button type="submit" variant="primary">
           Salvar Configurações
         </Button>
       </div>

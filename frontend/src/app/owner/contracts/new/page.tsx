@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createLeaseAction, getUnitsForForm, getTenantsForForm } from "./actions"
-import { Button, Card, Input, Select, SelectItem } from "@heroui/react"
+import { Button, Card, Input, Select, Label, ListBox, TextField, FieldError } from "@heroui/react"
 
 interface Unit {
   id: string
@@ -71,74 +71,81 @@ export default function NewContractForm() {
 
           <Select
             name="unit_id"
-            label="Unidade"
             placeholder="Selecione a unidade"
             isRequired
-            errorMessage={errors.unit_id?.[0]}
+            isInvalid={!!errors.unit_id}
           >
-            {units.map((unit) => (
-              <SelectItem key={unit.id} value={unit.id}>
-                {unit.label}
-              </SelectItem>
-            ))}
+            <Label>Unidade</Label>
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox items={units}>
+                {(unit) => (
+                  <ListBox.Item id={unit.id} textValue={unit.label}>
+                    {unit.label}
+                  </ListBox.Item>
+                )}
+              </ListBox>
+            </Select.Popover>
+            <FieldError>{errors.unit_id?.[0]}</FieldError>
           </Select>
 
           <Select
             name="tenant_id"
-            label="Inquilino"
             placeholder="Selecione o inquilino"
             isRequired
-            errorMessage={errors.tenant_id?.[0]}
+            isInvalid={!!errors.tenant_id}
           >
-            {tenants.map((tenant) => (
-              <SelectItem key={tenant.id} value={tenant.id}>
-                {tenant.name}
-              </SelectItem>
-            ))}
+            <Label>Inquilino</Label>
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox items={tenants}>
+                {(tenant) => (
+                  <ListBox.Item id={tenant.id} textValue={tenant.name}>
+                    {tenant.name}
+                  </ListBox.Item>
+                )}
+              </ListBox>
+            </Select.Popover>
+            <FieldError>{errors.tenant_id?.[0]}</FieldError>
           </Select>
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              name="start_date"
-              type="date"
-              label="Data de Início"
-              isRequired
-              errorMessage={errors.start_date?.[0]}
-            />
-            <Input
-              name="end_date"
-              type="date"
-              label="Data de Término"
-            />
+            <TextField name="start_date" isRequired isInvalid={!!errors.start_date}>
+              <Label>Data de Início</Label>
+              <Input type="date" />
+              <FieldError>{errors.start_date?.[0]}</FieldError>
+            </TextField>
+            
+            <TextField name="end_date">
+              <Label>Data de Término</Label>
+              <Input type="date" />
+            </TextField>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              name="rent_amount"
-              type="number"
-              step="0.01"
-              label="Valor do Aluguel (R$)"
-              placeholder="0,00"
-              isRequired
-              errorMessage={errors.rent_amount?.[0]}
-            />
-            <Input
-              name="payment_day"
-              type="number"
-              min="1"
-              max="31"
-              label="Dia de Vencimento"
-              placeholder="5"
-              isRequired
-              errorMessage={errors.payment_day?.[0]}
-            />
+            <TextField name="rent_amount" isRequired isInvalid={!!errors.rent_amount}>
+              <Label>Valor do Aluguel (R$)</Label>
+              <Input type="number" step="0.01" placeholder="0,00" />
+              <FieldError>{errors.rent_amount?.[0]}</FieldError>
+            </TextField>
+
+            <TextField name="payment_day" isRequired isInvalid={!!errors.payment_day}>
+              <Label>Dia de Vencimento</Label>
+              <Input type="number" min="1" max="31" placeholder="5" />
+              <FieldError>{errors.payment_day?.[0]}</FieldError>
+            </TextField>
           </div>
 
-          <Input
-            name="notes"
-            label="Observações"
-            placeholder="Observações adicionais..."
-          />
+          <TextField name="notes">
+            <Label>Observações</Label>
+            <Input placeholder="Observações adicionais..." />
+          </TextField>
 
           {errors._form && (
             <div className="text-danger text-sm">
@@ -147,7 +154,7 @@ export default function NewContractForm() {
           )}
 
           <div className="flex gap-4">
-            <Button type="submit" isLoading={isSubmitting} color="primary">
+            <Button type="submit" isPending={isSubmitting} className="bg-primary text-primary-foreground">
               Criar Contrato
             </Button>
             <Button 

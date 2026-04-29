@@ -1,10 +1,9 @@
 "use client"
 
-import { useFormState } from "react"
 import { useFormStatus } from "react-dom"
 import { useActionState } from "react"
 import { createPropertyAction } from "./actions"
-import { Button, Card, Input, Select, SelectItem } from "@heroui/react"
+import { Button, Card, Input, Select, Label, ListBox, TextField, FieldError } from "@heroui/react"
 import { useRouter } from "next/navigation"
 
 const PROPERTY_TYPES = [
@@ -16,7 +15,7 @@ function SubmitButton() {
   const { pending } = useFormStatus()
   
   return (
-    <Button type="submit" isLoading={pending} color="primary">
+    <Button type="submit" isPending={pending} className="bg-primary text-primary-foreground">
       Criar Imóvel
     </Button>
   )
@@ -36,42 +35,48 @@ export default function NewPropertyForm() {
 
           <Select
             name="type"
-            label="Tipo"
             placeholder="Selecione o tipo do imóvel"
             isRequired
           >
-            {PROPERTY_TYPES.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
-              </SelectItem>
-            ))}
+            <Label>Tipo</Label>
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox items={PROPERTY_TYPES}>
+                {(type) => (
+                  <ListBox.Item id={type.value} textValue={type.label}>
+                    {type.label}
+                  </ListBox.Item>
+                )}
+              </ListBox>
+            </Select.Popover>
           </Select>
 
-          <Input
-            name="name"
-            label="Nome"
-            placeholder="Ex: Apartamento Centro"
-            isRequired
-          />
+          <TextField name="name" isRequired isInvalid={!!state?.errors?.name}>
+            <Label>Nome</Label>
+            <Input placeholder="Ex: Apartamento Centro" />
+            <FieldError>{state?.errors?.name?.[0]}</FieldError>
+          </TextField>
 
-          <Input
-            name="address_line"
-            label="Endereço"
-            placeholder="Rua, número, complemento"
-          />
+          <TextField name="address_line" isInvalid={!!state?.errors?.address_line}>
+            <Label>Endereço</Label>
+            <Input placeholder="Rua, número, complemento" />
+            <FieldError>{state?.errors?.address_line?.[0]}</FieldError>
+          </TextField>
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              name="city"
-              label="Cidade"
-              placeholder="Cidade"
-            />
-            <Input
-              name="state"
-              label="Estado"
-              placeholder="UF"
-              maxLength={2}
-            />
+            <TextField name="city" isInvalid={!!state?.errors?.city}>
+              <Label>Cidade</Label>
+              <Input placeholder="Cidade" />
+              <FieldError>{state?.errors?.city?.[0]}</FieldError>
+            </TextField>
+            <TextField name="state" isInvalid={!!state?.errors?.state}>
+              <Label>Estado</Label>
+              <Input placeholder="UF" maxLength={2} />
+              <FieldError>{state?.errors?.state?.[0]}</FieldError>
+            </TextField>
           </div>
 
           {state?.errors?._form && (
@@ -81,7 +86,7 @@ export default function NewPropertyForm() {
           )}
 
           <div className="flex gap-4">
-            <Button type="submit" isLoading={isPending} color="primary">
+            <Button type="submit" isPending={isPending} className="bg-primary text-primary-foreground">
               Criar Imóvel
             </Button>
             <Button 

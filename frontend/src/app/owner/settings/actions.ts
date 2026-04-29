@@ -1,7 +1,7 @@
 "use server"
 
 import { getOwnerSettings, upsertOwnerSettings } from "@/data/owner/preferences-dal"
-import { revalidatePath } from "next/navigation"
+import { revalidatePath } from "next/cache"
 
 interface Settings {
   notify_payment_overdue: boolean
@@ -30,7 +30,7 @@ interface FormState {
   errors?: Record<string, string[]>
 }
 
-export async function updateSettingsAction(formData: FormData): Promise<FormState> {
+export async function updateSettingsAction(formData: FormData): Promise<void> {
   const notify_payment_overdue = formData.get("notify_payment_overdue") === "on"
   const notify_lease_expiring = formData.get("notify_lease_expiring") === "on"
   const notify_lease_expiring_days = formData.get("notify_lease_expiring_days") as string
@@ -49,9 +49,7 @@ export async function updateSettingsAction(formData: FormData): Promise<FormStat
     })
     
     revalidatePath("/owner/settings")
-    return { success: true }
   } catch (error) {
     console.error("Error updating settings:", error)
-    return { errors: { _form: ["Erro ao salvar configurações"] } }
   }
 }

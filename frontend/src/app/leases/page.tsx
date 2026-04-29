@@ -20,6 +20,18 @@ interface Lease {
   status: string
 }
 
+interface Tenant {
+  id: string
+  name: string
+  document?: string
+}
+
+interface PropertyWithUnits {
+  id: string
+  name: string
+  units: { id: string; label: string }[]
+}
+
 const STATUS_LABELS: Record<string, { label: string; class: string }> = {
   ACTIVE: { label: "Ativo", class: "bg-primary/10 text-primary" },
   PENDING: { label: "Pendente", class: "bg-secondary/10 text-secondary" },

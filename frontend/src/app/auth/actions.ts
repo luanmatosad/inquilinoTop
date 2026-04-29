@@ -25,7 +25,7 @@ const registerSchema = z.object({
 export type ActionState = {
   error?: string
   success?: string
-} | null
+} | null | undefined
 
 export async function login(prevState: ActionState, formData: FormData) {
   const email = formData.get('email') as string

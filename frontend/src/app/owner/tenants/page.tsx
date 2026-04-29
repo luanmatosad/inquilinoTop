@@ -36,12 +36,12 @@ async function TenantsList() {
       {tenants.map((tenant) => (
         <Link key={tenant.id} href={`/owner/tenants/${tenant.id}`} className="block h-full">
           <Card className="h-full overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-            <Card.Body className="p-5">
+            <Card.Content className="p-5">
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-lg font-semibold text-on-surface line-clamp-1">
                   {tenant.name}
                 </h3>
-                <Badge color={tenant.is_active ? "success" : "default"} variant="flat">
+                <Badge color={tenant.is_active ? "success" : "default"} variant="soft">
                   {tenant.is_active ? "Ativo" : "Inativo"}
                 </Badge>
               </div>
@@ -66,7 +66,7 @@ async function TenantsList() {
                   </div>
                 )}
               </div>
-            </Card.Body>
+            </Card.Content>
           </Card>
         </Link>
       ))}
