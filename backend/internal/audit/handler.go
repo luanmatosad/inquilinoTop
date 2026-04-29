@@ -25,7 +25,7 @@ type ListInput struct {
 }
 
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/api/v1/audit-logs", h.list)
+	r.With(authMW).Get("/audit-logs", h.list)
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {

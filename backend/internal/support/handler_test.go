@@ -33,7 +33,7 @@ func newRouter() (chi.Router, *support.Handler) {
 
 func TestHandler_List_Vazio(t *testing.T) {
 	r, _ := newRouter()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tickets", nil)
+	req := httptest.NewRequest(http.MethodGet, "/tickets", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -47,7 +47,7 @@ func TestHandler_List_Vazio(t *testing.T) {
 
 func TestHandler_Create_BodyInválido(t *testing.T) {
 	r, _ := newRouter()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/tickets", strings.NewReader("not-json"))
+	req := httptest.NewRequest(http.MethodPost, "/tickets", strings.NewReader("not-json"))
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -61,7 +61,7 @@ func TestHandler_Create_TipoInválido(t *testing.T) {
 		"assunto":   "Teste",
 		"descricao": "Descrição válida",
 	})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/tickets", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/tickets", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -76,7 +76,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 		"assunto":   "Erro no login",
 		"descricao": "Ao tentar logar, retorna 401 sem motivo aparente",
 	})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/tickets", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/tickets", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -86,7 +86,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 
 func TestHandler_GetByID_IDInválido(t *testing.T) {
 	r, _ := newRouter()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tickets/nao-e-uuid", nil)
+	req := httptest.NewRequest(http.MethodGet, "/tickets/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -95,7 +95,7 @@ func TestHandler_GetByID_IDInválido(t *testing.T) {
 
 func TestHandler_GetByID_NãoEncontrado(t *testing.T) {
 	r, _ := newRouter()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tickets/"+uuid.New().String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/tickets/"+uuid.New().String(), nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -119,7 +119,7 @@ func TestHandler_GetByID_ErroInterno_Retorna500(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tickets/"+uuid.New().String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/tickets/"+uuid.New().String(), nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -139,7 +139,7 @@ func TestHandler_GetByID_Válido(t *testing.T) {
 		Tipo: "FEATURE", Assunto: "Melhoria", Descricao: "Adicionar dark mode",
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tickets/"+ticket.ID.String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/tickets/"+ticket.ID.String(), nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 

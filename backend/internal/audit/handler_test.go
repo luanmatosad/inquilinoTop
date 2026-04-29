@@ -32,7 +32,7 @@ func TestHandler_List_UsesQueryParams(t *testing.T) {
 	h := NewHandler(svc)
 
 	ownerID := uuid.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/audit-logs?from=2024-01-01T00:00:00Z&event_type=LOGIN", nil)
+	req := httptest.NewRequest(http.MethodGet, "/audit-logs?from=2024-01-01T00:00:00Z&event_type=LOGIN", nil)
 	req = req.WithContext(auth.WithOwnerID(context.Background(), ownerID))
 	rr := httptest.NewRecorder()
 
@@ -49,7 +49,7 @@ func TestHandler_List_WithEmptyBody_Works(t *testing.T) {
 	h := NewHandler(svc)
 
 	ownerID := uuid.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/audit-logs", nil)
+	req := httptest.NewRequest(http.MethodGet, "/audit-logs", nil)
 	req = req.WithContext(auth.WithOwnerID(context.Background(), ownerID))
 	rr := httptest.NewRecorder()
 

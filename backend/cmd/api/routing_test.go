@@ -10,10 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestRouting_HandlerPathsAccessible verifica que handlers com paths absolutos
-// como "/api/v1/properties" são acessíveis nesses paths quando registrados no router.
-// Bug: ao usar r.Route("/api/v1", fn) + fn registra "/api/v1/properties",
-// a rota efetiva vira "/api/v1/api/v1/properties" — inacessível no path documentado.
+// TestRouting_HandlerPathsAccessible verifica que handlers com paths relativos
+// como "/properties" são acessíveis corretamente.
 func TestRouting_HandlerPathsAccessible(t *testing.T) {
 	called := false
 	h := func(w http.ResponseWriter, r *http.Request) {
@@ -21,18 +19,16 @@ func TestRouting_HandlerPathsAccessible(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	// Simula o padrão atual de main.go: handler registra path absoluto dentro de subrouter
+	// Handlers registram paths relativos (sem /api/v1)
 	r := chi.NewRouter()
-	r.Route("/api/v1", func(r1 chi.Router) {
-		r1.Get("/api/v1/properties", h) // path absoluto dentro de subrouter com prefixo
-	})
+	r.Get("/properties", h)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/properties", nil)
+	req := httptest.NewRequest(http.MethodGet, "/properties", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code,
-		"rota /api/v1/properties deve ser acessível — com r.Route a rota fica em /api/v1/api/v1/properties (bug)")
+		"rota /properties deve ser acessível com path relativo")
 	assert.True(t, called, "handler não foi chamado")
 }
 

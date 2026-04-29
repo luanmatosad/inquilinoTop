@@ -22,9 +22,9 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/api/v1/tickets", h.list)
-	r.With(authMW).Post("/api/v1/tickets", h.create)
-	r.With(authMW).Get("/api/v1/tickets/{id}", h.getByID)
+	r.With(authMW).Get("/tickets", h.list)
+	r.With(authMW).Post("/tickets", h.create)
+	r.With(authMW).Get("/tickets/{id}", h.getByID)
 }
 
 // @Summary Lista tickets do usuário

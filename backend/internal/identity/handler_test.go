@@ -34,7 +34,7 @@ func TestHandler_Register(t *testing.T) {
 	router, _ := newTestHandler(t)
 
 	body, _ := json.Marshal(map[string]string{"email": "h@test.com", "password": "senha123"})
-	req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/auth/register", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -53,7 +53,7 @@ func TestHandler_Login(t *testing.T) {
 	svc.Register(context.Background(), "login@test.com", "senha1234")
 
 	body, _ := json.Marshal(map[string]string{"email": "login@test.com", "password": "senha1234"})
-	req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -65,7 +65,7 @@ func TestHandler_Login_InvalidCredentials(t *testing.T) {
 	router, _ := newTestHandler(t)
 
 	body, _ := json.Marshal(map[string]string{"email": "none@test.com", "password": "wrong"})
-	req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -78,7 +78,7 @@ func TestHandler_Setup2FA_DoesNotExposeUserExistence(t *testing.T) {
 	user, _ := svc.Register(context.Background(), "exists@test.com", "senha123")
 
 	body, _ := json.Marshal(map[string]string{"email": "naoexiste@test.com"})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/2fa/setup", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/auth/2fa/setup", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+user.AccessToken)
 	w := httptest.NewRecorder()
@@ -93,7 +93,7 @@ func TestHandler_Setup2FA_EmailVálido(t *testing.T) {
 	user, _ := svc.Register(context.Background(), "setup2fa@test.com", "senha123")
 
 	body, _ := json.Marshal(map[string]string{"email": "setup2fa@test.com"})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/2fa/setup", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/auth/2fa/setup", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+user.AccessToken)
 	w := httptest.NewRecorder()
@@ -111,7 +111,7 @@ func TestHandler_Verify2FA_RequiresAuth(t *testing.T) {
 	h := identity.NewHandler(svc)
 
 	body, _ := json.Marshal(map[string]string{"code": "123456"})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/2fa/verify", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/auth/2fa/verify", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 

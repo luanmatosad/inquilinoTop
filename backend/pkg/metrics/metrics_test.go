@@ -51,7 +51,7 @@ func TestHTTPMetricsMiddleware_TracksErrors(t *testing.T) {
 		w.Write([]byte("Error"))
 	}))
 
-	req := httptest.NewRequest("POST", "/api/v1/test", nil)
+	req := httptest.NewRequest("POST", "/test", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -70,7 +70,7 @@ func TestHandlerHandler_ExposesMetrics(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 

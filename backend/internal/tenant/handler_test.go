@@ -37,7 +37,7 @@ func TestHandler_Create_BodyInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/tenants", bytes.NewReader([]byte("invalid")))
+	req := httptest.NewRequest(http.MethodPost, "/tenants", bytes.NewReader([]byte("invalid")))
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -55,7 +55,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 		Name:       "Foo",
 		PersonType: &pf,
 	})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/tenants", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/tenants", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -73,7 +73,7 @@ func TestHandler_Create_SemName(t *testing.T) {
 	body, _ := json.Marshal(tenant.CreateTenantInput{
 		PersonType: &pf,
 	})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/tenants", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/tenants", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -87,7 +87,7 @@ func TestHandler_Get_IDInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tenants/not-a-uuid", nil)
+	req := httptest.NewRequest(http.MethodGet, "/tenants/not-a-uuid", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -108,7 +108,7 @@ func TestHandler_Get_Válido(t *testing.T) {
 		Name: "Foo", PersonType: &pf,
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tenants/"+t1.ID.String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/tenants/"+t1.ID.String(), nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -121,7 +121,7 @@ func TestHandler_Update_IDInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/tenants/not-a-uuid", nil)
+	req := httptest.NewRequest(http.MethodPut, "/tenants/not-a-uuid", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -146,7 +146,7 @@ func TestHandler_Update_Válido(t *testing.T) {
 		Name:       "Bar",
 		PersonType: &pf,
 	})
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/tenants/"+t1.ID.String(), bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPut, "/tenants/"+t1.ID.String(), bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -160,7 +160,7 @@ func TestHandler_Delete_IDInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/tenants/not-a-uuid", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/tenants/not-a-uuid", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -181,7 +181,7 @@ func TestHandler_Delete_Válido(t *testing.T) {
 		Name: "Foo", PersonType: &pf,
 	})
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/tenants/"+t1.ID.String(), nil)
+	req := httptest.NewRequest(http.MethodDelete, "/tenants/"+t1.ID.String(), nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -201,7 +201,7 @@ func TestHandler_List_Válido(t *testing.T) {
 	svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "A", PersonType: &pf})
 	svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "B", PersonType: &pf})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tenants", nil)
+	req := httptest.NewRequest(http.MethodGet, "/tenants", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 

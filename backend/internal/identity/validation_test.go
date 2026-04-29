@@ -13,7 +13,7 @@ import (
 func TestHandler_Register_InvalidEmailFormat(t *testing.T) {
 	router, _ := newTestHandler(t)
 	body, _ := json.Marshal(map[string]string{"email": "notanemail", "password": "senha123"})
-	req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/auth/register", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -23,7 +23,7 @@ func TestHandler_Register_InvalidEmailFormat(t *testing.T) {
 func TestHandler_Register_ShortPassword(t *testing.T) {
 	router, _ := newTestHandler(t)
 	body, _ := json.Marshal(map[string]string{"email": "user@test.com", "password": "abc"})
-	req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/auth/register", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
