@@ -52,15 +52,21 @@ export function ExpenseDialog({ unitId, properties = [] }: ExpenseDialogProps) {
   useEffect(() => {
     if (state?.success) {
       toast.success(state.success)
-      setOpen(false)
     }
     if (state?.error) {
       toast.error(state.error)
     }
   }, [state])
 
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen)
+    if (!isOpen) {
+      setSelectedPropertyId('')
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" /> Nova Despesa

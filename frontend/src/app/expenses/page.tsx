@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { cookies } from 'next/headers'
 import { getActivePropertiesWithUnits } from "@/app/leases/actions"
 import { ExpenseDialog } from "@/components/expenses/ExpenseDialog"
+import { Property } from "@/types"
 
 interface Expense {
   id: string
@@ -61,7 +62,7 @@ async function getExpensesData() {
   return { expenses, total, categories }
 }
 
-async function ExpensesList({ search, category, properties }: { search?: string; category?: string; properties: any[] }) {
+async function ExpensesList({ search, category, properties }: { search?: string; category?: string; properties: Property[] }) {
   const { expenses, total, categories } = await getExpensesData()
 
   let filtered = expenses

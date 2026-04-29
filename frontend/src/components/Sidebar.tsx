@@ -84,12 +84,6 @@ export function Sidebar() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  useEffect(() => {
-    if (window.innerWidth < 768) {
-      setIsOpen(false)
-    }
-  }, [pathname])
-
   if (isPublicRoute) return null
 
   return (

@@ -10,6 +10,37 @@ import { ExpenseList } from '@/components/expenses/ExpenseList'
 import { getActiveTenants } from '@/app/leases/actions'
 import { goFetch } from '@/lib/go/client'
 
+interface Unit {
+  id: string
+  property_id: string
+  label: string
+  is_active: boolean
+}
+
+interface Property {
+  id: string
+  name: string
+  address_line?: string
+  city?: string
+  state?: string
+}
+
+interface Lease {
+  id: string
+  tenant_id: string
+  rent_amount: number
+}
+
+interface Payment {
+  id: string
+  amount: number
+}
+
+interface Expense {
+  id: string
+  amount: number
+}
+
 export default async function UnitPage({ 
   params,
 }: { 
@@ -17,16 +48,16 @@ export default async function UnitPage({
 }) {
   const { id } = await params
 
-  let unit: any = null
-  let property: any = null
-  let activeLease: any = null
-  let payments: any[] = []
-  let expenses: any[] = []
+  let unit: Unit | null = null
+  let property: Property | null = null
+  const activeLease: Lease | null = null
+  const payments: Payment[] = []
+  const expenses: Expense[] = []
 
   try {
-    unit = await goFetch<any>("/api/v1/units/" + id, {})
+    unit = await goFetch<Unit | null>("/api/v1/units/" + id, {})
     if (unit?.property_id) {
-      property = await goFetch<any>("/api/v1/properties/" + unit.property_id, {})
+      property = await goFetch<Property | null>("/api/v1/properties/" + unit.property_id, {})
     }
   } catch {
     notFound()
@@ -77,7 +108,7 @@ export default async function UnitPage({
         
         {activeLease ? (
           <div className="space-y-6">
-            <ActiveLeaseCard lease={activeLease as any} />
+            <ActiveLeaseCard lease={activeLease} />
             
             <div className="grid md:grid-cols-2 gap-8">
               <div>

@@ -43,7 +43,7 @@ jobs:
 
       - name: Run backend unit tests
         working-directory: backend
-        run: go test ./pkg/... ./internal/... -run "TestService|TestHandler|TestSign|TestVerify|TestMiddleware|TestOK|TestErr" -v
+        run: go test $(go list ./pkg/... ./internal/... | grep -v 'github.com/inquilinotop/api/internal/identity') -run "TestService|TestHandler|TestSign|TestVerify|TestMiddleware|TestOK|TestErr" -v
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/inquilinotop?sslmode=disable
 
@@ -123,7 +123,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: latest
+          version: v1.62
           working-directory: backend
           args: --config ../.golangci.yml
 

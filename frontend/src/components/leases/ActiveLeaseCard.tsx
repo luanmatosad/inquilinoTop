@@ -135,8 +135,8 @@ export function ActiveLeaseCard({ lease }: ActiveLeaseCardProps) {
               <AlertDialogHeader>
                 <AlertDialogTitle>Cancelar Contrato?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Use esta opção apenas se o contrato foi criado por engano. Isso irá marcar como CANCELADO e não gerará histórico financeiro válido.
-                  Para encerrar um contrato que chegou ao fim, use "Encerrar Contrato".
+                  Use esta op&ccedil;&atilde;o apenas se o contrato foi criado por engano. Isso ir&aacute; marcar como CANCELADO e n&atilde;o gerar&aacute; hist&oacute;rico financeiro v&aacute;lido.
+                  Para encerrar um contrato que chegou ao fim, use &quot;Encerrar Contrato&quot;.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

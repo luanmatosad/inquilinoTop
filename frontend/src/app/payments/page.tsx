@@ -53,7 +53,12 @@ async function getPaymentsData() {
   return { payments, received, pending, overdue }
 }
 
-async function PaymentsList({ leases }: { leases: any[] }) {
+interface Lease {
+  id: string
+  tenant_id: string
+}
+
+async function PaymentsList({ leases }: { leases: Lease[] }) {
   const { payments, received, pending, overdue } = await getPaymentsData()
 
   if (!payments.length) {

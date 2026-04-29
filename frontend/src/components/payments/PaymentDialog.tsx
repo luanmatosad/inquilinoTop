@@ -45,15 +45,21 @@ export function PaymentDialog({ leases }: PaymentDialogProps) {
   useEffect(() => {
     if (state?.success) {
       toast.success(state.success)
-      setOpen(false)
     }
     if (state?.error) {
       toast.error(state.error)
     }
   }, [state])
 
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen)
+    if (!isOpen) {
+      formAction(null)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" /> Novo Pagamento
