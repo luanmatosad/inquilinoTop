@@ -87,6 +87,20 @@ func (m *mockTenantRepo) Delete(_ context.Context, id, ownerID uuid.UUID) error 
 	return nil
 }
 
+func (m *mockTenantRepo) GetByField(_ context.Context, ownerID uuid.UUID, field string, value string) (*tenant.Tenant, error) {
+	for _, t := range m.tenants {
+		if t.OwnerID == ownerID && t.IsActive {
+			if field == "document" && t.Document != nil && *t.Document == value {
+				return t, nil
+			}
+			if field == "email" && t.Email != nil && *t.Email == value {
+				return t, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
 // --- Tests ---
 
 func TestService_Create_PersonTypeObrigatório(t *testing.T) {

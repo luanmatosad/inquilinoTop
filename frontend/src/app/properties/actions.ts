@@ -11,7 +11,7 @@ type ActionResponse<T = void> = {
   details?: Record<string, string[]>
 }
 
-interface Property {
+export interface Property {
   id: string
   owner_id: string
   type: string
@@ -35,7 +35,7 @@ interface Unit {
   updated_at: string
 }
 
-export async function createProperty(data: PropertyFormValues): Promise<ActionResponse<any>> {
+export async function createProperty(data: PropertyFormValues): Promise<ActionResponse<Property>> {
   const validated = propertySchema.safeParse(data)
   if (!validated.success) {
     return { error: "Dados inválidos", details: validated.error.flatten().fieldErrors }

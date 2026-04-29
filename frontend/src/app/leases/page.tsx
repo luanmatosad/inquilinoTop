@@ -56,7 +56,7 @@ async function getLeasesData() {
   return { leases, total, active, pending, expiringSoon }
 }
 
-async function LeasesList({ search, status, tenants, properties }: { search?: string; status?: string; tenants: any[]; properties: any[] }) {
+async function LeasesList({ search, status, tenants, properties }: { search?: string; status?: string; tenants: Tenant[]; properties: PropertyWithUnits[] }) {
   const { leases, total, active, pending, expiringSoon } = await getLeasesData()
 
   let filtered = leases

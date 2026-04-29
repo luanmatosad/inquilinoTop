@@ -27,6 +27,14 @@ interface Payment {
   created_at: string
 }
 
+interface CreatePaymentBody {
+  description: string
+  type: string
+  gross_amount: number
+  due_date: string
+  status: string
+}
+
 export async function generateInitialPayments(
   leaseId: string,
   startDate: string,
@@ -40,7 +48,7 @@ export async function generateInitialPayments(
   start.setHours(12, 0, 0, 0)
 
   let currentMonth = start.getMonth()
-  let currentYear = start.getFullYear()
+  const currentYear = start.getFullYear()
 
   if (start.getDate() >= paymentDay) {
     currentMonth++
@@ -83,7 +91,7 @@ export async function createPayment(prevState: PaymentActionState, formData: For
   }
 
   try {
-    const body: any = {
+    const body: CreatePaymentBody = {
       description,
       type,
       gross_amount: grossAmount,

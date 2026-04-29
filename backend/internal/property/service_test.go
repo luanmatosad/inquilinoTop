@@ -130,6 +130,15 @@ func (m *mockRepo) ListUnitsByPropertyIDs(_ context.Context, propertyIDs []uuid.
 	return list, nil
 }
 
+func (m *mockRepo) GetByField(_ context.Context, ownerID uuid.UUID, field string, value string) (*property.Property, error) {
+	for _, p := range m.properties {
+		if p.OwnerID == ownerID && p.IsActive && field == "name" && p.Name == value {
+			return p, nil
+		}
+	}
+	return nil, nil
+}
+
 func TestService_CreateSingleProperty_AutoCreatesUnit(t *testing.T) {
 	mock := newMockRepo()
 	svc := property.NewService(mock)

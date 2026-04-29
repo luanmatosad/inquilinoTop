@@ -122,6 +122,20 @@ func (m *mockPaymentRepo) GetActiveFinancialConfig(_ context.Context, ownerID uu
 	return nil, errors.New("not configured")
 }
 
+func (m *mockPaymentRepo) GetFinancialConfig(_ context.Context, ownerID uuid.UUID) (*payment.FinancialConfig, error) {
+	return nil, errors.New("not configured")
+}
+
+func (m *mockPaymentRepo) UpsertFinancialConfig(_ context.Context, ownerID uuid.UUID, in payment.UpsertFinancialConfigInput) (*payment.FinancialConfig, error) {
+	cfg := &payment.FinancialConfig{
+		ID:       uuid.New(),
+		OwnerID:  ownerID,
+		Provider: in.Provider,
+		IsActive: true,
+	}
+	return cfg, nil
+}
+
 func (m *mockPaymentRepo) CreateFinancialConfig(_ context.Context, ownerID uuid.UUID, in payment.CreateFinancialConfigInput) (*payment.FinancialConfig, error) {
 	cfg := &payment.FinancialConfig{
 		ID:       uuid.New(),

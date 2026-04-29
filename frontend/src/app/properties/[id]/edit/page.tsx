@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation"
 import { goFetch } from "@/lib/go/client"
 import { PropertyForm } from "@/components/properties/PropertyForm"
+import { Property } from "../actions"
 
 async function EditPropertyFormWrapper({ id }: { id: string }) {
   let property
 
   try {
-    property = await goFetch<any>("/api/v1/properties/" + id, {})
+    property = await goFetch<Property>("/api/v1/properties/" + id, {})
   } catch {
     notFound()
   }
