@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"os"
 	"path/filepath"
@@ -49,6 +50,17 @@ func TestLoadPrivateKeyFromEnvOrFile_EnvTakesPrecedence(t *testing.T) {
 	pemData := generateTestPEM(t)
 	t.Setenv("JWT_PRIVATE_KEY", string(pemData))
 	t.Setenv("JWT_PRIVATE_KEY_PATH", "/nonexistent/should/be/ignored.pem")
+
+	key, err := auth.LoadPrivateKeyFromEnvOrFile("JWT_PRIVATE_KEY", "JWT_PRIVATE_KEY_PATH")
+	require.NoError(t, err)
+	assert.NotNil(t, key)
+}
+
+func TestLoadPrivateKeyFromEnvOrFile_FromEnvBase64(t *testing.T) {
+	pemData := generateTestPEM(t)
+	b64 := base64.StdEncoding.EncodeToString(pemData)
+	t.Setenv("JWT_PRIVATE_KEY", b64)
+	t.Setenv("JWT_PRIVATE_KEY_PATH", "")
 
 	key, err := auth.LoadPrivateKeyFromEnvOrFile("JWT_PRIVATE_KEY", "JWT_PRIVATE_KEY_PATH")
 	require.NoError(t, err)

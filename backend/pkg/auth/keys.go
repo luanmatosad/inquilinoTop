@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"bytes"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
@@ -27,8 +28,12 @@ func LoadPrivateKeyFromEnvOrFile(envKey, pathKey string) (*rsa.PrivateKey, error
 }
 
 func parseRSAPrivateKey(data []byte) (*rsa.PrivateKey, error) {
-	// Aceita base64-encoded PEM (útil para armazenar em env vars sem quebras de linha)
-	if decoded, err := base64.StdEncoding.DecodeString(string(data)); err == nil {
+	trimmed := bytes.TrimSpace(data)
+	if !bytes.HasPrefix(trimmed, []byte("-----")) {
+		decoded, err := base64.StdEncoding.DecodeString(string(trimmed))
+		if err != nil {
+			return nil, fmt.Errorf("auth: input is neither PEM nor valid base64: %w", err)
+		}
 		data = decoded
 	}
 	block, _ := pem.Decode(data)

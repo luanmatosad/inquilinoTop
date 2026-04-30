@@ -20,7 +20,8 @@ docs/                    # gerado por swag init — não editar manualmente
 | Var | Descrição |
 |---|---|
 | `DATABASE_URL` | URL PostgreSQL (obrigatório) |
-| `JWT_PRIVATE_KEY_PATH` | Caminho para chave RSA privada (obrigatório) |
+| `JWT_PRIVATE_KEY` | Conteúdo da chave RSA privada (PEM direto ou base64). Prioridade sobre `JWT_PRIVATE_KEY_PATH`. Usado em produção |
+| `JWT_PRIVATE_KEY_PATH` | Caminho para arquivo com a chave RSA privada. Usado em dev local via Docker |
 | `MIGRATIONS_PATH` | Diretório de migrations (default: `./migrations`) |
 | `PORT` | Porta HTTP (default: `8080`) |
 | `TEST_DATABASE_URL` | DB para testes de integração (default: localhost:5433) |
