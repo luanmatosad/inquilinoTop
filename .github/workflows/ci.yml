@@ -186,11 +186,9 @@ jobs:
       - name: Trigger staging deploy
         if: github.ref == 'refs/heads/develop'
         run: |
-          curl -s -f -X POST "${{ secrets.DOKPLOY_WEBHOOK_STAGING }}" \
-            -H "Content-Type: application/json" || echo "Webhook staging falhou"
+          curl -s -f --max-time 30 -X POST "${{ secrets.DOKPLOY_WEBHOOK_STAGING }}"
 
       - name: Trigger production deploy
         if: github.ref == 'refs/heads/main'
         run: |
-          curl -s -f -X POST "${{ secrets.DOKPLOY_WEBHOOK_PROD }}" \
-            -H "Content-Type: application/json" || echo "Webhook prod falhou"
+          curl -s -f --max-time 30 -X POST "${{ secrets.DOKPLOY_WEBHOOK_PROD }}"
