@@ -182,19 +182,39 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-unit, backend-integration, frontend-quality]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    env:
+      DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+      DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+      GIT_SHA: ${{ github.sha }}
     steps:
-      - name: Trigger staging backend deploy
+      - name: Deploy backend-staging
         if: github.ref == 'refs/heads/develop'
-        run: curl -s -f --max-time 30 -X POST "${{ secrets.DOKPLOY_WEBHOOK_BACKEND_STAGING }}"
+        run: |
+          curl -s -f --max-time 30 -X POST "$DOKPLOY_URL/api/application.deploy" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\":\"i-BruNwZ5j4EfbObb2ETK\",\"titleLog\":\"CI deploy from $GIT_SHA\"}"
 
-      - name: Trigger staging frontend deploy
+      - name: Deploy frontend-staging
         if: github.ref == 'refs/heads/develop'
-        run: curl -s -f --max-time 30 -X POST "${{ secrets.DOKPLOY_WEBHOOK_FRONTEND_STAGING }}"
+        run: |
+          curl -s -f --max-time 30 -X POST "$DOKPLOY_URL/api/application.deploy" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\":\"6xMc2_ZNpXOVd2l5XigM1\",\"titleLog\":\"CI deploy from $GIT_SHA\"}"
 
-      - name: Trigger production backend deploy
+      - name: Deploy backend-prod
         if: github.ref == 'refs/heads/main'
-        run: curl -s -f --max-time 30 -X POST "${{ secrets.DOKPLOY_WEBHOOK_BACKEND_PROD }}"
+        run: |
+          curl -s -f --max-time 30 -X POST "$DOKPLOY_URL/api/application.deploy" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\":\"YzYCUkit5A4Ox3CUypgPL\",\"titleLog\":\"CI deploy from $GIT_SHA\"}"
 
-      - name: Trigger production frontend deploy
+      - name: Deploy frontend-prod
         if: github.ref == 'refs/heads/main'
-        run: curl -s -f --max-time 30 -X POST "${{ secrets.DOKPLOY_WEBHOOK_FRONTEND_PROD }}"
+        run: |
+          curl -s -f --max-time 30 -X POST "$DOKPLOY_URL/api/application.deploy" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\":\"9098XOnG4B3H0o-j1eFK7\",\"titleLog\":\"CI deploy from $GIT_SHA\"}"
