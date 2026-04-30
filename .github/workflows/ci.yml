@@ -123,7 +123,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.62
+          version: v2.11
           working-directory: backend
           args: --config ../.golangci.yml
 
