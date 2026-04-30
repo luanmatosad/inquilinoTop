@@ -2,9 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -70,7 +67,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	privKey := mustLoadPrivateKey(mustEnv("JWT_PRIVATE_KEY_PATH"))
+	privKey, err := auth.LoadPrivateKeyFromEnvOrFile("JWT_PRIVATE_KEY", "JWT_PRIVATE_KEY_PATH")
+	if err != nil {
+		slog.Error("failed to load private key", "error", err)
+		os.Exit(1)
+	}
 	jwtSvc := auth.NewJWTService(privKey, &privKey.PublicKey, 15*time.Minute)
 	authMW := auth.Middleware(jwtSvc)
 
@@ -348,33 +349,3 @@ func (a *identityAuditAdapter) LogFailedLogin(ctx context.Context) {
 	a.auditSvc.LogFailedLogin(ctx, uuid.Nil, "")
 }
 
-func mustLoadPrivateKey(path string) *rsa.PrivateKey {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		slog.Error("failed to read private key", "path", path, "error", err)
-		os.Exit(1)
-	}
-	block, _ := pem.Decode(data)
-	if block == nil {
-		slog.Error("failed to decode PEM block", "path", path)
-		os.Exit(1)
-	}
-
-	if key, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
-		return key
-	}
-
-	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		slog.Error("failed to parse private key", "error", err)
-		os.Exit(1)
-	}
-
-	rsaKey, ok := key.(*rsa.PrivateKey)
-	if !ok {
-		slog.Error("not an RSA private key")
-		os.Exit(1)
-	}
-
-	return rsaKey
-}
