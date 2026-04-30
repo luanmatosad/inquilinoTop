@@ -176,3 +176,21 @@ jobs:
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [backend-unit, backend-integration, frontend-quality]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    steps:
+      - name: Trigger staging deploy
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          curl -s -f -X POST "${{ secrets.DOKPLOY_WEBHOOK_STAGING }}" \
+            -H "Content-Type: application/json" || echo "Webhook staging falhou"
+
+      - name: Trigger production deploy
+        if: github.ref == 'refs/heads/main'
+        run: |
+          curl -s -f -X POST "${{ secrets.DOKPLOY_WEBHOOK_PROD }}" \
+            -H "Content-Type: application/json" || echo "Webhook prod falhou"
