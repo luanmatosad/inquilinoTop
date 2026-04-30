@@ -183,12 +183,18 @@ jobs:
     needs: [backend-unit, backend-integration, frontend-quality]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
     steps:
-      - name: Trigger staging deploy
+      - name: Trigger staging backend deploy
         if: github.ref == 'refs/heads/develop'
-        run: |
-          curl -s -f --max-time 30 -X POST "${{ secrets.DOKPLOY_WEBHOOK_STAGING }}"
+        run: curl -s -f --max-time 30 -X POST "${{ secrets.DOKPLOY_WEBHOOK_BACKEND_STAGING }}"
 
-      - name: Trigger production deploy
+      - name: Trigger staging frontend deploy
+        if: github.ref == 'refs/heads/develop'
+        run: curl -s -f --max-time 30 -X POST "${{ secrets.DOKPLOY_WEBHOOK_FRONTEND_STAGING }}"
+
+      - name: Trigger production backend deploy
         if: github.ref == 'refs/heads/main'
-        run: |
-          curl -s -f --max-time 30 -X POST "${{ secrets.DOKPLOY_WEBHOOK_PROD }}"
+        run: curl -s -f --max-time 30 -X POST "${{ secrets.DOKPLOY_WEBHOOK_BACKEND_PROD }}"
+
+      - name: Trigger production frontend deploy
+        if: github.ref == 'refs/heads/main'
+        run: curl -s -f --max-time 30 -X POST "${{ secrets.DOKPLOY_WEBHOOK_FRONTEND_PROD }}"
