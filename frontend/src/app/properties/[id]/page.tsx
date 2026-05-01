@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { ArrowLeft, Pencil, Building, MapPin } from "lucide-react"
 import { goFetch } from "@/lib/go/client"
 

@@ -1,8 +1,8 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import { Plus, FileText } from "lucide-react"
+import { Plus } from "lucide-react"
 import { listLeases } from "@/data/owner/contracts-dal"
-import { Button, Card, Badge } from "@heroui/react"
+import { Button, Badge } from "@heroui/react"
 
 interface LeaseWithDetails {
   id: string

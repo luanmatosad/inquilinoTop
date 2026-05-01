@@ -2,14 +2,6 @@ import { Suspense } from "react"
 import { loadSettings, updateSettingsAction } from "./actions"
 import { Button, Card, Switch } from "@heroui/react"
 
-interface Settings {
-  notify_payment_overdue: boolean
-  notify_lease_expiring: boolean
-  notify_lease_expiring_days: number
-  notify_new_message: boolean
-  notify_maintenance_request: boolean
-  notify_payment_received: boolean
-}
 
 async function SettingsForm() {
   const settings = await loadSettings()

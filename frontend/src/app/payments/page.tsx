@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { Suspense } from "react"
-import { Plus, Search, TrendingUp, AlertCircle, MoreVertical, Receipt, Calendar } from "lucide-react"
+import { Search, TrendingUp, AlertCircle, MoreVertical, Receipt, Calendar } from "lucide-react"
 import { goFetch } from "@/lib/go/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"

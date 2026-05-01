@@ -41,7 +41,6 @@ export async function generateInitialPayments(
   amount: number,
   paymentDay: number
 ) {
-  const payments = []
   const monthsToGenerate = 12
 
   const start = new Date(startDate)

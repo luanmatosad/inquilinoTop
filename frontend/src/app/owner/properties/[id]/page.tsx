@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft, Pencil, Building, MapPin, Trash } from "lucide-react"
+import { ArrowLeft, Pencil, Building, MapPin } from "lucide-react"
 import { getProperty } from "@/data/owner/properties-dal"
 import type { PropertyWithUnits } from "@/data/owner/properties-dal"
 import { Button } from "@heroui/react"

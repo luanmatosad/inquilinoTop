@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { listTenants } from "@/data/owner/tenants-dal"
-import { Button, Card, Badge } from "@heroui/react"
+import { Card, Badge } from "@heroui/react"
 import { User, Mail, Phone } from "lucide-react"
 
 interface Tenant {

@@ -3,7 +3,6 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowLeft, Mail, Phone, FileText } from "lucide-react"
 import { getTenantWithLeases } from "@/data/owner/tenants-dal"
-import { Button } from "@heroui/react"
 import { Card } from "@heroui/react"
 import { Badge } from "@heroui/react"
 
@@ -42,7 +41,6 @@ async function TenantDetails({ id }: { id: string }) {
     return null
   }
 
-  const activeLeases = tenant.leases?.filter(l => l.status === 'ACTIVE') || []
 
   return (
     <div className="space-y-8">
