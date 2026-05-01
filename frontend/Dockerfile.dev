@@ -3,8 +3,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install --legacy-peer-deps
 COPY . .
-EXPOSE 3001
-ENV PORT=3001
+EXPOSE 3005
+ENV PORT=3005
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_PUBLIC_API_URL=http://backend:8080
 CMD ["npm", "run", "dev"]

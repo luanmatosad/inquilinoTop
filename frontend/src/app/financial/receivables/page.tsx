@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { getReceivables, Receivable, TransactionStatus } from '../actions';
-import { Search, Plus, Filter, MoreVertical, FileText, Send, CheckCircle, FilePlus2 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { Search, Plus, Filter, MoreVertical, CheckCircle, FilePlus2 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 

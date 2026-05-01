@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getDashboardMetrics, getReceivables } from '../actions';
 import { ArrowUpRight, ArrowDownRight, TrendingUp, AlertTriangle } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+
 
 export default async function FinancialDashboard() {
   const metrics = await getDashboardMetrics();
