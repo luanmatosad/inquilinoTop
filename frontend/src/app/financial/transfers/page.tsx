@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { getTransfers, Transfer } from '../actions';
 import { Search, RefreshCw, FileText, Send } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 

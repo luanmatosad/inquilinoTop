@@ -5,7 +5,7 @@ import { FileUpload, ParsedSpreadsheet } from "@/components/import/FileUpload"
 import { ColumnMapper, ColumnMapping } from "@/components/import/ColumnMapper"
 import { ImportPreview } from "@/components/import/ImportPreview"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+
 import { goFetch } from "@/lib/go/client"
 import { toast } from "sonner"
 import { 

@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { getBankRecords, getReceivables, getPayables, BankRecord, Receivable, Payable } from '../actions';
+import { getBankRecords, getReceivables, getPayables, BankRecord } from '../actions';
 import { Upload, Link2, AlertTriangle, Check, FileDown } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 

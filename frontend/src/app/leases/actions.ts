@@ -67,7 +67,7 @@ export async function createLease(prevState: LeaseActionState, formData: FormDat
   }
 
   try {
-    const lease = await goFetch<Lease>("/api/v1/leases", {
+    await goFetch<Lease>("/api/v1/leases", {
       method: "POST",
       body: JSON.stringify({
         unit_id: validatedFields.data.unit_id,

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getReceivables, Receivable, TransactionStatus } from '../actions';
-import { Search, Plus, Filter, MoreVertical, CheckCircle, FilePlus2 } from 'lucide-react';
+import { Search, Plus, Filter, MoreVertical } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

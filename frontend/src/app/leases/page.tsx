@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { Suspense } from "react"
-import Link from "next/link"
-import { Plus, Search, Filter, Eye, Pencil, Building2, CheckCircle, Clock, AlertCircle } from "lucide-react"
+import { Search, Filter, Eye, Pencil, Building2, CheckCircle, Clock, AlertCircle } from "lucide-react"
 import { goFetch } from "@/lib/go/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
