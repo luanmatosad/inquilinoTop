@@ -55,6 +55,7 @@ async function getPaymentsData() {
 
 interface Lease {
   id: string
+  unit_id: string
   tenant_id: string
 }
 

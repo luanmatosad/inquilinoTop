@@ -13,6 +13,8 @@ interface Tenant {
 
 interface Property {
   id: string
+  name: string
+  units: { id: string; label: string }[]
 }
 
 interface CreateLeaseDialogProps {

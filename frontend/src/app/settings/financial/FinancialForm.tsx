@@ -20,9 +20,9 @@ export function FinancialForm({ initialData }: { initialData: FinancialConfig | 
     }
   }, [state])
 
-  const defaultLateFee = initialData?.config?.default_late_fee || ''
-  const defaultInterest = initialData?.config?.default_interest || ''
-  const asaasApiKey = initialData?.config?.api_key || ''
+  const defaultLateFee = String(initialData?.config?.default_late_fee ?? '')
+  const defaultInterest = String(initialData?.config?.default_interest ?? '')
+  const asaasApiKey = String(initialData?.config?.api_key ?? '')
 
   return (
     <form action={action} className="space-y-8">
@@ -67,7 +67,7 @@ export function FinancialForm({ initialData }: { initialData: FinancialConfig | 
             id="provider" 
             name="provider" 
             value={provider}
-            onChange={(e) => setProvider(e.target.value)}
+            onChange={(e) => setProvider(e.target.value as typeof provider)}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <option value="MOCK">Manual / Direto (PIX, Transferência)</option>

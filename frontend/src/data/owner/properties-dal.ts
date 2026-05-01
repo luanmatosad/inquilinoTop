@@ -14,7 +14,7 @@ export interface Property {
 }
 
 export interface PropertyWithUnits extends Property {
-  units: { id: string; label?: string }[]
+  units: { id: string; label: string; is_active: boolean; floor?: string | null; notes?: string | null }[]
 }
 
 export async function listProperties(): Promise<PropertyWithUnits[]> {
@@ -26,9 +26,9 @@ export async function listProperties(): Promise<PropertyWithUnits[]> {
   }
 }
 
-export async function getProperty(id: string): Promise<Property | null> {
+export async function getProperty(id: string): Promise<PropertyWithUnits | null> {
   try {
-    return await goFetch<Property>(`/api/v1/properties/${id}`)
+    return await goFetch<PropertyWithUnits>(`/api/v1/properties/${id}`)
   } catch {
     return null
   }

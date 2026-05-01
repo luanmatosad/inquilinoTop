@@ -8,7 +8,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { cookies } from 'next/headers'
 import { getActivePropertiesWithUnits } from "@/app/leases/actions"
 import { ExpenseDialog } from "@/components/expenses/ExpenseDialog"
-import { Property } from "@/types"
+
+type Property = { id: string; name: string; units: { id: string; label: string }[] }
 
 interface Expense {
   id: string

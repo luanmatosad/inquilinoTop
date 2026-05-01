@@ -1,7 +1,7 @@
 "use server"
 
 import { getOwnerSettings, upsertOwnerSettings } from "@/data/owner/preferences-dal"
-import { revalidatePath } from "next/navigation"
+import { revalidatePath } from "next/cache"
 
 interface Settings {
   notify_payment_overdue: boolean

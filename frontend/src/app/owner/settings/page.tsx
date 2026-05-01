@@ -14,8 +14,13 @@ interface Settings {
 async function SettingsForm() {
   const settings = await loadSettings()
 
+  async function handleAction(formData: FormData) {
+    "use server"
+    await updateSettingsAction(formData)
+  }
+
   return (
-    <form action={updateSettingsAction} className="space-y-6">
+    <form action={handleAction} className="space-y-6">
       <Card className="p-6">
         <h2 className="text-lg font-semibold mb-4">Notificações</h2>
         
@@ -92,7 +97,7 @@ async function SettingsForm() {
       </Card>
 
       <div className="flex justify-end">
-        <Button type="submit" color="primary">
+        <Button type="submit">
           Salvar Configurações
         </Button>
       </div>

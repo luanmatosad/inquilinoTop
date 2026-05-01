@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import { goFetch } from "@/lib/go/client"
 import { PropertyForm } from "@/components/properties/PropertyForm"
-import { Property } from "../actions"
+import { Property } from "../../actions"
 
 async function EditPropertyFormWrapper({ id }: { id: string }) {
   let property

@@ -9,11 +9,13 @@ import { ExpenseDialog } from '@/components/expenses/ExpenseDialog'
 import { ExpenseList } from '@/components/expenses/ExpenseList'
 import { getActiveTenants } from '@/app/leases/actions'
 import { goFetch } from '@/lib/go/client'
+import type { Payment, Expense } from '@/types'
 
 interface Unit {
   id: string
   property_id: string
   label: string
+  floor?: string | null
   is_active: boolean
 }
 
@@ -31,19 +33,9 @@ interface Lease {
   rent_amount: number
 }
 
-interface Payment {
-  id: string
-  amount: number
-}
-
-interface Expense {
-  id: string
-  amount: number
-}
-
-export default async function UnitPage({ 
+export default async function UnitPage({
   params,
-}: { 
+}: {
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
@@ -68,6 +60,7 @@ export default async function UnitPage({
   }
 
   const tenants = !activeLease ? await getActiveTenants() : []
+  const activeLeaseId = (activeLease as Lease | null)?.id ?? ''
 
   return (
     <div className="container py-8 space-y-8">
@@ -113,7 +106,7 @@ export default async function UnitPage({
             <div className="grid md:grid-cols-2 gap-8">
               <div>
                 <h3 className="text-lg font-medium mb-4">Pagamentos do Aluguel</h3>
-                <PaymentList payments={payments} leaseId={activeLease?.id || ''} />
+                <PaymentList payments={payments} leaseId={activeLeaseId} />
               </div>
 
               <div>

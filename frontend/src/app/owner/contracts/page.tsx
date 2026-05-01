@@ -85,7 +85,7 @@ async function ContractsList() {
                 {lease.end_date ? new Date(lease.end_date).toLocaleDateString('pt-BR') : '-'}
               </td>
               <td className="py-3 px-4">
-                <Badge color={getStatusColor(lease.status)} variant="flat">
+                <Badge color={getStatusColor(lease.status)} variant="secondary">
                   {getStatusLabel(lease.status)}
                 </Badge>
               </td>

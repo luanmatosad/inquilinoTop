@@ -68,10 +68,10 @@ export function PropertyForm({ initialData }: PropertyFormProps) {
           
           if (data.type === "RESIDENTIAL") {
             // Se for residencial, redireciona para criar unidade
-            router.push(`/properties/${result.data.id}?addUnit=true`)
+            router.push(`/properties/${result.data?.id}?addUnit=true`)
           } else {
             // Se for single, já criou a unidade automática
-            router.push(`/properties/${result.data.id}`)
+            router.push(`/properties/${result.data?.id}`)
           }
           router.refresh()
         }

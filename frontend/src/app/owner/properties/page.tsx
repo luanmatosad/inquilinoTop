@@ -8,9 +8,9 @@ interface PropertyWithUnits {
   id: string
   name: string
   type: string
-  address_line?: string
-  city?: string
-  state?: string
+  address_line?: string | null
+  city?: string | null
+  state?: string | null
   is_active: boolean
   created_at: string
   units: { id: string }[]

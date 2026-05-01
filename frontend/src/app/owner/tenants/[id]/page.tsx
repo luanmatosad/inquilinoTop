@@ -50,7 +50,7 @@ async function TenantDetails({ id }: { id: string }) {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             {tenant.name}
-            <Badge color={tenant.is_active ? "success" : "default"} variant="flat">
+            <Badge color={tenant.is_active ? "success" : "default"} variant="secondary">
               {tenant.is_active ? "Ativo" : "Inativo"}
             </Badge>
           </h1>
@@ -99,7 +99,7 @@ async function TenantDetails({ id }: { id: string }) {
                 <Badge color={
                   lease.status === 'ACTIVE' ? "success" : 
                   lease.status === 'ENDED' ? "default" : "danger"
-                } variant="flat">
+                } variant="secondary">
                   {lease.status === 'ACTIVE' ? 'Ativo' : 
                    lease.status === 'ENDED' ? 'Encerrado' : 'Cancelado'}
                 </Badge>

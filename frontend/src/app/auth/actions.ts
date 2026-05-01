@@ -54,6 +54,7 @@ export async function login(prevState: ActionState, formData: FormData) {
   if (success) {
     redirect('/')
   }
+  return null
 }
 
 export async function signup(prevState: ActionState, formData: FormData) {
@@ -85,6 +86,7 @@ export async function signup(prevState: ActionState, formData: FormData) {
   if (success) {
     redirect('/')
   }
+  return null
 }
 
 export async function logout() {

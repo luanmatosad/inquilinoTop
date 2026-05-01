@@ -53,9 +53,6 @@ export function PaymentDialog({ leases }: PaymentDialogProps) {
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen)
-    if (!isOpen) {
-      formAction(null)
-    }
   }
 
   return (
