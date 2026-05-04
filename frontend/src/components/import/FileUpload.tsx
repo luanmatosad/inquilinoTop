@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import ExcelJS from "exceljs"
-import Papa from "papaparse"
-import { Upload, AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
+import * as XLSX from "xlsx"
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export interface ParsedSpreadsheet {
@@ -33,38 +32,6 @@ export function FileUpload({ onFileParsed }: FileUploadProps) {
     return null
   }
 
-  const parseExcel = async (file: File): Promise<string[][]> => {
-    const data = await file.arrayBuffer()
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(data)
-    const worksheet = workbook.worksheets[0]
-    if (!worksheet) return []
-    const rows: string[][] = []
-    worksheet.eachRow({ includeEmpty: false }, (row) => {
-      const values = (row.values as (ExcelJS.CellValue | null)[]).slice(1)
-      rows.push(
-        values.map((cell) => {
-          if (cell === null || cell === undefined) return ""
-          if (cell instanceof Date) return cell.toISOString()
-          if (typeof cell === "object" && "text" in cell) return String((cell as ExcelJS.CellHyperlinkValue).text ?? "")
-          if (typeof cell === "object" && "richText" in cell) return (cell as ExcelJS.CellRichTextValue).richText.map(r => r.text).join("")
-          if (typeof cell === "object" && "result" in cell) return String((cell as unknown as ExcelJS.CellFormulaValue).result ?? "")
-          return String(cell)
-        })
-      )
-    })
-    return rows
-  }
-
-  const parseCsv = (file: File): Promise<string[][]> =>
-    new Promise((resolve, reject) => {
-      Papa.parse<string[]>(file, {
-        skipEmptyLines: true,
-        complete: (result) => resolve(result.data),
-        error: (err) => reject(err),
-      })
-    })
-
   const parseFile = useCallback(async (file: File) => {
     setIsLoading(true)
     setError(null)
@@ -77,11 +44,20 @@ export function FileUpload({ onFileParsed }: FileUploadProps) {
         return
       }
 
-      const extension = "." + file.name.split(".").pop()?.toLowerCase()
-      const jsonData = extension === ".csv" ? await parseCsv(file) : await parseExcel(file)
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data, { type: "array", cellDates: true })
+
+      if (workbook.SheetNames.length === 0) {
+        setError("Arquivo vazio.")
+        return
+      }
+
+      const sheetName = workbook.SheetNames[0]
+      const sheet = workbook.Sheets[sheetName]
+      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as string[][]
 
       if (jsonData.length === 0) {
-        setError("Arquivo vazio.")
+        setError("Arquivo sem dados.")
         return
       }
 
@@ -93,7 +69,11 @@ export function FileUpload({ onFileParsed }: FileUploadProps) {
       const headers = jsonData[0].map((h) => String(h ?? ""))
       const rows = jsonData.slice(1).filter((row) => row.some((cell) => cell !== ""))
 
-      onFileParsed({ headers, rows, fileName: file.name })
+      onFileParsed({
+        headers,
+        rows,
+        fileName: file.name,
+      })
     } catch {
       setError("Erro ao processar arquivo. Tente novamente.")
     } finally {
