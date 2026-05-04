@@ -47,7 +47,7 @@ export function FileUpload({ onFileParsed }: FileUploadProps) {
           if (cell === null || cell === undefined) return ""
           if (cell instanceof Date) return cell.toISOString()
           if (typeof cell === "object" && "text" in cell) return String((cell as unknown as ExcelJS.CellRichTextValue).text ?? "")
-          if (typeof cell === "object" && "result" in cell) return String((cell as ExcelJS.CellFormulaValue).result ?? "")
+          if (typeof cell === "object" && "result" in cell) return String((cell as unknown as ExcelJS.CellFormulaValue).result ?? "")
           return String(cell)
         })
       )
