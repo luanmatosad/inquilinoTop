@@ -2,7 +2,9 @@
 
 import { cookies } from 'next/headers'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+// API_INTERNAL_URL is for server-side requests (Docker internal network).
+// Falls back to NEXT_PUBLIC_API_URL for local dev.
+const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
 export interface AuthUser {
   id: string

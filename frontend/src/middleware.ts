@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
   // Refresh if less than 1 minute remaining or already expired
   if (payload && (payload.exp * 1000 - Date.now() < 60000)) {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://backend:8080'
+      const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:8080'
       const refreshRes = await fetch(`${apiUrl}/api/v1/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
