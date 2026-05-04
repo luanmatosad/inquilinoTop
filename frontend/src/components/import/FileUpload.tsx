@@ -46,7 +46,8 @@ export function FileUpload({ onFileParsed }: FileUploadProps) {
         values.map((cell) => {
           if (cell === null || cell === undefined) return ""
           if (cell instanceof Date) return cell.toISOString()
-          if (typeof cell === "object" && "text" in cell) return String((cell as unknown as ExcelJS.CellRichTextValue).text ?? "")
+          if (typeof cell === "object" && "text" in cell) return String((cell as ExcelJS.CellHyperlinkValue).text ?? "")
+          if (typeof cell === "object" && "richText" in cell) return (cell as ExcelJS.CellRichTextValue).richText.map(r => r.text).join("")
           if (typeof cell === "object" && "result" in cell) return String((cell as unknown as ExcelJS.CellFormulaValue).result ?? "")
           return String(cell)
         })
