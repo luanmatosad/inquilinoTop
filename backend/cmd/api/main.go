@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
@@ -55,6 +56,8 @@ import (
 func main() {
 	logger := createLogger()
 	slog.SetDefault(logger)
+
+	initSentry()
 
 	databaseURL := mustEnv("DATABASE_URL")
 	database, err := db.New(context.Background(), databaseURL)
@@ -156,11 +159,11 @@ func main() {
 		slog.Error("failed to initialize metrics", "error", err)
 	}
 
-	r := chi.NewRouter()
-r.Use(middleware.RequestID)
+r := chi.NewRouter()
+	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(sentryMiddleware)
+	r.Use(requestLogger)
 	r.Use(rateLimiter.Middleware)
 	r.Use(corsMiddleware)
 	r.Use(securityHeadersMW)
@@ -378,3 +381,31 @@ func mustLoadPrivateKey(path string) *rsa.PrivateKey {
 
 	return rsaKey
 }
+
+func initSentry() {
+	dsn := os.Getenv("SENTRY_DSN")
+	if dsn == "" {
+		slog.Warn("SENTRY_DSN not set, Sentry disabled")
+		return
+	}
+
+	traceRate := 0.1
+	if envOr("APP_ENV", "development") == "development" {
+		traceRate = 1.0
+	}
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn:              dsn,
+		Environment:      envOr("APP_ENV", "development"),
+		Release:          "inquilinotop@1.0.0",
+		EnableTracing:    true,
+		TracesSampleRate: traceRate,
+		EnableLogs:       true,
+	})
+	if err != nil {
+		slog.Error("failed to initialize Sentry", "error", err)
+		return
+	}
+
+	slog.Info("Sentry initialized", "dsn", dsn)
+}
+
