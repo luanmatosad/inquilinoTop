@@ -1,0 +1,153 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications alt+T"
+    - generic [ref=e3]:
+      - generic [ref=e7]:
+        - img [ref=e10]
+        - generic [ref=e12]:
+          - generic [ref=e13]:
+            - generic [ref=e14]: Home
+            - list [ref=e15]:
+              - listitem [ref=e16]:
+                - link "Home" [ref=e17] [cursor=pointer]:
+                  - /url: /dashboard/home
+                  - img [ref=e18]
+                  - generic [ref=e21]: Home
+              - listitem [ref=e22]:
+                - link "Projects" [ref=e23] [cursor=pointer]:
+                  - /url: /dashboard/projects
+                  - img [ref=e24]
+                  - generic [ref=e26]: Projects
+          - generic [ref=e27]:
+            - generic [ref=e28]: Settings
+            - list [ref=e29]:
+              - listitem [ref=e30]:
+                - link "Profile" [ref=e31] [cursor=pointer]:
+                  - /url: /dashboard/settings/profile
+                  - img [ref=e32]
+                  - generic [ref=e35]: Profile
+          - generic [ref=e36]:
+            - generic [ref=e37]: Extra
+            - list [ref=e38]:
+              - listitem [ref=e39]:
+                - link "Documentation" [ref=e40] [cursor=pointer]:
+                  - /url: https://docs.dokploy.com/docs/core
+                  - img [ref=e42]
+                  - generic [ref=e44]: Documentation
+              - listitem [ref=e45]:
+                - link "Support" [ref=e46] [cursor=pointer]:
+                  - /url: https://discord.gg/2tBnJ3jDJc
+                  - img [ref=e48]
+                  - generic [ref=e51]: Support
+        - list [ref=e53]:
+          - listitem [ref=e54]:
+            - button "UU Account" [ref=e55] [cursor=pointer]:
+              - generic [ref=e57]: UU
+              - generic [ref=e59]: Account
+              - img [ref=e60]
+        - button "Toggle Sidebar" [ref=e63]
+      - main [ref=e64]:
+        - generic [ref=e66]:
+          - generic [ref=e68]:
+            - button "Toggle Sidebar" [ref=e69] [cursor=pointer]:
+              - img [ref=e70]
+              - generic [ref=e72]: Toggle Sidebar
+            - button "Select Project" [ref=e74] [cursor=pointer]:
+              - img [ref=e75]
+              - generic [ref=e78]: Select Project
+              - img [ref=e79]
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - generic [ref=e85]:
+                - heading "Application icon frontend-prod" [level=3] [ref=e86]:
+                  - generic [ref=e87]:
+                    - button "Application icon" [ref=e88] [cursor=pointer]:
+                      - img "Application icon" [ref=e89]
+                      - img [ref=e91]
+                    - button [ref=e95] [cursor=pointer]
+                  - text: frontend-prod
+                - generic [ref=e97]: frontendprod-wrgy3x
+              - generic [ref=e100] [cursor=pointer]: Dokploy Server
+            - generic [ref=e102]:
+              - tablist [ref=e104]:
+                - tab "General" [selected] [ref=e105] [cursor=pointer]
+                - tab "Patches" [ref=e106] [cursor=pointer]
+              - tabpanel "General" [ref=e107]:
+                - generic [ref=e108]:
+                  - generic [ref=e109]:
+                    - heading "Deploy Settings" [level=3] [ref=e111]
+                    - button "Open Terminal" [ref=e113] [cursor=pointer]:
+                      - img [ref=e114]
+                      - text: Open Terminal
+                  - generic [ref=e116]:
+                    - heading "Provider Select the source of your code" [level=3] [ref=e118]:
+                      - generic [ref=e119]:
+                        - generic [ref=e120]: Provider
+                        - paragraph [ref=e121]: Select the source of your code
+                      - img [ref=e123]
+                    - generic [ref=e129]:
+                      - img [ref=e130]
+                      - generic [ref=e132]: Loading providers...
+                  - generic [ref=e133]:
+                    - heading "Build Type Select the way of building your code" [level=3] [ref=e135]:
+                      - generic [ref=e136]:
+                        - generic [ref=e137]: Build Type
+                        - paragraph [ref=e138]: Select the way of building your code
+                      - img [ref=e140]
+                    - generic [ref=e151]:
+                      - generic [ref=e152]:
+                        - img [ref=e154]
+                        - generic [ref=e157]:
+                          - text: "Builders can consume significant memory and CPU resources (recommended: 4+ GB RAM and 2+ CPU cores). For production environments, please review our"
+                          - link "Production Guide" [ref=e158] [cursor=pointer]:
+                            - /url: https://docs.dokploy.com/docs/core/applications/going-production
+                          - text: for best practices and optimization recommendations. Builders are suitable for development and prototyping purposes when you have sufficient resources available.
+                      - generic [ref=e159]:
+                        - generic [ref=e160]:
+                          - text: Build Type
+                          - radiogroup [ref=e161]:
+                            - generic [ref=e162]:
+                              - radio "Dockerfile" [checked] [ref=e163] [cursor=pointer]:
+                                - img [ref=e165]
+                              - radio [checked]
+                              - generic [ref=e167]: Dockerfile
+                            - generic [ref=e168]:
+                              - radio "Railpack New" [ref=e169] [cursor=pointer]
+                              - radio
+                              - generic [ref=e170]:
+                                - text: Railpack
+                                - generic [ref=e171]: New
+                            - generic [ref=e172]:
+                              - radio "Nixpacks" [ref=e173] [cursor=pointer]
+                              - radio
+                              - generic [ref=e174]: Nixpacks
+                            - generic [ref=e175]:
+                              - radio "Heroku Buildpacks" [ref=e176] [cursor=pointer]
+                              - radio
+                              - generic [ref=e177]: Heroku Buildpacks
+                            - generic [ref=e178]:
+                              - radio "Paketo Buildpacks" [ref=e179] [cursor=pointer]
+                              - radio
+                              - generic [ref=e180]: Paketo Buildpacks
+                            - generic [ref=e181]:
+                              - radio "Static" [ref=e182] [cursor=pointer]
+                              - radio
+                              - generic [ref=e183]: Static
+                        - generic [ref=e184]:
+                          - text: Docker File
+                          - textbox "Docker File" [ref=e186]:
+                            - /placeholder: "Path of your docker file (default: Dockerfile)"
+                            - text: frontend/Dockerfile
+                        - generic [ref=e187]:
+                          - text: Docker Context Path
+                          - textbox "Docker Context Path" [ref=e189]:
+                            - /placeholder: "Path of your docker context (default: .)"
+                            - text: frontend
+                        - generic [ref=e190]:
+                          - generic [ref=e191]:
+                            - text: Docker Build Stage
+                            - paragraph [ref=e192]: Allows you to target a specific stage in a Multi-stage Dockerfile. If empty, Docker defaults to build the last defined stage.
+                          - textbox "Docker Build Stage" [ref=e194]:
+                            - /placeholder: E.g. production
+                        - button "Save" [ref=e196] [cursor=pointer]
+  - alert [ref=e197]

@@ -1,0 +1,424 @@
+- generic:
+  - generic:
+    - region "Notifications alt+T"
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - list:
+                - listitem:
+                  - button:
+                    - generic:
+                      - generic:
+                        - img
+                      - generic:
+                        - paragraph: My Organization
+                    - img
+                - listitem:
+                  - button:
+                    - img
+            - generic:
+              - generic:
+                - generic: Home
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/home
+                      - img
+                      - generic: Home
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/projects
+                      - img
+                      - generic: Projects
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/deployments
+                      - img
+                      - generic: Deployments
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/monitoring
+                      - img
+                      - generic: Monitoring
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/schedules
+                      - img
+                      - generic: Schedules
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/traefik
+                      - img
+                      - generic: Traefik File System
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/docker
+                      - img
+                      - generic: Docker
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/swarm
+                      - img
+                      - generic: Swarm
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/requests
+                      - img
+                      - generic: Requests
+              - generic:
+                - generic: Settings
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/server
+                      - img
+                      - generic: Web Server
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/profile
+                      - img
+                      - generic: Profile
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/servers
+                      - img
+                      - generic: Remote Servers
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/users
+                      - img
+                      - generic: Users
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/audit-logs
+                      - img
+                      - generic: Audit Logs
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/ssh-keys
+                      - img
+                      - generic: SSH Keys
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/ai
+                      - img
+                      - generic: AI
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/tags
+                      - img
+                      - generic: Tags
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/git-providers
+                      - img
+                      - generic: Git
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/registry
+                      - img
+                      - generic: Registry
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/destinations
+                      - img
+                      - generic: S3 Destinations
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/certificates
+                      - img
+                      - generic: Certificates
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/cluster
+                      - img
+                      - generic: Cluster
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/notifications
+                      - img
+                      - generic: Notifications
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/settings/sso
+                      - img
+                      - generic: SSO
+              - generic:
+                - generic: Extra
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: https://docs.dokploy.com/docs/core
+                      - generic:
+                        - img
+                      - generic: Documentation
+                  - listitem:
+                    - link:
+                      - /url: https://discord.gg/2tBnJ3jDJc
+                      - generic:
+                        - img
+                      - generic: Support
+            - generic:
+              - list:
+                - listitem:
+                  - button:
+                    - generic:
+                      - img
+                    - generic:
+                      - generic: Account
+                      - generic: maycoaoki@gmail.com
+                    - img
+                - generic: Version v0.29.2
+            - button
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - button:
+                  - img
+                  - generic: Toggle Sidebar
+                - generic:
+                  - button:
+                    - img
+                    - generic: ImoviFlow
+                    - img
+                  - paragraph: production
+                  - button:
+                    - img
+                    - generic: frontend-prod
+                    - img
+                  - button:
+                    - img
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - heading [level=3]:
+                        - generic:
+                          - button:
+                            - img
+                            - generic:
+                              - img
+                          - generic:
+                            - button
+                        - text: frontend-prod
+                      - generic: frontendprod-wrgy3x
+                    - generic:
+                      - generic:
+                        - generic: Dokploy Server
+                      - generic:
+                        - button:
+                          - img
+                        - button:
+                          - img
+                  - generic:
+                    - generic:
+                      - generic:
+                        - tablist:
+                          - tab [selected]: General
+                          - tab: Environment
+                          - tab: Domains
+                          - tab: Deployments
+                          - tab: Preview Deployments
+                          - tab: Schedules
+                          - tab: Volume Backups
+                          - tab: Logs
+                          - tab: Patches
+                          - tab: Monitoring
+                          - tab: Advanced
+                      - tabpanel:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - heading [level=3]: Deploy Settings
+                            - generic:
+                              - button [expanded]:
+                                - generic:
+                                  - img
+                                  - text: Deploy
+                              - button:
+                                - generic:
+                                  - img
+                                  - text: Reload
+                              - button:
+                                - generic:
+                                  - img
+                                  - text: Rebuild
+                              - button:
+                                - generic:
+                                  - img
+                                  - text: Stop
+                              - button:
+                                - img
+                                - text: Open Terminal
+                              - generic:
+                                - generic: Autodeploy
+                                - switch [checked]
+                              - generic:
+                                - generic: Clean Cache
+                                - switch
+                          - generic:
+                            - generic:
+                              - heading [level=3]:
+                                - generic:
+                                  - generic: Provider
+                                  - paragraph: Select the source of your code
+                                - generic:
+                                  - img
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - tablist:
+                                    - tab:
+                                      - img
+                                      - text: Github
+                                    - tab:
+                                      - img
+                                      - text: Gitlab
+                                    - tab:
+                                      - img
+                                      - text: Bitbucket
+                                    - tab:
+                                      - img
+                                      - text: Gitea
+                                    - tab:
+                                      - img
+                                      - text: Docker
+                                    - tab [selected]:
+                                      - img
+                                      - text: Git
+                                    - tab:
+                                      - img
+                                      - text: Drop
+                                - tabpanel:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - generic: Repository URL
+                                              - link:
+                                                - /url: https://github.com/luanmatosad/inquilinoTop.git
+                                                - img
+                                                - generic: View Repository
+                                            - generic:
+                                              - textbox:
+                                                - /placeholder: Repository URL
+                                                - text: https://github.com/luanmatosad/inquilinoTop.git
+                                        - button:
+                                          - img
+                                          - text: Add SSH Key
+                                      - generic:
+                                        - generic:
+                                          - text: Branch
+                                          - generic:
+                                            - textbox:
+                                              - /placeholder: Branch
+                                              - text: main
+                                      - generic:
+                                        - text: Build Path
+                                        - generic:
+                                          - textbox:
+                                            - /placeholder: /
+                                            - text: /
+                                      - generic:
+                                        - generic:
+                                          - generic: Watch Paths
+                                          - img
+                                        - generic:
+                                          - generic:
+                                            - textbox:
+                                              - /placeholder: Enter a path to watch (e.g., src/**, dist/*.js)
+                                          - button: Add
+                                      - generic:
+                                        - switch
+                                        - checkbox
+                                        - generic: Enable Submodules
+                                    - generic:
+                                      - button: Save
+                          - generic:
+                            - generic:
+                              - heading [level=3]:
+                                - generic:
+                                  - generic: Build Type
+                                  - paragraph: Select the way of building your code
+                                - generic:
+                                  - img
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - img
+                                - generic:
+                                  - generic:
+                                    - text: "Builders can consume significant memory and CPU resources (recommended: 4+ GB RAM and 2+ CPU cores). For production environments, please review our"
+                                    - link:
+                                      - /url: https://docs.dokploy.com/docs/core/applications/going-production
+                                      - text: Production Guide
+                                    - text: for best practices and optimization recommendations. Builders are suitable for development and prototyping purposes when you have sufficient resources available.
+                              - generic:
+                                - generic:
+                                  - text: Build Type
+                                  - radiogroup:
+                                    - generic:
+                                      - radio [checked]:
+                                        - generic:
+                                          - img
+                                      - radio [checked]
+                                      - generic: Dockerfile
+                                    - generic:
+                                      - radio
+                                      - radio
+                                      - generic:
+                                        - text: Railpack
+                                        - generic: New
+                                    - generic:
+                                      - radio
+                                      - radio
+                                      - generic: Nixpacks
+                                    - generic:
+                                      - radio
+                                      - radio
+                                      - generic: Heroku Buildpacks
+                                    - generic:
+                                      - radio
+                                      - radio
+                                      - generic: Paketo Buildpacks
+                                    - generic:
+                                      - radio
+                                      - radio
+                                      - generic: Static
+                                - generic:
+                                  - text: Docker File
+                                  - generic:
+                                    - textbox:
+                                      - /placeholder: "Path of your docker file (default: Dockerfile)"
+                                      - text: frontend/Dockerfile
+                                - generic:
+                                  - text: Docker Context Path
+                                  - generic:
+                                    - textbox:
+                                      - /placeholder: "Path of your docker context (default: .)"
+                                      - text: frontend
+                                - generic:
+                                  - generic:
+                                    - text: Docker Build Stage
+                                    - paragraph: Allows you to target a specific stage in a Multi-stage Dockerfile. If empty, Docker defaults to build the last defined stage.
+                                  - generic:
+                                    - textbox:
+                                      - /placeholder: E.g. production
+                                - generic:
+                                  - button: Save
+  - generic:
+    - alert: "Application: frontend-prod - ImoviFlow | Dokploy"
+  - alertdialog "Deploy Application" [ref=e861]:
+    - generic [ref=e862]:
+      - heading "Deploy Application" [level=2] [ref=e863]
+      - paragraph [ref=e864]: Are you sure you want to deploy this application?
+    - generic [ref=e865]:
+      - button "Cancel" [active] [ref=e866] [cursor=pointer]
+      - button "Confirm" [ref=e867] [cursor=pointer]

@@ -1,0 +1,295 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications alt+T":
+      - list:
+        - listitem [ref=e507]:
+          - img [ref=e509]
+          - generic [ref=e512]: Application deployed successfully
+    - generic [ref=e3]:
+      - generic [ref=e7]:
+        - list [ref=e198]:
+          - listitem [ref=e199]:
+            - button "My Organization" [ref=e200] [cursor=pointer]:
+              - generic [ref=e201]:
+                - img [ref=e203]
+                - paragraph [ref=e208]: My Organization
+              - img [ref=e209]
+          - listitem [ref=e212]:
+            - button [ref=e213] [cursor=pointer]:
+              - img [ref=e214]
+        - generic [ref=e12]:
+          - generic [ref=e13]:
+            - generic [ref=e14]: Home
+            - list [ref=e15]:
+              - listitem [ref=e16]:
+                - link "Home" [ref=e17] [cursor=pointer]:
+                  - /url: /dashboard/home
+                  - img [ref=e18]
+                  - generic [ref=e21]: Home
+              - listitem [ref=e22]:
+                - link "Projects" [ref=e23] [cursor=pointer]:
+                  - /url: /dashboard/projects
+                  - img [ref=e24]
+                  - generic [ref=e26]: Projects
+              - listitem [ref=e217]:
+                - link "Deployments" [ref=e218] [cursor=pointer]:
+                  - /url: /dashboard/deployments
+                  - img [ref=e219]
+                  - generic [ref=e224]: Deployments
+              - listitem [ref=e225]:
+                - link "Monitoring" [ref=e226] [cursor=pointer]:
+                  - /url: /dashboard/monitoring
+                  - img [ref=e227]
+                  - generic [ref=e231]: Monitoring
+              - listitem [ref=e232]:
+                - link "Schedules" [ref=e233] [cursor=pointer]:
+                  - /url: /dashboard/schedules
+                  - img [ref=e234]
+                  - generic [ref=e237]: Schedules
+              - listitem [ref=e238]:
+                - link "Traefik File System" [ref=e239] [cursor=pointer]:
+                  - /url: /dashboard/traefik
+                  - img [ref=e240]
+                  - generic [ref=e242]: Traefik File System
+              - listitem [ref=e243]:
+                - link "Docker" [ref=e244] [cursor=pointer]:
+                  - /url: /dashboard/docker
+                  - img [ref=e245]
+                  - generic [ref=e248]: Docker
+              - listitem [ref=e249]:
+                - link "Swarm" [ref=e250] [cursor=pointer]:
+                  - /url: /dashboard/swarm
+                  - img [ref=e251]
+                  - generic [ref=e254]: Swarm
+              - listitem [ref=e255]:
+                - link "Requests" [ref=e256] [cursor=pointer]:
+                  - /url: /dashboard/requests
+                  - img [ref=e257]
+                  - generic [ref=e260]: Requests
+          - generic [ref=e27]:
+            - generic [ref=e28]: Settings
+            - list [ref=e29]:
+              - listitem [ref=e261]:
+                - link "Web Server" [ref=e262] [cursor=pointer]:
+                  - /url: /dashboard/settings/server
+                  - img [ref=e263]
+                  - generic [ref=e265]: Web Server
+              - listitem [ref=e30]:
+                - link "Profile" [ref=e31] [cursor=pointer]:
+                  - /url: /dashboard/settings/profile
+                  - img [ref=e32]
+                  - generic [ref=e35]: Profile
+              - listitem [ref=e266]:
+                - link "Remote Servers" [ref=e267] [cursor=pointer]:
+                  - /url: /dashboard/settings/servers
+                  - img [ref=e268]
+                  - generic [ref=e271]: Remote Servers
+              - listitem [ref=e272]:
+                - link "Users" [ref=e273] [cursor=pointer]:
+                  - /url: /dashboard/settings/users
+                  - img [ref=e274]
+                  - generic [ref=e279]: Users
+              - listitem [ref=e280]:
+                - link "Audit Logs" [ref=e281] [cursor=pointer]:
+                  - /url: /dashboard/settings/audit-logs
+                  - img [ref=e282]
+                  - generic [ref=e285]: Audit Logs
+              - listitem [ref=e286]:
+                - link "SSH Keys" [ref=e287] [cursor=pointer]:
+                  - /url: /dashboard/settings/ssh-keys
+                  - img [ref=e288]
+                  - generic [ref=e291]: SSH Keys
+              - listitem [ref=e292]:
+                - link "AI" [ref=e293] [cursor=pointer]:
+                  - /url: /dashboard/settings/ai
+                  - img [ref=e294]
+                  - generic [ref=e297]: AI
+              - listitem [ref=e298]:
+                - link "Tags" [ref=e299] [cursor=pointer]:
+                  - /url: /dashboard/settings/tags
+                  - img [ref=e300]
+                  - generic [ref=e304]: Tags
+              - listitem [ref=e305]:
+                - link "Git" [ref=e306] [cursor=pointer]:
+                  - /url: /dashboard/settings/git-providers
+                  - img [ref=e307]
+                  - generic [ref=e311]: Git
+              - listitem [ref=e312]:
+                - link "Registry" [ref=e313] [cursor=pointer]:
+                  - /url: /dashboard/settings/registry
+                  - img [ref=e314]
+                  - generic [ref=e318]: Registry
+              - listitem [ref=e319]:
+                - link "S3 Destinations" [ref=e320] [cursor=pointer]:
+                  - /url: /dashboard/settings/destinations
+                  - img [ref=e321]
+                  - generic [ref=e325]: S3 Destinations
+              - listitem [ref=e326]:
+                - link "Certificates" [ref=e327] [cursor=pointer]:
+                  - /url: /dashboard/settings/certificates
+                  - img [ref=e328]
+                  - generic [ref=e331]: Certificates
+              - listitem [ref=e332]:
+                - link "Cluster" [ref=e333] [cursor=pointer]:
+                  - /url: /dashboard/settings/cluster
+                  - img [ref=e334]
+                  - generic [ref=e344]: Cluster
+              - listitem [ref=e345]:
+                - link "Notifications" [ref=e346] [cursor=pointer]:
+                  - /url: /dashboard/settings/notifications
+                  - img [ref=e347]
+                  - generic [ref=e350]: Notifications
+              - listitem [ref=e351]:
+                - link "SSO" [ref=e352] [cursor=pointer]:
+                  - /url: /dashboard/settings/sso
+                  - img [ref=e353]
+                  - generic [ref=e356]: SSO
+          - generic [ref=e36]:
+            - generic [ref=e37]: Extra
+            - list [ref=e38]:
+              - listitem [ref=e39]:
+                - link "Documentation" [ref=e40] [cursor=pointer]:
+                  - /url: https://docs.dokploy.com/docs/core
+                  - img [ref=e42]
+                  - generic [ref=e44]: Documentation
+              - listitem [ref=e45]:
+                - link "Support" [ref=e46] [cursor=pointer]:
+                  - /url: https://discord.gg/2tBnJ3jDJc
+                  - img [ref=e48]
+                  - generic [ref=e51]: Support
+        - list [ref=e53]:
+          - listitem
+          - listitem [ref=e54]:
+            - button "/avatars/avatar-8.png Account maycoaoki@gmail.com" [ref=e357] [cursor=pointer]:
+              - img "/avatars/avatar-8.png" [ref=e358]
+              - generic [ref=e58]:
+                - generic [ref=e59]: Account
+                - generic [ref=e359]: maycoaoki@gmail.com
+              - img [ref=e60]
+          - generic [ref=e360]: Version v0.29.2
+        - button "Toggle Sidebar" [ref=e63]
+      - main [ref=e64]:
+        - generic [ref=e66]:
+          - generic [ref=e68]:
+            - button "Toggle Sidebar" [ref=e69] [cursor=pointer]:
+              - img [ref=e70]
+              - generic [ref=e72]: Toggle Sidebar
+            - generic [ref=e73]:
+              - button "ImoviFlow" [ref=e361] [cursor=pointer]:
+                - img [ref=e75]
+                - generic [ref=e78]: ImoviFlow
+                - img [ref=e79]
+              - paragraph [ref=e362]: production
+              - button "frontend-prod" [ref=e363] [cursor=pointer]:
+                - img [ref=e364]
+                - generic [ref=e367]: frontend-prod
+                - img [ref=e368]
+              - button [ref=e370] [cursor=pointer]:
+                - img [ref=e371]
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - generic [ref=e85]:
+                - heading "Application icon frontend-prod" [level=3] [ref=e86]:
+                  - generic [ref=e87]:
+                    - button "Application icon" [ref=e88] [cursor=pointer]:
+                      - img "Application icon" [ref=e89]
+                      - img [ref=e91]
+                    - button [ref=e95] [cursor=pointer]
+                  - text: frontend-prod
+                - generic [ref=e97]: frontendprod-wrgy3x
+              - generic [ref=e98]:
+                - generic [ref=e100] [cursor=pointer]: Dokploy Server
+                - generic [ref=e374]:
+                  - button [ref=e375] [cursor=pointer]:
+                    - img [ref=e376]
+                  - button [ref=e379] [cursor=pointer]:
+                    - img [ref=e380]
+            - generic [ref=e102]:
+              - tablist [ref=e104]:
+                - tab "General" [ref=e105] [cursor=pointer]
+                - tab "Environment" [ref=e383] [cursor=pointer]
+                - tab "Domains" [ref=e384] [cursor=pointer]
+                - tab "Deployments" [selected] [ref=e385] [cursor=pointer]
+                - tab "Preview Deployments" [ref=e386] [cursor=pointer]
+                - tab "Schedules" [ref=e387] [cursor=pointer]
+                - tab "Volume Backups" [ref=e388] [cursor=pointer]
+                - tab "Logs" [ref=e389] [cursor=pointer]
+                - tab "Patches" [ref=e106] [cursor=pointer]
+                - tab "Monitoring" [ref=e390] [cursor=pointer]
+                - tab "Advanced" [ref=e391] [cursor=pointer]
+              - tabpanel "Deployments" [ref=e514]:
+                - generic [ref=e516]:
+                  - generic [ref=e517]:
+                    - generic [ref=e518]:
+                      - heading "Deployments" [level=3] [ref=e519]
+                      - paragraph [ref=e520]: See the last 10 deployments for this application
+                    - generic [ref=e521]:
+                      - button "Clear deployments" [ref=e522] [cursor=pointer]:
+                        - text: Clear deployments
+                        - img [ref=e523]
+                      - button "Kill Build" [ref=e527] [cursor=pointer]:
+                        - text: Kill Build
+                        - img [ref=e528]
+                      - button "Cancel Queues" [ref=e534] [cursor=pointer]:
+                        - text: Cancel Queues
+                        - img [ref=e535]
+                      - button "Configure Rollbacks" [ref=e538] [cursor=pointer]:
+                        - text: Configure Rollbacks
+                        - img [ref=e539]
+                  - generic [ref=e542]:
+                    - generic [ref=e543]:
+                      - generic [ref=e544]: If you want to re-deploy this application use this URL in the config of your git provider or docker
+                      - generic [ref=e545]:
+                        - generic [ref=e546]: "Webhook URL:"
+                        - generic [ref=e547]:
+                          - button "Copy webhook URL to clipboard" [ref=e548] [cursor=pointer]:
+                            - text: https://dockploy.lucasdiasdev.cloud/api/deploy/eZpxwZqyfyhF2V9Bi2zea
+                            - img [ref=e549]
+                          - button [ref=e552] [cursor=pointer]:
+                            - img [ref=e553]
+                    - generic [ref=e558]:
+                      - generic [ref=e559]:
+                        - generic [ref=e560]:
+                          - generic [ref=e561]:
+                            - text: 1. running
+                            - button [ref=e562] [cursor=pointer]
+                          - generic [ref=e565]: Manual deployment
+                        - generic [ref=e566]:
+                          - button "less than a minute ago" [ref=e568] [cursor=pointer]:
+                            - generic [ref=e569]: less than a minute ago
+                          - button "View" [ref=e571] [cursor=pointer]
+                      - generic [ref=e572]:
+                        - generic [ref=e573]:
+                          - generic [ref=e574]:
+                            - text: 2. done
+                            - button [ref=e575] [cursor=pointer]
+                          - generic [ref=e577]:
+                            - generic [ref=e578]: "chore: run only TestService (skip broken handler tests)"
+                            - generic [ref=e579]: "Commit: b2edef42b4f8ad4d32b51ae95ed50ef82b62e3da"
+                        - generic [ref=e580]:
+                          - generic [ref=e581]:
+                            - button "26 minutes ago" [ref=e582] [cursor=pointer]:
+                              - generic [ref=e583]: 26 minutes ago
+                            - generic [ref=e584]:
+                              - img [ref=e585]
+                              - text: 1m 58s
+                          - generic [ref=e588]:
+                            - button "View" [ref=e589] [cursor=pointer]
+                            - button "Delete" [ref=e590] [cursor=pointer]:
+                              - text: Delete
+                              - img [ref=e591]
+                      - generic [ref=e594]:
+                        - generic [ref=e595]:
+                          - generic [ref=e596]:
+                            - text: 3. done
+                            - button [ref=e597] [cursor=pointer]
+                          - generic [ref=e600]: Manual deploy - initial setup
+                        - generic [ref=e601]:
+                          - button "4 days ago" [ref=e603] [cursor=pointer]:
+                            - generic [ref=e604]: 4 days ago
+                          - generic [ref=e605]:
+                            - button "View" [ref=e606] [cursor=pointer]
+                            - button "Delete" [ref=e607] [cursor=pointer]:
+                              - text: Delete
+                              - img [ref=e608]
+  - alert [ref=e197]: "Application: frontend-prod - ImoviFlow | Dokploy"

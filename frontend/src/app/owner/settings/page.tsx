@@ -2,17 +2,20 @@ import { Suspense } from "react"
 import { loadSettings, updateSettingsAction } from "./actions"
 import { Button, Card, Switch } from "@heroui/react"
 
+interface Settings {
+  notify_payment_overdue: boolean
+  notify_lease_expiring: boolean
+  notify_lease_expiring_days: number
+  notify_new_message: boolean
+  notify_maintenance_request: boolean
+  notify_payment_received: boolean
+}
 
 async function SettingsForm() {
   const settings = await loadSettings()
 
-  async function handleAction(formData: FormData) {
-    "use server"
-    await updateSettingsAction(formData)
-  }
-
   return (
-    <form action={handleAction} className="space-y-6">
+    <form action={updateSettingsAction} className="space-y-6">
       <Card className="p-6">
         <h2 className="text-lg font-semibold mb-4">Notificações</h2>
         
@@ -89,7 +92,7 @@ async function SettingsForm() {
       </Card>
 
       <div className="flex justify-end">
-        <Button type="submit">
+        <Button type="submit" variant="primary">
           Salvar Configurações
         </Button>
       </div>

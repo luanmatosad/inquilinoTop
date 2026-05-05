@@ -3,6 +3,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowLeft, Mail, Phone, FileText } from "lucide-react"
 import { getTenantWithLeases } from "@/data/owner/tenants-dal"
+import { Button } from "@heroui/react"
 import { Card } from "@heroui/react"
 import { Badge } from "@heroui/react"
 
@@ -41,6 +42,7 @@ async function TenantDetails({ id }: { id: string }) {
     return null
   }
 
+  const activeLeases = tenant.leases?.filter(l => l.status === 'ACTIVE') || []
 
   return (
     <div className="space-y-8">
@@ -48,7 +50,7 @@ async function TenantDetails({ id }: { id: string }) {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             {tenant.name}
-            <Badge color={tenant.is_active ? "success" : "default"} variant="secondary">
+            <Badge color={tenant.is_active ? "success" : "default"} variant="soft">
               {tenant.is_active ? "Ativo" : "Inativo"}
             </Badge>
           </h1>
@@ -97,7 +99,7 @@ async function TenantDetails({ id }: { id: string }) {
                 <Badge color={
                   lease.status === 'ACTIVE' ? "success" : 
                   lease.status === 'ENDED' ? "default" : "danger"
-                } variant="secondary">
+                } variant="soft">
                   {lease.status === 'ACTIVE' ? 'Ativo' : 
                    lease.status === 'ENDED' ? 'Encerrado' : 'Cancelado'}
                 </Badge>

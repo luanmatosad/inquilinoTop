@@ -14,7 +14,7 @@ type ActionResponse<T = void> = {
 export interface Property {
   id: string
   owner_id: string
-  type: "RESIDENTIAL" | "SINGLE"
+  type: 'RESIDENTIAL' | 'SINGLE'
   name: string
   address_line?: string
   city?: string

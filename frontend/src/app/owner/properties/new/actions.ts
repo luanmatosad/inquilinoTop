@@ -7,7 +7,7 @@ interface FormState {
   errors?: Record<string, string[]>
 }
 
-export async function createPropertyAction(_prevState: FormState | null, formData: FormData): Promise<FormState> {
+export async function createPropertyAction(prevState: FormState | null, formData: FormData): Promise<FormState> {
   const type = formData.get("type") as string
   const name = formData.get("name") as string
   const address_line = formData.get("address_line") as string

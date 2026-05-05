@@ -1,8 +1,8 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import { Plus } from "lucide-react"
+import { Plus, FileText } from "lucide-react"
 import { listLeases } from "@/data/owner/contracts-dal"
-import { Button, Badge } from "@heroui/react"
+import { Button, Card, Badge } from "@heroui/react"
 
 interface LeaseWithDetails {
   id: string
@@ -85,7 +85,7 @@ async function ContractsList() {
                 {lease.end_date ? new Date(lease.end_date).toLocaleDateString('pt-BR') : '-'}
               </td>
               <td className="py-3 px-4">
-                <Badge color={getStatusColor(lease.status)} variant="secondary">
+                <Badge color={getStatusColor(lease.status)} variant="soft">
                   {getStatusLabel(lease.status)}
                 </Badge>
               </td>

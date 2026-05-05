@@ -1,15 +1,16 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft, Pencil, Building, MapPin } from "lucide-react"
-import { getProperty } from "@/data/owner/properties-dal"
-import type { PropertyWithUnits } from "@/data/owner/properties-dal"
+import { ArrowLeft, Pencil, Building, MapPin, Trash } from "lucide-react"
+import { getProperty, listProperties, type PropertyWithUnits } from "@/data/owner/properties-dal"
 import { Button } from "@heroui/react"
 import { Card } from "@heroui/react"
 import { Badge } from "@heroui/react"
 
+type Property = PropertyWithUnits;
+
 async function PropertyDetails({ id }: { id: string }) {
-  let property: PropertyWithUnits | null = null
+  let property: Property | null = null
 
   try {
     property = await getProperty(id)
@@ -23,7 +24,7 @@ async function PropertyDetails({ id }: { id: string }) {
   }
 
   const units = (property.units || []).sort((a, b) => 
-    a.label.localeCompare(b.label, undefined, { numeric: true })
+    (a.label || '').localeCompare(b.label || '', undefined, { numeric: true })
   )
 
   return (
@@ -33,7 +34,7 @@ async function PropertyDetails({ id }: { id: string }) {
           <h1 className="text-3xl font-bold flex items-center gap-2">
             {property.name}
             {!property.is_active && (
-              <Badge color="danger" variant="secondary">Desativado</Badge>
+              <Badge color="danger" variant="soft">Desativado</Badge>
             )}
           </h1>
           <div className="mt-2 text-on-surface-variant flex items-center gap-2">
@@ -55,7 +56,8 @@ async function PropertyDetails({ id }: { id: string }) {
         <div className="flex gap-2">
           <Link href={`/owner/properties/${id}/edit`}>
             <Button variant="secondary">
-              <Pencil className="w-4 h-4" /> Editar Imóvel
+              <Pencil className="w-4 h-4" />
+              Editar Imóvel
             </Button>
           </Link>
         </div>
@@ -73,7 +75,7 @@ async function PropertyDetails({ id }: { id: string }) {
                   <span className="font-medium">{unit.label}</span>
                   {unit.floor && <span className="text-on-surface-variant ml-2">- {unit.floor}</span>}
                 </div>
-                <Badge color={unit.is_active ? "success" : "default"} variant="secondary">
+                <Badge color={unit.is_active ? "success" : "default"} variant="soft">
                   {unit.is_active ? "Ativo" : "Inativo"}
                 </Badge>
               </div>

@@ -1,0 +1,372 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications alt+T"
+    - generic [ref=e3]:
+      - generic [ref=e7]:
+        - list [ref=e393]:
+          - listitem [ref=e394]:
+            - button "My Organization" [ref=e395] [cursor=pointer]:
+              - generic [ref=e396]:
+                - img [ref=e398]
+                - paragraph [ref=e403]: My Organization
+              - img [ref=e404]
+          - listitem [ref=e407]:
+            - button [ref=e408] [cursor=pointer]:
+              - img [ref=e409]
+        - generic [ref=e12]:
+          - generic [ref=e13]:
+            - generic [ref=e14]: Home
+            - list [ref=e15]:
+              - listitem [ref=e16]:
+                - link "Home" [ref=e17] [cursor=pointer]:
+                  - /url: /dashboard/home
+                  - img [ref=e18]
+                  - generic [ref=e21]: Home
+              - listitem [ref=e22]:
+                - link "Projects" [ref=e23] [cursor=pointer]:
+                  - /url: /dashboard/projects
+                  - img [ref=e24]
+                  - generic [ref=e26]: Projects
+              - listitem [ref=e200]:
+                - link "Deployments" [ref=e201] [cursor=pointer]:
+                  - /url: /dashboard/deployments
+                  - img [ref=e202]
+                  - generic [ref=e207]: Deployments
+              - listitem [ref=e208]:
+                - link "Monitoring" [ref=e209] [cursor=pointer]:
+                  - /url: /dashboard/monitoring
+                  - img [ref=e210]
+                  - generic [ref=e214]: Monitoring
+              - listitem [ref=e215]:
+                - link "Schedules" [ref=e216] [cursor=pointer]:
+                  - /url: /dashboard/schedules
+                  - img [ref=e217]
+                  - generic [ref=e220]: Schedules
+              - listitem [ref=e221]:
+                - link "Traefik File System" [ref=e222] [cursor=pointer]:
+                  - /url: /dashboard/traefik
+                  - img [ref=e223]
+                  - generic [ref=e225]: Traefik File System
+              - listitem [ref=e226]:
+                - link "Docker" [ref=e227] [cursor=pointer]:
+                  - /url: /dashboard/docker
+                  - img [ref=e228]
+                  - generic [ref=e231]: Docker
+              - listitem [ref=e232]:
+                - link "Swarm" [ref=e233] [cursor=pointer]:
+                  - /url: /dashboard/swarm
+                  - img [ref=e234]
+                  - generic [ref=e237]: Swarm
+              - listitem [ref=e238]:
+                - link "Requests" [ref=e239] [cursor=pointer]:
+                  - /url: /dashboard/requests
+                  - img [ref=e240]
+                  - generic [ref=e243]: Requests
+          - generic [ref=e27]:
+            - generic [ref=e28]: Settings
+            - list [ref=e29]:
+              - listitem [ref=e244]:
+                - link "Web Server" [ref=e245] [cursor=pointer]:
+                  - /url: /dashboard/settings/server
+                  - img [ref=e246]
+                  - generic [ref=e248]: Web Server
+              - listitem [ref=e30]:
+                - link "Profile" [ref=e31] [cursor=pointer]:
+                  - /url: /dashboard/settings/profile
+                  - img [ref=e32]
+                  - generic [ref=e35]: Profile
+              - listitem [ref=e249]:
+                - link "Remote Servers" [ref=e250] [cursor=pointer]:
+                  - /url: /dashboard/settings/servers
+                  - img [ref=e251]
+                  - generic [ref=e254]: Remote Servers
+              - listitem [ref=e255]:
+                - link "Users" [ref=e256] [cursor=pointer]:
+                  - /url: /dashboard/settings/users
+                  - img [ref=e257]
+                  - generic [ref=e262]: Users
+              - listitem [ref=e263]:
+                - link "Audit Logs" [ref=e264] [cursor=pointer]:
+                  - /url: /dashboard/settings/audit-logs
+                  - img [ref=e265]
+                  - generic [ref=e268]: Audit Logs
+              - listitem [ref=e269]:
+                - link "SSH Keys" [ref=e270] [cursor=pointer]:
+                  - /url: /dashboard/settings/ssh-keys
+                  - img [ref=e271]
+                  - generic [ref=e274]: SSH Keys
+              - listitem [ref=e275]:
+                - link "AI" [ref=e276] [cursor=pointer]:
+                  - /url: /dashboard/settings/ai
+                  - img [ref=e277]
+                  - generic [ref=e280]: AI
+              - listitem [ref=e281]:
+                - link "Tags" [ref=e282] [cursor=pointer]:
+                  - /url: /dashboard/settings/tags
+                  - img [ref=e283]
+                  - generic [ref=e287]: Tags
+              - listitem [ref=e288]:
+                - link "Git" [ref=e289] [cursor=pointer]:
+                  - /url: /dashboard/settings/git-providers
+                  - img [ref=e290]
+                  - generic [ref=e294]: Git
+              - listitem [ref=e295]:
+                - link "Registry" [ref=e296] [cursor=pointer]:
+                  - /url: /dashboard/settings/registry
+                  - img [ref=e297]
+                  - generic [ref=e301]: Registry
+              - listitem [ref=e302]:
+                - link "S3 Destinations" [ref=e303] [cursor=pointer]:
+                  - /url: /dashboard/settings/destinations
+                  - img [ref=e304]
+                  - generic [ref=e308]: S3 Destinations
+              - listitem [ref=e309]:
+                - link "Certificates" [ref=e310] [cursor=pointer]:
+                  - /url: /dashboard/settings/certificates
+                  - img [ref=e311]
+                  - generic [ref=e314]: Certificates
+              - listitem [ref=e315]:
+                - link "Cluster" [ref=e316] [cursor=pointer]:
+                  - /url: /dashboard/settings/cluster
+                  - img [ref=e317]
+                  - generic [ref=e327]: Cluster
+              - listitem [ref=e328]:
+                - link "Notifications" [ref=e329] [cursor=pointer]:
+                  - /url: /dashboard/settings/notifications
+                  - img [ref=e330]
+                  - generic [ref=e333]: Notifications
+              - listitem [ref=e334]:
+                - link "SSO" [ref=e335] [cursor=pointer]:
+                  - /url: /dashboard/settings/sso
+                  - img [ref=e336]
+                  - generic [ref=e339]: SSO
+          - generic [ref=e36]:
+            - generic [ref=e37]: Extra
+            - list [ref=e38]:
+              - listitem [ref=e39]:
+                - link "Documentation" [ref=e40] [cursor=pointer]:
+                  - /url: https://docs.dokploy.com/docs/core
+                  - img [ref=e42]
+                  - generic [ref=e44]: Documentation
+              - listitem [ref=e45]:
+                - link "Support" [ref=e46] [cursor=pointer]:
+                  - /url: https://discord.gg/2tBnJ3jDJc
+                  - img [ref=e48]
+                  - generic [ref=e51]: Support
+        - list [ref=e53]:
+          - listitem
+          - listitem [ref=e54]:
+            - button "/avatars/avatar-8.png Account maycoaoki@gmail.com" [ref=e340] [cursor=pointer]:
+              - img "/avatars/avatar-8.png" [ref=e341]
+              - generic [ref=e58]:
+                - generic [ref=e59]: Account
+                - generic [ref=e342]: maycoaoki@gmail.com
+              - img [ref=e60]
+          - generic [ref=e343]: Version v0.29.2
+        - button "Toggle Sidebar" [ref=e63]
+      - main [ref=e64]:
+        - generic [ref=e66]:
+          - generic [ref=e68]:
+            - button "Toggle Sidebar" [ref=e69] [cursor=pointer]:
+              - img [ref=e70]
+              - generic [ref=e72]: Toggle Sidebar
+            - generic [ref=e73]:
+              - button "ImoviFlow" [ref=e412] [cursor=pointer]:
+                - img [ref=e75]
+                - generic [ref=e78]: ImoviFlow
+                - img [ref=e79]
+              - paragraph [ref=e413]: production
+              - button "frontend-staging" [ref=e414] [cursor=pointer]:
+                - img [ref=e415]
+                - generic [ref=e418]: frontend-staging
+                - img [ref=e419]
+              - button [ref=e421] [cursor=pointer]:
+                - img [ref=e422]
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - generic [ref=e85]:
+                - heading "frontend-staging" [level=3] [ref=e86]:
+                  - generic [ref=e87]:
+                    - button [ref=e88] [cursor=pointer]:
+                      - img [ref=e89]
+                      - img [ref=e93]
+                    - button [ref=e97] [cursor=pointer]
+                  - text: frontend-staging
+                - generic [ref=e99]: frontendstaging-rob0mn
+              - generic [ref=e100]:
+                - generic [ref=e102] [cursor=pointer]: Dokploy Server
+                - generic [ref=e344]:
+                  - button [ref=e345] [cursor=pointer]:
+                    - img [ref=e346]
+                  - button [ref=e349] [cursor=pointer]:
+                    - img [ref=e350]
+            - generic [ref=e104]:
+              - tablist [ref=e106]:
+                - tab "General" [active] [selected] [ref=e107] [cursor=pointer]
+                - tab "Environment" [ref=e353] [cursor=pointer]
+                - tab "Domains" [ref=e354] [cursor=pointer]
+                - tab "Deployments" [ref=e355] [cursor=pointer]
+                - tab "Preview Deployments" [ref=e356] [cursor=pointer]
+                - tab "Schedules" [ref=e357] [cursor=pointer]
+                - tab "Volume Backups" [ref=e358] [cursor=pointer]
+                - tab "Logs" [ref=e359] [cursor=pointer]
+                - tab "Patches" [ref=e108] [cursor=pointer]
+                - tab "Monitoring" [ref=e360] [cursor=pointer]
+                - tab "Advanced" [ref=e361] [cursor=pointer]
+              - tabpanel "General" [ref=e109]:
+                - generic [ref=e568]:
+                  - generic [ref=e569]:
+                    - heading "Deploy Settings" [level=3] [ref=e571]
+                    - generic [ref=e572]:
+                      - button "Deploy" [ref=e573] [cursor=pointer]:
+                        - generic [ref=e574]:
+                          - img [ref=e575]
+                          - text: Deploy
+                      - button "Reload" [ref=e580] [cursor=pointer]:
+                        - generic [ref=e581]:
+                          - img [ref=e582]
+                          - text: Reload
+                      - button "Rebuild" [ref=e587] [cursor=pointer]:
+                        - generic [ref=e588]:
+                          - img [ref=e589]
+                          - text: Rebuild
+                      - button "Stop" [ref=e593] [cursor=pointer]:
+                        - generic [ref=e594]:
+                          - img [ref=e595]
+                          - text: Stop
+                      - button "Open Terminal" [ref=e598] [cursor=pointer]:
+                        - img [ref=e599]
+                        - text: Open Terminal
+                      - generic [ref=e601]:
+                        - generic [ref=e602]: Autodeploy
+                        - switch "Toggle autodeploy" [checked] [ref=e603] [cursor=pointer]
+                      - generic [ref=e604]:
+                        - generic [ref=e605]: Clean Cache
+                        - switch "Toggle clean cache" [ref=e606] [cursor=pointer]
+                  - generic [ref=e607]:
+                    - heading "Provider Select the source of your code" [level=3] [ref=e609]:
+                      - generic [ref=e610]:
+                        - generic [ref=e611]: Provider
+                        - paragraph [ref=e612]: Select the source of your code
+                      - img [ref=e614]
+                    - generic [ref=e619]:
+                      - tablist [ref=e621]:
+                        - tab "github Github" [ref=e622] [cursor=pointer]:
+                          - img "github" [ref=e623]
+                          - text: Github
+                        - tab "gitlab Gitlab" [ref=e625] [cursor=pointer]:
+                          - img "gitlab" [ref=e626]
+                          - text: Gitlab
+                        - tab "Bitbucket" [ref=e631] [cursor=pointer]:
+                          - img [ref=e632]
+                          - text: Bitbucket
+                        - tab "Gitea" [ref=e635] [cursor=pointer]:
+                          - img [ref=e636]
+                          - text: Gitea
+                        - tab "Docker" [ref=e643] [cursor=pointer]:
+                          - img [ref=e644]
+                          - text: Docker
+                        - tab "Git" [selected] [ref=e648] [cursor=pointer]:
+                          - img [ref=e649]
+                          - text: Git
+                        - tab "Drop" [ref=e651] [cursor=pointer]:
+                          - img [ref=e652]
+                          - text: Drop
+                      - tabpanel "Git" [ref=e655]:
+                        - generic [ref=e656]:
+                          - generic [ref=e657]:
+                            - generic [ref=e658]:
+                              - generic [ref=e660]:
+                                - generic [ref=e661]:
+                                  - generic [ref=e662]: Repository URL
+                                  - link "View Repository" [ref=e663] [cursor=pointer]:
+                                    - /url: https://github.com/luanmatosad/inquilinoTop.git
+                                    - img [ref=e664]
+                                    - generic [ref=e666]: View Repository
+                                - textbox "Repository URL" [ref=e668]: https://github.com/luanmatosad/inquilinoTop.git
+                              - button "Add SSH Key" [ref=e669] [cursor=pointer]:
+                                - img [ref=e670]
+                                - text: Add SSH Key
+                            - generic [ref=e674]:
+                              - text: Branch
+                              - textbox "Branch" [ref=e676]: develop
+                            - generic [ref=e677]:
+                              - text: Build Path
+                              - textbox "Build Path" [ref=e679]:
+                                - /placeholder: /
+                                - text: /
+                            - generic [ref=e680]:
+                              - generic [ref=e681]:
+                                - generic [ref=e682]: Watch Paths
+                                - img [ref=e683] [cursor=pointer]
+                              - generic [ref=e686]:
+                                - textbox "Enter a path to watch (e.g., src/**, dist/*.js)" [ref=e688]
+                                - button "Add" [ref=e689] [cursor=pointer]
+                            - generic [ref=e690]:
+                              - switch "Enable Submodules" [ref=e691] [cursor=pointer]
+                              - checkbox
+                              - generic [ref=e692]: Enable Submodules
+                          - button "Save" [ref=e694] [cursor=pointer]
+                  - generic [ref=e695]:
+                    - heading "Build Type Select the way of building your code" [level=3] [ref=e697]:
+                      - generic [ref=e698]:
+                        - generic [ref=e699]: Build Type
+                        - paragraph [ref=e700]: Select the way of building your code
+                      - img [ref=e702]
+                    - generic [ref=e713]:
+                      - generic [ref=e714]:
+                        - img [ref=e716]
+                        - generic [ref=e719]:
+                          - text: "Builders can consume significant memory and CPU resources (recommended: 4+ GB RAM and 2+ CPU cores). For production environments, please review our"
+                          - link "Production Guide" [ref=e720] [cursor=pointer]:
+                            - /url: https://docs.dokploy.com/docs/core/applications/going-production
+                          - text: for best practices and optimization recommendations. Builders are suitable for development and prototyping purposes when you have sufficient resources available.
+                      - generic [ref=e721]:
+                        - generic [ref=e722]:
+                          - text: Build Type
+                          - radiogroup [ref=e723]:
+                            - generic [ref=e724]:
+                              - radio "Dockerfile" [checked] [ref=e725] [cursor=pointer]:
+                                - img [ref=e727]
+                              - radio [checked]
+                              - generic [ref=e729]: Dockerfile
+                            - generic [ref=e730]:
+                              - radio "Railpack New" [ref=e731] [cursor=pointer]
+                              - radio
+                              - generic [ref=e732]:
+                                - text: Railpack
+                                - generic [ref=e733]: New
+                            - generic [ref=e734]:
+                              - radio "Nixpacks" [ref=e735] [cursor=pointer]
+                              - radio
+                              - generic [ref=e736]: Nixpacks
+                            - generic [ref=e737]:
+                              - radio "Heroku Buildpacks" [ref=e738] [cursor=pointer]
+                              - radio
+                              - generic [ref=e739]: Heroku Buildpacks
+                            - generic [ref=e740]:
+                              - radio "Paketo Buildpacks" [ref=e741] [cursor=pointer]
+                              - radio
+                              - generic [ref=e742]: Paketo Buildpacks
+                            - generic [ref=e743]:
+                              - radio "Static" [ref=e744] [cursor=pointer]
+                              - radio
+                              - generic [ref=e745]: Static
+                        - generic [ref=e746]:
+                          - text: Docker File
+                          - textbox "Docker File" [ref=e748]:
+                            - /placeholder: "Path of your docker file (default: Dockerfile)"
+                            - text: frontend/Dockerfile
+                        - generic [ref=e749]:
+                          - text: Docker Context Path
+                          - textbox "Docker Context Path" [ref=e751]:
+                            - /placeholder: "Path of your docker context (default: .)"
+                            - text: frontend
+                        - generic [ref=e752]:
+                          - generic [ref=e753]:
+                            - text: Docker Build Stage
+                            - paragraph [ref=e754]: Allows you to target a specific stage in a Multi-stage Dockerfile. If empty, Docker defaults to build the last defined stage.
+                          - textbox "Docker Build Stage" [ref=e756]:
+                            - /placeholder: E.g. production
+                        - button "Save" [ref=e758] [cursor=pointer]
+  - alert [ref=e199]: "Application: frontend-staging - ImoviFlow | Dokploy"

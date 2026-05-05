@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createLeaseAction, getUnitsForForm, getTenantsForForm } from "./actions"
-import { Button, Card } from "@heroui/react"
-
-const inputClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+import { Button, Card, Input, Select, Label, ListBox, TextField, FieldError } from "@heroui/react"
 
 interface Unit {
   id: string
@@ -50,7 +48,7 @@ export default function NewContractForm() {
     setErrors({})
 
     const formData = new FormData(e.currentTarget)
-
+    
     try {
       const result = await createLeaseAction(formData)
       if (result.errors) {
@@ -67,59 +65,87 @@ export default function NewContractForm() {
     <div className="max-w-2xl mx-auto py-8">
       <Card className="p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h1 className="text-2xl font-bold mb-6">Novo Contrato de Locação</h1>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Unidade</label>
-            <select name="unit_id" required className={inputClass}>
-              <option value="">Selecione a unidade</option>
-              {units.map((unit) => (
-                <option key={unit.id} value={unit.id}>{unit.label}</option>
-              ))}
-            </select>
-            {errors.unit_id && <p className="text-sm text-danger">{errors.unit_id[0]}</p>}
+          <div>
+            <h1 className="text-2xl font-bold mb-6">Novo Contrato de Locação</h1>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Inquilino</label>
-            <select name="tenant_id" required className={inputClass}>
-              <option value="">Selecione o inquilino</option>
-              {tenants.map((tenant) => (
-                <option key={tenant.id} value={tenant.id}>{tenant.name}</option>
-              ))}
-            </select>
-            {errors.tenant_id && <p className="text-sm text-danger">{errors.tenant_id[0]}</p>}
+          <Select
+            name="unit_id"
+            placeholder="Selecione a unidade"
+            isRequired
+            isInvalid={!!errors.unit_id}
+          >
+            <Label>Unidade</Label>
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox items={units}>
+                {(unit) => (
+                  <ListBox.Item id={unit.id} textValue={unit.label}>
+                    {unit.label}
+                  </ListBox.Item>
+                )}
+              </ListBox>
+            </Select.Popover>
+            <FieldError>{errors.unit_id?.[0]}</FieldError>
+          </Select>
+
+          <Select
+            name="tenant_id"
+            placeholder="Selecione o inquilino"
+            isRequired
+            isInvalid={!!errors.tenant_id}
+          >
+            <Label>Inquilino</Label>
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox items={tenants}>
+                {(tenant) => (
+                  <ListBox.Item id={tenant.id} textValue={tenant.name}>
+                    {tenant.name}
+                  </ListBox.Item>
+                )}
+              </ListBox>
+            </Select.Popover>
+            <FieldError>{errors.tenant_id?.[0]}</FieldError>
+          </Select>
+
+          <div className="grid grid-cols-2 gap-4">
+            <TextField name="start_date" isRequired isInvalid={!!errors.start_date}>
+              <Label>Data de Início</Label>
+              <Input type="date" />
+              <FieldError>{errors.start_date?.[0]}</FieldError>
+            </TextField>
+            
+            <TextField name="end_date">
+              <Label>Data de Término</Label>
+              <Input type="date" />
+            </TextField>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Data de Início</label>
-              <input name="start_date" type="date" required className={inputClass} />
-              {errors.start_date && <p className="text-sm text-danger">{errors.start_date[0]}</p>}
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Data de Término</label>
-              <input name="end_date" type="date" className={inputClass} />
-            </div>
+            <TextField name="rent_amount" isRequired isInvalid={!!errors.rent_amount}>
+              <Label>Valor do Aluguel (R$)</Label>
+              <Input type="number" step="0.01" placeholder="0,00" />
+              <FieldError>{errors.rent_amount?.[0]}</FieldError>
+            </TextField>
+
+            <TextField name="payment_day" isRequired isInvalid={!!errors.payment_day}>
+              <Label>Dia de Vencimento</Label>
+              <Input type="number" min="1" max="31" placeholder="5" />
+              <FieldError>{errors.payment_day?.[0]}</FieldError>
+            </TextField>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Valor do Aluguel (R$)</label>
-              <input name="rent_amount" type="number" step="0.01" placeholder="0,00" required className={inputClass} />
-              {errors.rent_amount && <p className="text-sm text-danger">{errors.rent_amount[0]}</p>}
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Dia de Vencimento</label>
-              <input name="payment_day" type="number" min="1" max="31" placeholder="5" required className={inputClass} />
-              {errors.payment_day && <p className="text-sm text-danger">{errors.payment_day[0]}</p>}
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Observações</label>
-            <input name="notes" placeholder="Observações adicionais..." className={inputClass} />
-          </div>
+          <TextField name="notes">
+            <Label>Observações</Label>
+            <Input placeholder="Observações adicionais..." />
+          </TextField>
 
           {errors._form && (
             <div className="text-danger text-sm">
@@ -128,10 +154,13 @@ export default function NewContractForm() {
           )}
 
           <div className="flex gap-4">
-            <Button type="submit" isDisabled={isSubmitting}>
-              {isSubmitting ? "Criando..." : "Criar Contrato"}
+            <Button type="submit" isPending={isSubmitting} className="bg-primary text-primary-foreground">
+              Criar Contrato
             </Button>
-            <Button variant="outline" onPress={() => router.back()}>
+            <Button 
+              variant="outline" 
+              onPress={() => router.back()}
+            >
               Cancelar
             </Button>
           </div>

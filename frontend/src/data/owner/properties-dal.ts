@@ -14,7 +14,12 @@ export interface Property {
 }
 
 export interface PropertyWithUnits extends Property {
-  units: { id: string; label: string; is_active: boolean; floor?: string | null; notes?: string | null }[]
+  units: { 
+    id: string; 
+    label?: string;
+    floor?: string;
+    is_active?: boolean;
+  }[]
 }
 
 export async function listProperties(): Promise<PropertyWithUnits[]> {
