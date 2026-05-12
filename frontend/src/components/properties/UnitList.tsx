@@ -188,7 +188,7 @@ export function UnitList({ propertyId, units, defaultOpenAdd = false }: UnitList
           <AlertDialogHeader>
             <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
             <AlertDialogDescription>
-              Isso irá desativar a unidade "{deletingUnit?.label}". Você poderá reativá-la posteriormente se necessário (via admin ou futura feature).
+              Isso irá desativar a unidade &quot;{deletingUnit?.label}&quot;. Você poderá reativá-la posteriormente se necessário (via admin ou futura feature).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

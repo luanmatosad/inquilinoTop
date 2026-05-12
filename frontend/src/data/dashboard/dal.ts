@@ -65,11 +65,11 @@ interface Payment {
 }
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
-  let properties: Property[] = []
-  let units: Unit[] = []
-  let tenants: Tenant[] = []
-  let payments: Payment[] = []
-  let expiringLeases: Lease[] = []
+  const properties: Property[] = []
+  const units: Unit[] = []
+  const tenants: Tenant[] = []
+  const payments: Payment[] = []
+  const expiringLeases: Lease[] = []
 
   try {
     const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
