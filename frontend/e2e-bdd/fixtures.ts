@@ -1,12 +1,20 @@
-import { test as base } from 'playwright-bdd'
+import { test as base, expect } from 'playwright-bdd'
 import * as fs from 'fs'
 import * as path from 'path'
 
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8080'
 
 function readApiToken(): string {
-  const tokenPath = path.resolve('e2e-bdd/.auth/api-token.json')
-  const { token } = JSON.parse(fs.readFileSync(tokenPath, 'utf-8'))
+  const tokenPath = path.join(__dirname, '.auth/api-token.json')
+  let raw: string
+  try {
+    raw = fs.readFileSync(tokenPath, 'utf-8')
+  } catch {
+    throw new Error(
+      `apiToken fixture: arquivo não encontrado em ${tokenPath}. Certifique-se de que o globalSetup foi executado.`,
+    )
+  }
+  const { token } = JSON.parse(raw)
   return token
 }
 
@@ -17,11 +25,9 @@ export const test = base.extend<{
 }>({
   logado: [
     async ({ page }, use) => {
-      await page.goto('/login')
-      await page.fill('input[name="email"]', 'owner@example.com')
-      await page.fill('input[name="password"]', 'senha123')
-      await page.click('button[type="submit"]')
-      await page.waitForURL('/')
+      // storageState already provides auth — just verify we're not on login page
+      await page.goto('/')
+      await expect(page).not.toHaveURL(/\/login/)
       await use()
     },
     { auto: false },
@@ -34,4 +40,4 @@ export const test = base.extend<{
   },
 })
 
-export { expect } from '@playwright/test'
+export { expect }

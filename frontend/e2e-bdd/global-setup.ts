@@ -6,7 +6,7 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000'
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8080'
 const EMAIL = process.env.E2E_USER_EMAIL ?? 'owner@example.com'
 const PASSWORD = process.env.E2E_USER_PASSWORD ?? 'senha123'
-const AUTH_DIR = path.resolve('e2e-bdd/.auth')
+const AUTH_DIR = path.join(__dirname, '.auth')
 
 export default async function globalSetup() {
   fs.mkdirSync(AUTH_DIR, { recursive: true })
@@ -33,7 +33,7 @@ export default async function globalSetup() {
   await page.fill('input[name="email"]', EMAIL)
   await page.fill('input[name="password"]', PASSWORD)
   await page.click('button[type="submit"]')
-  await page.waitForURL(`${BASE_URL}/`)
+  await page.waitForURL(`${BASE_URL}/`, { timeout: 15000 })
   await page.context().storageState({ path: path.join(AUTH_DIR, 'user.json') })
   await browser.close()
 }
