@@ -33,3 +33,4 @@ yarn-error.log*
 cookies.txt
 stitch-prompt.txt
 .tdd-state-*
+.playwright-mcp
