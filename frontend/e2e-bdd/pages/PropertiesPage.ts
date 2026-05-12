@@ -37,7 +37,7 @@ export class PropertiesPage {
   }
 
   async verificarAusenteNaLista(nome: string) {
-    await expect(this.page.getByText(nome)).not.toBeVisible()
+    await expect(this.page.getByRole('link', { name: nome })).toHaveCount(0)
   }
 
   async verificarToastCriado() {
@@ -49,21 +49,19 @@ export class PropertiesPage {
   }
 
   async verificarFormularioNaoSubmetido() {
-    expect(this.page.url()).toContain('/properties/new')
+    await expect(this.page).toHaveURL(/\/properties\/new/)
   }
 
   async navegarParaImovel(nome: string) {
     await this.page.goto('/properties')
     await this.page.waitForLoadState('networkidle')
-    await this.page.getByText(nome).click()
+    await this.page.getByRole('link', { name: nome }).click()
     await this.page.waitForURL(/\/properties\/[a-f0-9-]+/)
   }
 
   async excluirImovel() {
     await this.page.getByRole('button', { name: 'Desativar' }).click()
-    const confirmar = this.page.getByRole('button', { name: 'Confirmar' })
-    if (await confirmar.isVisible()) {
-      await confirmar.click()
-    }
+    await expect(this.page.getByRole('button', { name: 'Confirmar' })).toBeVisible()
+    await this.page.getByRole('button', { name: 'Confirmar' }).click()
   }
 }

@@ -3,9 +3,13 @@ import { createBdd } from 'playwright-bdd'
 import { test, expect } from '../fixtures'
 import { PropertiesPage } from '../pages/PropertiesPage'
 
-const { Given, When, Then, After } = createBdd(test)
+const { Given, When, Then, After, Before } = createBdd(test)
 
 let propertiesPage: PropertiesPage
+
+Before(async ({ page }) => {
+  propertiesPage = new PropertiesPage(page)
+})
 const createdPropertyIds: string[] = []
 
 Given('que estou autenticado', async ({ page }) => {
@@ -31,7 +35,7 @@ When('navego para a lista de imóveis', async ({ page }) => {
   await propertiesPage.navegarParaLista()
 })
 
-When('clico em {string}', async ({}, _label: string) => {
+When('clico no link de novo imóvel', async ({}) => {
   await propertiesPage.clicarNovoImovel()
 })
 

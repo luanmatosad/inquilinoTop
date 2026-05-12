@@ -14,7 +14,7 @@ Funcionalidade: Gestão de Imóveis
   @smoke
   Cenário: Criar imóvel do tipo SINGLE com sucesso
     Quando navego para a lista de imóveis
-    E clico em "Novo Imóvel"
+    E clico no link de novo imóvel
     E preencho o nome do imóvel com "Imóvel SINGLE BDD"
     E seleciono o tipo "SINGLE"
     E submeto o formulário de imóvel
@@ -23,7 +23,7 @@ Funcionalidade: Gestão de Imóveis
 
   Cenário: Criar imóvel do tipo RESIDENTIAL com sucesso
     Quando navego para a lista de imóveis
-    E clico em "Novo Imóvel"
+    E clico no link de novo imóvel
     E preencho o nome do imóvel com "Imóvel RESIDENTIAL BDD"
     E seleciono o tipo "RESIDENTIAL"
     E submeto o formulário de imóvel
@@ -31,7 +31,7 @@ Funcionalidade: Gestão de Imóveis
 
   Cenário: Não criar imóvel sem nome
     Quando navego para a lista de imóveis
-    E clico em "Novo Imóvel"
+    E clico no link de novo imóvel
     E submeto o formulário de imóvel sem preencher o nome
     Então o formulário não deve ser submetido
 
