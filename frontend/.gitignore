@@ -1,2 +1,5 @@
 .env.local
 .env*.local
+
+# Playwright auth state (gerado pelo globalSetup)
+e2e-bdd/.auth/
