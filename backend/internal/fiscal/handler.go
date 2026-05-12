@@ -21,7 +21,7 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/api/v1/fiscal/annual-report", h.AnnualReport)
+	r.With(authMW).Get("/fiscal/annual-report", h.AnnualReport)
 }
 
 // @Summary Relatório fiscal anual para DIRPF

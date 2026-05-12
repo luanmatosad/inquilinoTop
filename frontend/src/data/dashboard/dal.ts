@@ -65,9 +65,9 @@ interface Payment {
 }
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
-  const properties: Property[] = []
-  const units: Unit[] = []
-  const tenants: Tenant[] = []
+  let properties: Property[] = []
+  let units: Unit[] = []
+  let tenants: Tenant[] = []
   const payments: Payment[] = []
   const expiringLeases: Lease[] = []
 

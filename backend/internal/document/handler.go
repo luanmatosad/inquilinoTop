@@ -23,10 +23,10 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/api/v1/documents", h.listByEntity)
-	r.With(authMW).Post("/api/v1/documents", h.upload)
-	r.With(authMW).Get("/api/v1/documents/{id}", h.download)
-	r.With(authMW).Delete("/api/v1/documents/{id}", h.delete)
+	r.With(authMW).Get("/documents", h.listByEntity)
+	r.With(authMW).Post("/documents", h.upload)
+	r.With(authMW).Get("/documents/{id}", h.download)
+	r.With(authMW).Delete("/documents/{id}", h.delete)
 }
 
 func (h *Handler) listByEntity(w http.ResponseWriter, r *http.Request) {
