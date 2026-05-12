@@ -68,8 +68,8 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   let properties: Property[] = []
   let units: Unit[] = []
   let tenants: Tenant[] = []
-  let payments: Payment[] = []
-  let expiringLeases: Lease[] = []
+  const payments: Payment[] = []
+  const expiringLeases: Lease[] = []
 
   try {
     const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()

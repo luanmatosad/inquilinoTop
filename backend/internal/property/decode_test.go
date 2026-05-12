@@ -25,7 +25,7 @@ func TestHandler_UpdateProperty_InvalidBody(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest("PUT", "/api/v1/properties/"+p.ID.String(), strings.NewReader("{bad json"))
+	req := httptest.NewRequest("PUT", "/properties/"+p.ID.String(), strings.NewReader("{bad json"))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -44,7 +44,7 @@ func TestHandler_CreateUnit_InvalidBody(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest("POST", "/api/v1/properties/"+p.ID.String()+"/units", strings.NewReader("{bad"))
+	req := httptest.NewRequest("POST", "/properties/"+p.ID.String()+"/units", strings.NewReader("{bad"))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)

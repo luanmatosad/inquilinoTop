@@ -198,7 +198,7 @@ export function TenantListClient({ tenants }: TenantListClientProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
             <AlertDialogDescription>
-              Isso irá remover permanentemente o inquilino "{deletingTenant?.name}". 
+              Isso irá remover permanentemente o inquilino &quot;{deletingTenant?.name}&quot;.
               Cuidado: Se ele tiver contratos ativos, isso pode gerar inconsistências.
               Recomendamos apenas desativar.
             </AlertDialogDescription>

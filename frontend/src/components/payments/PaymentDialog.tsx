@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useActionState, useEffect, useState, startTransition } from 'react'
 import { createPayment } from '@/app/payments/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -45,7 +45,7 @@ export function PaymentDialog({ leases }: PaymentDialogProps) {
   useEffect(() => {
     if (state?.success) {
       toast.success(state.success)
-      setOpen(false)
+      startTransition(() => setOpen(false))
     }
     if (state?.error) {
       toast.error(state.error)

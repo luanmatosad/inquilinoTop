@@ -62,7 +62,7 @@ export function DeletePropertyButton({ id, name }: DeletePropertyButtonProps) {
         <AlertDialogHeader>
           <AlertDialogTitle>Desativar Imóvel?</AlertDialogTitle>
           <AlertDialogDescription>
-            Isso irá desativar o imóvel "{name}" e todas as suas unidades.
+            Isso irá desativar o imóvel &quot;{name}&quot; e todas as suas unidades.
             Ele não aparecerá mais na lista principal.
           </AlertDialogDescription>
         </AlertDialogHeader>

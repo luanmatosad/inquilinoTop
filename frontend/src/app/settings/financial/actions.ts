@@ -14,7 +14,7 @@ export async function getFinancialConfig(): Promise<FinancialConfig | null> {
   }
 }
 
-export async function updateFinancialConfig(prevState: any, formData: FormData) {
+export async function updateFinancialConfig(prevState: unknown, formData: FormData) {
   try {
     const provider = formData.get('provider') as string
     const pixKey = (formData.get('pix_key') as string) || null
@@ -29,7 +29,7 @@ export async function updateFinancialConfig(prevState: any, formData: FormData) 
     const ownerName = formData.get('owner_name') as string
     const document = formData.get('document') as string
 
-    const config: Record<string, any> = {}
+    const config: Record<string, unknown> = {}
     if (defaultLateFee) config['default_late_fee'] = parseFloat(defaultLateFee)
     if (defaultInterest) config['default_interest'] = parseFloat(defaultInterest)
     

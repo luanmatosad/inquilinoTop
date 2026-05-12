@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { cookies } from 'next/headers'
 import { getActiveLeases } from "./actions"
 import { PaymentDialog } from "@/components/payments/PaymentDialog"
+import { Lease } from "@/types"
 
 interface Payment {
   id: string
@@ -53,7 +54,7 @@ async function getPaymentsData() {
   return { payments, received, pending, overdue }
 }
 
-async function PaymentsList({ leases }: { leases: any[] }) {
+async function PaymentsList({ leases }: { leases: Lease[] }) {
   const { payments, received, pending, overdue } = await getPaymentsData()
 
   if (!payments.length) {

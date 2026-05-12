@@ -31,7 +31,7 @@ func newDocRouter() chi.Router {
 
 func TestHandler_ListByEntity_SemParams(t *testing.T) {
 	r := newDocRouter()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/documents", nil)
+	req := httptest.NewRequest(http.MethodGet, "/documents", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -39,7 +39,7 @@ func TestHandler_ListByEntity_SemParams(t *testing.T) {
 
 func TestHandler_ListByEntity_EntityIDInválido(t *testing.T) {
 	r := newDocRouter()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/documents?entity_type=property&entity_id=nao-e-uuid", nil)
+	req := httptest.NewRequest(http.MethodGet, "/documents?entity_type=property&entity_id=nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -48,7 +48,7 @@ func TestHandler_ListByEntity_EntityIDInválido(t *testing.T) {
 func TestHandler_ListByEntity_Válido(t *testing.T) {
 	r := newDocRouter()
 	req := httptest.NewRequest(http.MethodGet,
-		"/api/v1/documents?entity_type=property&entity_id="+uuid.New().String(), nil)
+		"/documents?entity_type=property&entity_id="+uuid.New().String(), nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -66,7 +66,7 @@ func TestHandler_Upload_SemArquivo(t *testing.T) {
 	mw.WriteField("entity_id", uuid.New().String())
 	mw.Close()
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/documents", &buf)
+	req := httptest.NewRequest(http.MethodPost, "/documents", &buf)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -81,7 +81,7 @@ func TestHandler_Upload_SemParams(t *testing.T) {
 	fw.Write([]byte("conteúdo"))
 	mw.Close()
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/documents", &buf)
+	req := httptest.NewRequest(http.MethodPost, "/documents", &buf)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -98,7 +98,7 @@ func TestHandler_Upload_EntityIDInválido(t *testing.T) {
 	mw.WriteField("entity_id", "nao-e-uuid")
 	mw.Close()
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/documents", &buf)
+	req := httptest.NewRequest(http.MethodPost, "/documents", &buf)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -107,7 +107,7 @@ func TestHandler_Upload_EntityIDInválido(t *testing.T) {
 
 func TestHandler_Download_IDInválido(t *testing.T) {
 	r := newDocRouter()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/documents/nao-e-uuid", nil)
+	req := httptest.NewRequest(http.MethodGet, "/documents/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -115,7 +115,7 @@ func TestHandler_Download_IDInválido(t *testing.T) {
 
 func TestHandler_Download_NãoEncontrado(t *testing.T) {
 	r := newDocRouter()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/documents/"+uuid.New().String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/documents/"+uuid.New().String(), nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusNotFound, rr.Code)
@@ -123,7 +123,7 @@ func TestHandler_Download_NãoEncontrado(t *testing.T) {
 
 func TestHandler_Delete_IDInválido(t *testing.T) {
 	r := newDocRouter()
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/documents/nao-e-uuid", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/documents/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -131,7 +131,7 @@ func TestHandler_Delete_IDInválido(t *testing.T) {
 
 func TestHandler_Delete_NãoEncontrado(t *testing.T) {
 	r := newDocRouter()
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/documents/"+uuid.New().String(), nil)
+	req := httptest.NewRequest(http.MethodDelete, "/documents/"+uuid.New().String(), nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusNotFound, rr.Code)

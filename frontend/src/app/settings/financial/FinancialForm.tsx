@@ -67,7 +67,7 @@ export function FinancialForm({ initialData }: { initialData: FinancialConfig | 
             id="provider" 
             name="provider" 
             value={provider}
-            onChange={(e) => setProvider(e.target.value as any)}
+            onChange={(e) => setProvider(e.target.value as FinancialConfig['provider'])}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <option value="MOCK">Manual / Direto (PIX, Transferência)</option>

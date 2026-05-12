@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, startTransition } from 'react'
 import { cn } from '@/lib/utils'
 
 import { LayoutDashboard, Building2, Users, Menu, X, Plus, Wallet, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Send, Percent, BarChart3, Headphones, Phone, FileText, Receipt, CreditCard, Upload, UserCircle, Settings, Bell } from 'lucide-react'
@@ -86,7 +86,7 @@ export function Sidebar() {
 
   useEffect(() => {
     if (window.innerWidth < 768) {
-      setIsOpen(false)
+      startTransition(() => setIsOpen(false))
     }
   }, [pathname])
 

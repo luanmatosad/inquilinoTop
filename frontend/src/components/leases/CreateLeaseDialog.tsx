@@ -5,11 +5,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { LeaseForm } from './LeaseForm'
+import { Tenant, Property } from '@/types'
 
 interface CreateLeaseDialogProps {
   unitId?: string
-  tenants: any[] // Pode tipar melhor se quiser importar a interface
-  properties?: any[]
+  tenants: Tenant[]
+  properties?: Property[]
 }
 
 export function CreateLeaseDialog({ unitId, tenants, properties }: CreateLeaseDialogProps) {

@@ -107,7 +107,7 @@ export interface FinancialConfig {
   id: string
   owner_id: string
   provider: 'ASAAS' | 'BRADESCO' | 'ITAU' | 'SICOOB' | 'MOCK'
-  config?: Record<string, any>
+  config?: Record<string, unknown>
   pix_key?: string | null
   bank_info?: BankInfo | null
   is_active: boolean
@@ -117,7 +117,7 @@ export interface FinancialConfig {
 
 export interface UpsertFinancialConfigInput {
   provider: string
-  config: Record<string, any>
+  config: Record<string, unknown>
   pix_key?: string | null
   bank_info?: BankInfo | null
 }

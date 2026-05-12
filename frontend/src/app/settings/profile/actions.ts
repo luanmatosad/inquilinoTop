@@ -14,7 +14,7 @@ export async function getProfile(): Promise<UserProfile | null> {
   }
 }
 
-export async function updateProfile(prevState: any, formData: FormData) {
+export async function updateProfile(prevState: unknown, formData: FormData) {
   try {
     const input: UpsertProfileInput = {
       full_name: (formData.get('full_name') as string) || null,

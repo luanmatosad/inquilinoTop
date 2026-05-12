@@ -168,15 +168,7 @@ r := chi.NewRouter()
 	r.Use(corsMiddleware)
 	r.Use(securityHeadersMW)
 	r.Use(metrics.HTTPMetricsMiddleware())
-	// Rewrite /api/v1/* to /* before routing
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, "/api/v1") {
-				r.URL.Path = strings.Replace(r.URL.Path, "/api/v1", "", 1)
-			}
-			next.ServeHTTP(w, r)
-		})
-	})
+	// Deprecation header para /api/v1/* (antes do rewrite para ver o path original)
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			if strings.HasPrefix(req.URL.Path, "/api/v1/") {
@@ -184,6 +176,15 @@ r := chi.NewRouter()
 				w.Header().Set("Warning", "299 - \"This API v1 is deprecated and will be removed. Please migrate to /api/v2.\"")
 			}
 			next.ServeHTTP(w, req)
+		})
+	})
+	// Rewrite /api/v1/* to /* before routing
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/api/v1") {
+				r.URL.Path = strings.Replace(r.URL.Path, "/api/v1", "", 1)
+			}
+			next.ServeHTTP(w, r)
 		})
 	})
 

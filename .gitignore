@@ -8,6 +8,9 @@ frontend/.vercel
 frontend/*.tsbuildinfo
 frontend/next-env.d.ts
 frontend/coverage
+frontend/.features-gen/
+frontend/playwright-report/
+frontend/test-results/
 
 # ── Backend (Go) ─────────────────────────────────────────────
 backend/tmp/

@@ -61,7 +61,13 @@ async function getExpensesData() {
   return { expenses, total, categories }
 }
 
-async function ExpensesList({ search, category, properties }: { search?: string; category?: string; properties: any[] }) {
+interface PropertyWithUnits {
+  id: string
+  name: string
+  units: { id: string; label: string }[]
+}
+
+async function ExpensesList({ search, category, properties }: { search?: string; category?: string; properties: PropertyWithUnits[] }) {
   const { expenses, total, categories } = await getExpensesData()
 
   let filtered = expenses
