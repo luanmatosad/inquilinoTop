@@ -36,7 +36,7 @@ func (m *mockRepo) Create(_ context.Context, ownerID uuid.UUID, in property.Crea
 func (m *mockRepo) GetByID(_ context.Context, id, ownerID uuid.UUID) (*property.Property, error) {
 	p, ok := m.properties[id]
 	if !ok || p.OwnerID != ownerID || !p.IsActive {
-		return nil, errors.New("not found")
+		return nil, apierr.ErrNotFound
 	}
 	return p, nil
 }

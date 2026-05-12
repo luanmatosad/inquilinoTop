@@ -170,11 +170,12 @@ func TestHandler_ListUnits_RouteExists(t *testing.T) {
 	svc := property.NewService(mock)
 	h := property.NewHandler(svc)
 
+	ownerID := uuid.New()
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(ownerID))
 
-	propertyID := uuid.New()
-	req := httptest.NewRequest(http.MethodGet, "/properties/"+propertyID.String()+"/units", nil)
+	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa"})
+	req := httptest.NewRequest(http.MethodGet, "/properties/"+p.ID.String()+"/units", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
