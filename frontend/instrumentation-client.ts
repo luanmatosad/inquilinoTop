@@ -11,7 +11,7 @@ Sentry.init({
 
   integrations: [
     Sentry.replayIntegration(),
-    Sentry.feedbackIntegration(),
+    Sentry.feedbackIntegration({ colorScheme: "system" }),
   ],
 
   replaysSessionSampleRate: 0.1,
@@ -19,3 +19,5 @@ Sentry.init({
 
   _experiments: { enableLogs: true },
 });
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
