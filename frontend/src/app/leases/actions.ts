@@ -53,7 +53,7 @@ export async function createLease(prevState: LeaseActionState, formData: FormDat
     notes: formData.get("notes"),
     late_fee_percent: formData.get("late_fee_percent"),
     daily_interest_percent: formData.get("daily_interest_percent"),
-    iptu_reimbursable: formData.get("iptu_reimbursable"),
+    iptu_reimbursable: formData.get("iptu_reimbursable") === "on",
     annual_iptu_amount: formData.get("annual_iptu_amount"),
   }
 
