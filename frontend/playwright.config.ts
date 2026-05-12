@@ -1,7 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
+import { defineBddConfig } from 'playwright-bdd'
+
+const testDir = defineBddConfig({
+  features: 'e2e-bdd/features/**/*.feature',
+  steps: ['e2e-bdd/steps/**/*.steps.ts', 'e2e-bdd/fixtures.ts'],
+})
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
