@@ -52,7 +52,7 @@ func TestHandler_ListByLease_IDInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/leases/nao-e-uuid/payments", nil)
+	req := httptest.NewRequest(http.MethodGet, "/leases/nao-e-uuid/payments", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -65,7 +65,7 @@ func TestHandler_ListByLease_Válido(t *testing.T) {
 	h.Register(r, noopAuthMW)
 
 	leaseID := uuid.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/leases/"+leaseID.String()+"/payments", nil)
+	req := httptest.NewRequest(http.MethodGet, "/leases/"+leaseID.String()+"/payments", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -83,7 +83,7 @@ func TestHandler_Get_IDInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/payments/nao-e-uuid", nil)
+	req := httptest.NewRequest(http.MethodGet, "/payments/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -95,7 +95,7 @@ func TestHandler_Create_LeaseIDInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/leases/nao-e-uuid/payments", nil)
+	req := httptest.NewRequest(http.MethodPost, "/leases/nao-e-uuid/payments", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -108,7 +108,7 @@ func TestHandler_Create_BodyInválido(t *testing.T) {
 	h.Register(r, noopAuthMW)
 
 	leaseID := uuid.New()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/leases/"+leaseID.String()+"/payments", strings.NewReader("not-json"))
+	req := httptest.NewRequest(http.MethodPost, "/leases/"+leaseID.String()+"/payments", strings.NewReader("not-json"))
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -126,7 +126,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 		"gross_amount": 1500.0,
 		"type":         "RENT",
 	})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/leases/"+leaseID.String()+"/payments", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/leases/"+leaseID.String()+"/payments", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -139,7 +139,7 @@ func TestHandler_Update_IDInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/payments/nao-e-uuid", nil)
+	req := httptest.NewRequest(http.MethodPut, "/payments/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -151,7 +151,7 @@ func TestHandler_Update_BodyInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/payments/"+uuid.New().String(), strings.NewReader("not-json"))
+	req := httptest.NewRequest(http.MethodPut, "/payments/"+uuid.New().String(), strings.NewReader("not-json"))
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -194,12 +194,12 @@ func TestHandler_Generate_MonthInválido(t *testing.T) {
 	ownerID := uuid.New()
 
 	r := chi.NewRouter()
-	r.With(noopAuthMWWithOwnerID(ownerID)).Post("/api/v1/leases/{leaseId}/payments/generate", h.Generate)
+	r.With(noopAuthMWWithOwnerID(ownerID)).Post("/leases/{leaseId}/payments/generate", h.Generate)
 
 	leaseID := uuid.New()
 	setupLeaseInHandler(ts, leaseID, ownerID)
 
-	req := httptest.NewRequest("POST", "/api/v1/leases/"+leaseID.String()+"/payments/generate?month=abril", nil)
+	req := httptest.NewRequest("POST", "/leases/"+leaseID.String()+"/payments/generate?month=abril", nil)
 	w := httptest.NewRecorder()
 
 	r.ServeHTTP(w, req)
@@ -213,12 +213,12 @@ func TestHandler_Generate_RouteExists(t *testing.T) {
 	ownerID := uuid.New()
 
 	r := chi.NewRouter()
-	r.With(noopAuthMWWithOwnerID(ownerID)).Post("/api/v1/leases/{leaseId}/payments/generate", h.Generate)
+	r.With(noopAuthMWWithOwnerID(ownerID)).Post("/leases/{leaseId}/payments/generate", h.Generate)
 
 	leaseID := uuid.New()
 	setupLeaseInHandler(ts, leaseID, ownerID)
 
-	req := httptest.NewRequest("POST", "/api/v1/leases/"+leaseID.String()+"/payments/generate?month=2026-04", nil)
+	req := httptest.NewRequest("POST", "/leases/"+leaseID.String()+"/payments/generate?month=2026-04", nil)
 	w := httptest.NewRecorder()
 
 	r.ServeHTTP(w, req)
@@ -280,7 +280,7 @@ func TestHandler_ListByOwner_Vazio(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/payments", nil)
+	req := httptest.NewRequest(http.MethodGet, "/payments", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -295,7 +295,7 @@ func TestHandler_ListByOwner_ComFiltroStatus(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/payments?status=PENDING", nil)
+	req := httptest.NewRequest(http.MethodGet, "/payments?status=PENDING", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 

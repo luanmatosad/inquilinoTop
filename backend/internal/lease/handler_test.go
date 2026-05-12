@@ -164,7 +164,7 @@ func TestHandler_Create_BodyInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/leases", strings.NewReader("not-json"))
+	req := httptest.NewRequest(http.MethodPost, "/leases", strings.NewReader("not-json"))
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -184,7 +184,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 		RentAmount: 1500,
 		PaymentDay: 5,
 	})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/leases", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/leases", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -198,7 +198,7 @@ func TestHandler_Get_IDInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/leases/nao-e-uuid", nil)
+	req := httptest.NewRequest(http.MethodGet, "/leases/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -211,7 +211,7 @@ func TestHandler_Update_IDInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/leases/nao-e-uuid", nil)
+	req := httptest.NewRequest(http.MethodPut, "/leases/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -224,7 +224,7 @@ func TestHandler_Delete_IDInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/leases/nao-e-uuid", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/leases/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -240,7 +240,7 @@ func TestHandler_EndLease_RouteExists(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW)
 
-	req := httptest.NewRequest("POST", "/api/v1/leases/"+l.ID.String()+"/end", nil)
+	req := httptest.NewRequest("POST", "/leases/"+l.ID.String()+"/end", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
@@ -260,7 +260,7 @@ func TestHandler_RenewLease_RouteExists(t *testing.T) {
 		"new_end_date": time.Now().Add(365 * 24 * time.Hour),
 		"rent_amount":  1200.0,
 	})
-	req := httptest.NewRequest("POST", "/api/v1/leases/"+l.ID.String()+"/renew", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/leases/"+l.ID.String()+"/renew", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -282,7 +282,7 @@ func TestHandler_Readjust_RouteExists(t *testing.T) {
 		"applied_at": time.Now(),
 		"index_name": "IGPM",
 	})
-	req := httptest.NewRequest("POST", "/api/v1/leases/"+l.ID.String()+"/readjust", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/leases/"+l.ID.String()+"/readjust", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -302,7 +302,7 @@ func TestHandler_Readjust_PercentagemInválida(t *testing.T) {
 	h.Register(r, noopAuthMW)
 
 	body := `{"percentage":0.0,"applied_at":"2026-04-01T00:00:00Z"}`
-	req := httptest.NewRequest("POST", "/api/v1/leases/"+leaseID.String()+"/readjust", strings.NewReader(body))
+	req := httptest.NewRequest("POST", "/leases/"+leaseID.String()+"/readjust", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)

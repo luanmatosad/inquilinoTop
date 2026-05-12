@@ -29,7 +29,7 @@ func TestHandler_AnnualReport_YearInválido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMWWithOwnerID(uuid.New()))
 
-	req := httptest.NewRequest("GET", "/api/v1/fiscal/annual-report?year=xx", nil)
+	req := httptest.NewRequest("GET", "/fiscal/annual-report?year=xx", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
@@ -42,7 +42,7 @@ func TestHandler_AnnualReport_YearObrigatório(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMWWithOwnerID(uuid.New()))
 
-	req := httptest.NewRequest("GET", "/api/v1/fiscal/annual-report", nil)
+	req := httptest.NewRequest("GET", "/fiscal/annual-report", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
@@ -55,7 +55,7 @@ func TestHandler_AnnualReport_YearForaDoRange(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMWWithOwnerID(uuid.New()))
 
-	req := httptest.NewRequest("GET", "/api/v1/fiscal/annual-report?year=1800", nil)
+	req := httptest.NewRequest("GET", "/fiscal/annual-report?year=1800", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
@@ -68,7 +68,7 @@ func TestHandler_AnnualReport_SemAutenticação(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMWWithOwnerID(uuid.Nil))
 
-	req := httptest.NewRequest("GET", "/api/v1/fiscal/annual-report?year=2026", nil)
+	req := httptest.NewRequest("GET", "/fiscal/annual-report?year=2026", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
@@ -105,7 +105,7 @@ func TestHandler_AnnualReport_Sucesso(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMWWithOwnerID(ownerID))
 
-	req := httptest.NewRequest("GET", "/api/v1/fiscal/annual-report?year=2026", nil)
+	req := httptest.NewRequest("GET", "/fiscal/annual-report?year=2026", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
