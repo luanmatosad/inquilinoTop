@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect } from 'react'
+import { useActionState, useEffect, useState } from 'react'
 import { createLease } from '@/app/leases/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,6 +38,7 @@ interface LeaseFormProps {
 
 export function LeaseForm({ unitId, tenants, properties = [], onSuccess, onCancel }: LeaseFormProps) {
   const [state, formAction, isPending] = useActionState(createLease, null)
+  const [iptuReimbursable, setIptuReimbursable] = useState(false)
 
   useEffect(() => {
     if (state?.success) {
@@ -176,6 +177,67 @@ export function LeaseForm({ unitId, tenants, properties = [], onSuccess, onCance
           />
         </div>
       </div>
+
+      <div className="relative flex items-center py-1">
+        <div className="flex-grow border-t border-gray-200" />
+        <span className="mx-3 flex-shrink text-xs text-gray-400 uppercase tracking-wide">Encargos e IPTU</span>
+        <div className="flex-grow border-t border-gray-200" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="late_fee_percent">Multa por Atraso (%)</Label>
+          <Input
+            id="late_fee_percent"
+            name="late_fee_percent"
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            placeholder="Ex: 2.00"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="daily_interest_percent">Juros Diários (%)</Label>
+          <Input
+            id="daily_interest_percent"
+            name="daily_interest_percent"
+            type="number"
+            step="0.001"
+            min="0"
+            max="100"
+            placeholder="Ex: 0.033"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <input
+          id="iptu_reimbursable"
+          name="iptu_reimbursable"
+          type="checkbox"
+          checked={iptuReimbursable}
+          onChange={(e) => setIptuReimbursable(e.target.checked)}
+          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <Label htmlFor="iptu_reimbursable" className="cursor-pointer font-normal">
+          IPTU reembolsável pelo inquilino
+        </Label>
+      </div>
+
+      {iptuReimbursable && (
+        <div className="space-y-2">
+          <Label htmlFor="annual_iptu_amount">Valor Anual do IPTU (R$)</Label>
+          <Input
+            id="annual_iptu_amount"
+            name="annual_iptu_amount"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+          />
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="notes">Observações</Label>
