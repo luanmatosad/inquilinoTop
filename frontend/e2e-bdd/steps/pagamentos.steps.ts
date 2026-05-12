@@ -126,6 +126,10 @@ Given(
   },
 )
 
+When('navego para a lista de pagamentos', async ({}) => {
+  await paymentsPage.navegar()
+})
+
 When('clico no botão de novo pagamento', async ({}) => {
   await paymentsPage.clicarNovoPagamento()
 })
@@ -138,8 +142,11 @@ When('seleciono o tipo de pagamento {string}', async ({}, tipo: string) => {
   await paymentsPage.selecionarTipoPagamento(tipo)
 })
 
+When('preencho a descrição do pagamento com {string}', async ({}, descricao: string) => {
+  await paymentsPage.preencherDescricao(descricao)
+})
+
 When('preencho o valor do pagamento com {string}', async ({}, valor: string) => {
-  await paymentsPage.preencherDescricao('Aluguel BDD')
   await paymentsPage.preencherValor(valor)
 })
 

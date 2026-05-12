@@ -7,6 +7,7 @@ const { Given, When, Then, Before, After } = createBdd(test)
 
 let tenantsPage: TenantsPage
 const createdTenantIds: string[] = []
+let lastFilledTenantName = ''
 
 Before(async ({ page }) => {
   tenantsPage = new TenantsPage(page)
@@ -29,11 +30,16 @@ Given(
   },
 )
 
+When('navego para a lista de inquilinos', async ({}) => {
+  await tenantsPage.navegar()
+})
+
 When('clico no botão de novo inquilino', async ({}) => {
   await tenantsPage.clicarNovoInquilino()
 })
 
 When('preencho o nome do inquilino com {string}', async ({}, nome: string) => {
+  lastFilledTenantName = nome
   await tenantsPage.preencherNome(nome)
 })
 
@@ -76,4 +82,23 @@ After(async ({ request, apiToken, apiUrl }) => {
     })
   }
   createdTenantIds.length = 0
+
+  // Clean up UI-created tenants by name
+  if (lastFilledTenantName) {
+    const listRes = await request.get(`${apiUrl}/api/v1/tenants`, {
+      headers: { Authorization: `Bearer ${apiToken}` },
+    })
+    if (listRes.ok()) {
+      const { data: tenants } = await listRes.json()
+      const found = (tenants as { name: string; id: string }[]).find(
+        (t) => t.name === lastFilledTenantName,
+      )
+      if (found) {
+        await request.delete(`${apiUrl}/api/v1/tenants/${found.id}`, {
+          headers: { Authorization: `Bearer ${apiToken}` },
+        })
+      }
+    }
+    lastFilledTenantName = ''
+  }
 })

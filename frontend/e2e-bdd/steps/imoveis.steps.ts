@@ -30,8 +30,7 @@ Given(
   },
 )
 
-When('navego para a lista de imóveis', async ({ page }) => {
-  propertiesPage = new PropertiesPage(page)
+When('navego para a lista de imóveis', async ({}) => {
   await propertiesPage.navegarParaLista()
 })
 
@@ -55,8 +54,7 @@ When('submeto o formulário de imóvel sem preencher o nome', async ({}) => {
   await propertiesPage.submeterFormularioSemNome()
 })
 
-When('navego para a página do imóvel {string}', async ({ page }, nome: string) => {
-  propertiesPage = new PropertiesPage(page)
+When('navego para a página do imóvel {string}', async ({}, nome: string) => {
   await propertiesPage.navegarParaImovel(nome)
 })
 
@@ -72,8 +70,11 @@ Then('devo ver a confirmação de imóvel criado', async ({}) => {
   await propertiesPage.verificarToastCriado()
 })
 
-Then('devo ser redirecionado para a página do imóvel', async ({}) => {
+Then('devo ser redirecionado para a página do imóvel', async ({ page }) => {
   await propertiesPage.verificarRedirecionadoParaImovel()
+  // capture ID from URL for cleanup
+  const match = page.url().match(/\/properties\/([a-f0-9-]+)/)
+  if (match) createdPropertyIds.push(match[1])
 })
 
 Then('o formulário não deve ser submetido', async ({}) => {

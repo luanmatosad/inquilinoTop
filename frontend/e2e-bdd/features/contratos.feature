@@ -8,6 +8,7 @@ Funcionalidade: Gestão de Contratos
   @smoke
   Cenário: Listar contratos ativos
     Dado que existe um contrato ativo criado via API
+    Quando navego para a lista de contratos
     Então devo ver pelo menos um contrato na lista
 
   @smoke

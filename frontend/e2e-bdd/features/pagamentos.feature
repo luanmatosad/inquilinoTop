@@ -8,6 +8,7 @@ Funcionalidade: Gestão de Pagamentos
   @smoke
   Cenário: Listar pagamentos existentes
     Dado que existe um pagamento pendente criado via API
+    Quando navego para a lista de pagamentos
     Então devo ver pelo menos um pagamento na lista
 
   @smoke
@@ -16,6 +17,7 @@ Funcionalidade: Gestão de Pagamentos
     Quando clico no botão de novo pagamento
     E seleciono o contrato disponível no formulário de pagamento
     E seleciono o tipo de pagamento "RENT"
+    E preencho a descrição do pagamento com "Aluguel BDD"
     E preencho o valor do pagamento com "1200"
     E preencho o vencimento com "2026-07-01"
     E submeto o formulário de pagamento

@@ -8,6 +8,7 @@ Funcionalidade: Gestão de Inquilinos
   @smoke
   Cenário: Listar inquilinos existentes
     Dado que existe um inquilino "Inquilino Listagem BDD" criado via API
+    Quando navego para a lista de inquilinos
     Então devo ver "Inquilino Listagem BDD" na tabela de inquilinos
 
   @smoke

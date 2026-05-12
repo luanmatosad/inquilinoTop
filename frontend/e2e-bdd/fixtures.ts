@@ -1,4 +1,4 @@
-import { test as base, expect } from 'playwright-bdd'
+import { test as base } from 'playwright-bdd'
 import * as fs from 'fs'
 import * as path from 'path'
 
@@ -19,19 +19,9 @@ function readApiToken(): string {
 }
 
 export const test = base.extend<{
-  logado: void
   apiToken: string
   apiUrl: string
 }>({
-  logado: [
-    async ({ page }, use) => {
-      // storageState already provides auth — just verify we're not on login page
-      await page.goto('/')
-      await expect(page).not.toHaveURL(/\/login/)
-      await use()
-    },
-    { auto: false },
-  ],
   apiToken: async ({}, use) => {
     await use(readApiToken())
   },
@@ -40,4 +30,4 @@ export const test = base.extend<{
   },
 })
 
-export { expect }
+export { expect } from '@playwright/test'

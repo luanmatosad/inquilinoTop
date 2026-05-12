@@ -102,6 +102,10 @@ Given(
   },
 )
 
+When('navego para a lista de contratos', async ({}) => {
+  await leasesPage.navegar()
+})
+
 When('clico no botão de novo contrato', async ({}) => {
   await leasesPage.clicarNovoContrato()
 })
