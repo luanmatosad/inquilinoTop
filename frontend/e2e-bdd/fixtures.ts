@@ -1,4 +1,4 @@
-import { test as base } from '@playwright/test'
+import { test as base } from 'playwright-bdd'
 
 export const test = base.extend<{ logado: void }>({
   logado: [
