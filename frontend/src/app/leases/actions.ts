@@ -72,8 +72,8 @@ export async function createLease(prevState: LeaseActionState, formData: FormDat
       body: JSON.stringify({
         unit_id: validatedFields.data.unit_id,
         tenant_id: validatedFields.data.tenant_id,
-        start_date: validatedFields.data.start_date,
-        end_date: validatedFields.data.end_date || null,
+        start_date: `${validatedFields.data.start_date}T00:00:00Z`,
+        end_date: validatedFields.data.end_date ? `${validatedFields.data.end_date}T00:00:00Z` : null,
         rent_amount: validatedFields.data.rent_amount,
         deposit_amount: validatedFields.data.deposit_amount || null,
         payment_day: validatedFields.data.payment_day,

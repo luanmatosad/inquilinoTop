@@ -57,7 +57,7 @@ export async function createExpense(prevState: ExpenseActionState, formData: For
       body: JSON.stringify({
         description: validatedFields.data.description,
         amount: validatedFields.data.amount,
-        due_date: validatedFields.data.due_date,
+        due_date: `${validatedFields.data.due_date}T00:00:00Z`,
         category: validatedFields.data.category,
       }),
     })

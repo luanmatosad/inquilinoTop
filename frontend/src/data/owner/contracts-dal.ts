@@ -50,7 +50,11 @@ export interface CreateLeaseInput {
 export async function createLease(input: CreateLeaseInput): Promise<Lease> {
   return goFetch<Lease>('/api/v1/leases', {
     method: 'POST',
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      ...input,
+      start_date: `${input.start_date}T00:00:00Z`,
+      end_date: input.end_date ? `${input.end_date}T00:00:00Z` : undefined,
+    }),
   })
 }
 

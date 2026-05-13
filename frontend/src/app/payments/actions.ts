@@ -65,7 +65,7 @@ export async function generateInitialPayments(
       await goFetch<Payment>(`/api/v1/leases/${leaseId}/payments`, {
         method: "POST",
         body: JSON.stringify({
-          due_date: dueDate.toISOString().split("T")[0],
+          due_date: dueDate.toISOString(),
           gross_amount: amount,
           type: "RENT",
           description: description,
@@ -95,7 +95,7 @@ export async function createPayment(prevState: PaymentActionState, formData: For
       description,
       type,
       gross_amount: grossAmount,
-      due_date: dueDate,
+      due_date: `${dueDate}T00:00:00Z`,
       status: "PENDING",
     }
     
