@@ -171,7 +171,6 @@ interface GoLease {
   tenant_id: string
   rent_amount: number
   status: string
-  is_active: boolean
 }
 
 interface GoTenant {
@@ -187,11 +186,11 @@ export interface ActiveLease {
 export async function getActiveLeases(): Promise<ActiveLease[]> {
   try {
     const [leases, tenants] = await Promise.all([
-      goFetch<GoLease[]>('/api/v1/leases') ?? [],
-      goFetch<GoTenant[]>('/api/v1/tenants') ?? [],
+      goFetch<GoLease[]>('/api/v1/leases'),
+      goFetch<GoTenant[]>('/api/v1/tenants'),
     ])
-    const tenantMap = new Map((tenants ?? []).map((t) => [t.id, t.name]))
-    return (leases ?? [])
+    const tenantMap = new Map(tenants.map((t) => [t.id, t.name]))
+    return leases
       .filter((l) => l.status === 'ACTIVE')
       .map((l) => ({
         id: l.id,
