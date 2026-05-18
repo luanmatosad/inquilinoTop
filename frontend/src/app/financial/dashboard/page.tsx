@@ -1,134 +1,148 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getDashboardMetrics, getReceivables } from '../actions';
-import { ArrowUpRight, ArrowDownRight, TrendingUp, AlertTriangle } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import React from 'react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import {
+  Wallet,
+  AlertTriangle,
+  Building2,
+  Send,
+  Plus,
+  Calendar,
+} from 'lucide-react'
+
+import { getDashboardMetrics, getReceivables } from '../actions'
+import { KpiCard } from './_components/KpiCard'
+import { CashFlowChart } from './_components/CashFlowChart'
+import { OverdueList } from './_components/OverdueList'
+import { fmtBRL, fmtBRLCompact } from '@/lib/format'
 
 export default async function FinancialDashboard() {
-  const metrics = await getDashboardMetrics();
-  const receivables = await getReceivables();
-  const overdue = receivables.filter(r => r.status === 'OVERDUE').slice(0, 3);
+  const metrics = await getDashboardMetrics()
+  const receivables = await getReceivables()
+  const overdue = receivables.filter((r) => r.status === 'OVERDUE').slice(0, 3)
 
-  const formatBRL = (val: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-  };
+  const now = new Date()
+  const monthLabel = new Intl.DateTimeFormat('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  }).format(now)
+  const monthLabelShort = new Intl.DateTimeFormat('pt-BR', {
+    month: 'short',
+    year: 'numeric',
+  }).format(now)
+
+  const realizedRatio =
+    metrics.expectedRevenue > 0
+      ? Math.round((metrics.realizedRevenue / metrics.expectedRevenue) * 100)
+      : 0
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* ─── Header row ─────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-on-surface">Visão Geral</h1>
-          <p className="text-on-surface-variant">Módulo Financeiro - Mês Atual</p>
+          <h1 className="text-2xl font-bold tracking-tight text-on-surface">
+            Visão geral
+          </h1>
+          <p className="mt-1 text-sm text-on-surface-variant">
+            Módulo financeiro · {monthLabel}
+          </p>
         </div>
-        <div>
-          <input type="month" className="px-4 py-2 bg-surface border border-outline rounded-md text-sm text-on-surface" defaultValue="2026-05" />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm">
+            <Calendar className="size-4" />
+            {monthLabelShort.charAt(0).toUpperCase() + monthLabelShort.slice(1)}
+          </Button>
+          <Button size="sm">
+            <Plus className="size-4" />
+            Nova cobrança
+          </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Receita Prevista vs. Realizada</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatBRL(metrics.realizedRevenue)}</div>
-            <p className="text-xs text-on-surface-variant">de {formatBRL(metrics.expectedRevenue)} previsto</p>
-            <div className="mt-4 h-2 w-full bg-surface-variant rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary" 
-                style={{ width: `${(metrics.realizedRevenue / (metrics.expectedRevenue || 1)) * 100}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Índice de Inadimplência</CardTitle>
-            <AlertTriangle className={`h-4 w-4 ${metrics.defaultRate > 5 ? 'text-error' : 'text-success'}`} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-error">{metrics.defaultRate}%</div>
-            <p className="text-xs text-on-surface-variant">
-              {metrics.defaultRate > 5 ? 'Acima do ideal' : 'Dentro do esperado'}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor Geral de Aluguel (VGA)</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatBRL(metrics.totalRentValue)}</div>
-            <p className="text-xs text-on-surface-variant">Volume total de aluguéis geridos</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total a Repassar</CardTitle>
-            <ArrowDownRight className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatBRL(metrics.totalToTransfer)}</div>
-            <p className="text-xs text-on-surface-variant">Para proprietários este mês</p>
-          </CardContent>
-        </Card>
+      {/* ─── KPI grid ───────────────────────────────────────────────── */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          title="Receita realizada"
+          icon={Wallet}
+          value={fmtBRL(metrics.realizedRevenue)}
+          hint={`de ${fmtBRL(metrics.expectedRevenue)} previsto`}
+          progress={realizedRatio}
+        />
+        <KpiCard
+          title="Inadimplência"
+          icon={AlertTriangle}
+          accent={metrics.defaultRate > 5 ? 'danger' : 'success'}
+          value={
+            <span className={metrics.defaultRate > 5 ? 'text-destructive' : ''}>
+              {metrics.defaultRate.toLocaleString('pt-BR', {
+                maximumFractionDigits: 1,
+              })}
+              %
+            </span>
+          }
+          hint={
+            metrics.defaultRate > 5
+              ? 'Acima do esperado'
+              : 'Dentro do esperado'
+          }
+        />
+        <KpiCard
+          title="VGA — valor geral"
+          icon={Building2}
+          value={fmtBRLCompact(metrics.totalRentValue)}
+          hint="Volume total de aluguéis geridos"
+        />
+        <KpiCard
+          title="A repassar"
+          icon={Send}
+          value={fmtBRL(metrics.totalToTransfer)}
+          hint="Para proprietários este mês"
+        />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-7 lg:grid-cols-7">
-        <Card className="md:col-span-4 lg:col-span-5">
-          <CardHeader>
-            <CardTitle>Fluxo de Caixa (6 Meses)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] flex items-end justify-between space-x-2 pt-4">
-              {/* Placeholder for chart */}
-              {[40, 60, 45, 80, 55, 90].map((h, i) => (
-                <div key={i} className="w-full flex flex-col justify-end gap-1 group relative">
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-surface text-on-surface text-xs p-1 rounded shadow-sm whitespace-nowrap transition-opacity z-10 border border-outline">
-                    {formatBRL(h * 1000)}
-                  </div>
-                  <div className="bg-primary/20 hover:bg-primary/40 rounded-t-sm w-full transition-colors" style={{ height: `${h}%` }}></div>
-                  <div className="text-center text-xs text-on-surface-variant mt-2">Mês {i+1}</div>
-                </div>
-              ))}
+      {/* ─── Chart + Aging ──────────────────────────────────────────── */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2 py-5">
+          <CardContent className="space-y-4">
+            <div className="flex items-baseline justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-on-surface">
+                  Fluxo de caixa
+                </h2>
+                <p className="text-xs text-on-surface-variant">
+                  Últimos 6 meses
+                </p>
+              </div>
+              <div className="flex items-center gap-3 text-xs font-medium text-on-surface-variant">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-[2px] bg-primary" />
+                  Receita
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-[2px] bg-chart-2" />
+                  Despesa
+                </span>
+              </div>
             </div>
+            <CashFlowChart />
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-3 lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Aging de Contas</CardTitle>
-            <p className="text-sm text-on-surface-variant">Inquilinos em atraso</p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {overdue.length === 0 ? (
-                <div className="text-sm text-center py-4 text-on-surface-variant">Nenhum atraso registrado</div>
-              ) : overdue.map((item) => (
-                <div key={item.id} className="flex items-center justify-between border-b border-outline pb-2 last:border-0 last:pb-0">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">{item.payer}</p>
-                    <p className="text-xs text-on-surface-variant">
-                      {item.property}
-                    </p>
-                    <p className="text-xs font-semibold text-error">
-                      {formatBRL(item.amount)}
-                    </p>
-                  </div>
-                  <button className="text-xs px-3 py-1 bg-[#25D366]/10 text-[#25D366] rounded-full hover:bg-[#25D366]/20 transition-colors font-medium">
-                    Cobrar
-                  </button>
-                </div>
-              ))}
+        <Card className="py-5">
+          <CardContent className="space-y-3">
+            <div>
+              <h2 className="text-base font-semibold text-on-surface">
+                Aging de contas
+              </h2>
+              <p className="text-xs text-on-surface-variant">
+                Inquilinos em atraso
+              </p>
             </div>
+            <OverdueList items={overdue} />
           </CardContent>
         </Card>
       </div>
     </div>
-  );
+  )
 }

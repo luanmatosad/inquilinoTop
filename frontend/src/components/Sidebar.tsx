@@ -117,8 +117,8 @@ export function Sidebar() {
       >
         <div className="px-6 mb-8 flex items-center justify-between mt-8 md:mt-0">
           <div>
-            <h1 className="text-2xl font-bold text-sidebar-primary tracking-tight">PropHero</h1>
-            <p className="text-sm text-sidebar-foreground/70">Gestão Imobiliária</p>
+            <h1 className="text-xl font-bold text-sidebar-primary tracking-tight">InquilinoTop</h1>
+            <p className="text-xs text-sidebar-foreground/70">Gestão imobiliária</p>
           </div>
         </div>
 

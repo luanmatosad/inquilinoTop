@@ -71,6 +71,21 @@
   --sidebar-accent-foreground: #1b1b1b;
   --sidebar-border: #c1c6d7;
   --sidebar-ring: #005ac3;
+
+  /* Semantic — success */
+  --color-success-50:  #ecfdf3;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+
+  /* Semantic — warning */
+  --color-warning-50:  #fffaeb;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+
+  /* WhatsApp brand */
+  --color-whatsapp: #25d366;
 }
 
 /* Dark theme */
@@ -127,6 +142,18 @@
   --sidebar-accent-foreground: #f1f1f1;
   --sidebar-border: #3d4352;
   --sidebar-ring: #4da3ff;
+
+  --color-success-50:  #052e16;
+  --color-success-500: #22c55e;
+  --color-success-600: #4ade80;
+  --color-success-700: #86efac;
+
+  --color-warning-50:  #2a1c00;
+  --color-warning-500: #fbbf24;
+  --color-warning-600: #fcd34d;
+  --color-warning-700: #fde68a;
+
+  --color-whatsapp: #25d366;
 }
 
 @theme inline {
@@ -185,6 +212,11 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
+  /* Extended semantic tokens */
+  --color-success: var(--color-success-600);
+  --color-warning: var(--color-warning-600);
+  --color-surface-variant: var(--surface-variant);
 }
 
 @layer base {
@@ -194,4 +226,13 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200px 0; }
+  100% { background-position:  200px 0; }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.2s linear infinite;
 }
