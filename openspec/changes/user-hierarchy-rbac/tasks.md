@@ -62,8 +62,8 @@
 - [x] 10.4 Update `payment/handler.go` to get ownerID from context
 - [x] 10.5 Update `expense/handler.go` to get ownerID from context
 - [x] 10.6 Update all domain handlers to pass `organizationID` to service layer
-- [ ] 11.1 Update migration 000001 users table: add organization_id foreign key constraint
-- [ ] 11.2 Update all existing migration down files that reference owner_id
+- [x] 11.1 Update migration 000001 users table: add organization_id foreign key constraint
+- [x] 11.2 Update all existing migration down files that reference owner_id
 
 ## 12. Frontend: Team Management UI
 
