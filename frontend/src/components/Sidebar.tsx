@@ -36,6 +36,7 @@ const supportItems = [
 
 const settingsItems = [
   { href: '/settings/profile', label: 'Meu Perfil', icon: 'user' },
+  { href: '/settings/team', label: 'Equipe', icon: 'team' },
   { href: '/settings/financial', label: 'Config. Financeira', icon: 'settings' },
   { href: '/owner/settings', label: 'Notificações', icon: 'bell' },
 ]
@@ -59,9 +60,10 @@ function getIconComponent(icon: string) {
     case 'newticket': return Plus
     case 'contacts': return Phone
     case 'importar': return Upload
-    case 'settings': return Settings
     case 'user': return UserCircle
+    case 'settings': return Settings
     case 'bell': return Bell
+    case 'team': return Users
     default: return LayoutDashboard
   }
 }
