@@ -46,22 +46,22 @@
 - [x] 7.2 Update `main.go` to apply RBAC middleware to all domain routes
 - [x] 7.3 Map each route to its required permission (property:write, tenant:read, etc.)
 - [x] 7.4 Add `organization_id` and `branch_id` extraction in middleware context
-- [ ] 8.1 Update `property/repository.go` to filter by `organization_id` instead of `owner_id`
-- [ ] 8.2 Update `tenant/repository.go` to filter by `organization_id` instead of `owner_id`
-- [ ] 8.3 Update `lease/repository.go` to filter by `organization_id` instead of `owner_id`
-- [ ] 8.4 Update `payment/repository.go` to filter by `organization_id` instead of `owner_id`
-- [ ] 8.5 Update `expense/repository.go` to filter by `organization_id` instead of `owner_id`
-- [ ] 9.1 Update `property/model.go` to replace `OwnerID` with `OrganizationID`
-- [ ] 9.2 Update `tenant/model.go` to replace `OwnerID` with `OrganizationID`
-- [ ] 9.3 Update `lease/model.go` to replace `OwnerID` with `OrganizationID`
-- [ ] 9.4 Update `payment/model.go` to replace `OwnerID` with `OrganizationID`
-- [ ] 9.5 Update all domain services to get `organizationID` from context, not parameter
-- [ ] 10.1 Update `property/handler.go` to get ownerID from context (not param)
-- [ ] 10.2 Update `tenant/handler.go` to get ownerID from context
-- [ ] 10.3 Update `lease/handler.go` to get ownerID from context
-- [ ] 10.4 Update `payment/handler.go` to get ownerID from context
-- [ ] 10.5 Update `expense/handler.go` to get ownerID from context
-- [ ] 10.6 Update all domain handlers to pass `organizationID` to service layer
+- [x] 8.1 Update `property/repository.go` to filter by `organization_id` instead of `owner_id`
+- [x] 8.2 Update `tenant/repository.go` to filter by `organization_id` instead of `owner_id`
+- [x] 8.3 Update `lease/repository.go` to filter by `organization_id` instead of `owner_id`
+- [x] 8.4 Update `payment/repository.go` to filter by `organization_id` instead of `owner_id`
+- [x] 8.5 Update `expense/repository.go` to filter by `organization_id` instead of `owner_id`
+- [x] 9.1 Update `property/model.go` to replace `OwnerID` with `OrganizationID`
+- [x] 9.2 Update `tenant/model.go` to replace `OwnerID` with `OrganizationID`
+- [x] 9.3 Update `lease/model.go` to replace `OwnerID` with `OrganizationID`
+- [x] 9.4 Update `payment/model.go` to replace `OwnerID` with `OrganizationID`
+- [x] 9.5 Update all domain services to get `organizationID` from context, not parameter
+- [x] 10.1 Update `property/handler.go` to get ownerID from context (not param)
+- [x] 10.2 Update `tenant/handler.go` to get ownerID from context
+- [x] 10.3 Update `lease/handler.go` to get ownerID from context
+- [x] 10.4 Update `payment/handler.go` to get ownerID from context
+- [x] 10.5 Update `expense/handler.go` to get ownerID from context
+- [x] 10.6 Update all domain handlers to pass `organizationID` to service layer
 - [ ] 11.1 Update migration 000001 users table: add organization_id foreign key constraint
 - [ ] 11.2 Update all existing migration down files that reference owner_id
 
@@ -81,8 +81,8 @@
 
 ## 14. Testing
 
-- [ ] 14.1 Write unit tests for `rbac/service.go` permission matrix with inheritance
+- [x] 14.1 Write unit tests for `rbac/service.go` permission matrix with inheritance
 - [ ] 14.2 Write integration tests for organization CRUD
 - [ ] 14.3 Write integration tests for invite flow
-- [ ] 14.4 Verify all existing tests pass after changes
-- [ ] 14.5 Test RBAC middleware blocks unauthorized actions
+- [x] 14.4 Verify all existing tests pass after changes
+- [x] 14.5 Test RBAC middleware blocks unauthorized actions
