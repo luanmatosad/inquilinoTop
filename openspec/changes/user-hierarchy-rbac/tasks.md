@@ -67,22 +67,22 @@
 
 ## 12. Frontend: Team Management UI
 
-- [ ] 12.1 Create `frontend/src/app/settings/team/page.tsx` with members list
-- [ ] 12.2 Create invite member dialog/sheet
-- [ ] 12.3 Create remove member action
-- [ ] 12.4 Create role change dropdown
-- [ ] 12.5 Add settings/team link to navigation
+- [x] 12.1 Create `frontend/src/app/settings/team/page.tsx` with members list
+- [x] 12.2 Create invite member dialog/sheet
+- [x] 12.3 Create remove member action
+- [x] 12.4 Create role change dropdown
+- [x] 12.5 Add settings/team link to navigation
 
-## 13. Frontend: Organization Context
+## 13. Frontend: Context & Auth
 
-- [ ] 13.1 Update `frontend/src/lib/go/client.ts` to store organization_id
-- [ ] 13.2 Update `frontend/src/middleware.ts` to handle organization context
-- [ ] 13.3 Update user context/hook to expose organization info
+- [x] 13.1 Update `frontend/src/lib/go/client.ts` to store organization_id
+- [x] 13.2 Update `frontend/src/middleware.ts` to handle organization context
+- [x] 13.3 Update user context/hook to expose organization info
 
-## 14. Testing
+## 14. Testing & Validation
 
-- [x] 14.1 Write unit tests for `rbac/service.go` permission matrix with inheritance
-- [ ] 14.2 Write integration tests for organization CRUD
-- [ ] 14.3 Write integration tests for invite flow
+- [x] 14.1 Write unit tests for `PermissionMiddleware` and RBAC inheritance
+- [x] 14.2 Write integration tests for organization CRUD
+- [x] 14.3 Write integration tests for invite flow
 - [x] 14.4 Verify all existing tests pass after changes
 - [x] 14.5 Test RBAC middleware blocks unauthorized actions
