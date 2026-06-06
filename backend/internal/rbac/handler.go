@@ -63,7 +63,7 @@ func (h *Handler) assignRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.AssignRole(r.Context(), in.UserID, in.Role, in.PropertyID); err != nil {
+	if err := h.svc.AssignRole(r.Context(), in.UserID, in.Role, in.OrganizationID, in.BranchID); err != nil {
 		if errors.Is(err, ErrRoleAlreadyExists) {
 			httputil.Err(w, http.StatusConflict, "ROLE_EXISTS", "role já atribuída")
 			return
@@ -93,7 +93,7 @@ func (h *Handler) removeRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.RemoveRole(r.Context(), in.UserID, in.Role, in.PropertyID); err != nil {
+	if err := h.svc.RemoveRole(r.Context(), in.UserID, in.Role, in.OrganizationID, in.BranchID); err != nil {
 		if errors.Is(err, ErrRoleNotFound) {
 			httputil.Err(w, http.StatusNotFound, "ROLE_NOT_FOUND", "role não encontrada")
 			return

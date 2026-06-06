@@ -19,31 +19,32 @@ func newMockRepo() *mockRepo {
 	return &mockRepo{tickets: make(map[uuid.UUID]*support.Ticket)}
 }
 
-func (m *mockRepo) Create(_ context.Context, userID uuid.UUID, in support.CreateTicketInput) (*support.Ticket, error) {
+func (m *mockRepo) Create(_ context.Context, orgID, userID uuid.UUID, in support.CreateTicketInput) (*support.Ticket, error) {
 	t := &support.Ticket{
-		ID:        uuid.New(),
-		UserID:    userID,
-		Tipo:      in.Tipo,
-		Assunto:   in.Assunto,
-		Descricao: in.Descricao,
-		Status:    "open",
+		ID:             uuid.New(),
+		OrganizationID: orgID,
+		UserID:         userID,
+		Tipo:           in.Tipo,
+		Assunto:        in.Assunto,
+		Descricao:      in.Descricao,
+		Status:         "open",
 	}
 	m.tickets[t.ID] = t
 	return t, nil
 }
 
-func (m *mockRepo) GetByID(_ context.Context, id, userID uuid.UUID) (*support.Ticket, error) {
+func (m *mockRepo) GetByID(_ context.Context, id, orgID, userID uuid.UUID) (*support.Ticket, error) {
 	t, ok := m.tickets[id]
-	if !ok || t.UserID != userID {
+	if !ok || t.OrganizationID != orgID || t.UserID != userID {
 		return nil, apierr.ErrNotFound
 	}
 	return t, nil
 }
 
-func (m *mockRepo) ListByUser(_ context.Context, userID uuid.UUID) ([]support.Ticket, error) {
+func (m *mockRepo) ListByUser(_ context.Context, orgID, userID uuid.UUID) ([]support.Ticket, error) {
 	var list []support.Ticket
 	for _, t := range m.tickets {
-		if t.UserID == userID {
+		if t.OrganizationID == orgID && t.UserID == userID {
 			list = append(list, *t)
 		}
 	}
@@ -53,8 +54,9 @@ func (m *mockRepo) ListByUser(_ context.Context, userID uuid.UUID) ([]support.Ti
 func TestService_Create_Válido(t *testing.T) {
 	svc := support.NewService(newMockRepo())
 	userID := uuid.New()
+	orgID := uuid.New()
 
-	ticket, err := svc.Create(context.Background(), userID, support.CreateTicketInput{
+	ticket, err := svc.Create(context.Background(), orgID, userID, support.CreateTicketInput{
 		Tipo:      "BUG",
 		Assunto:   "Erro ao salvar",
 		Descricao: "Ao clicar em salvar, retorna 500",
@@ -62,6 +64,7 @@ func TestService_Create_Válido(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "BUG", ticket.Tipo)
 	assert.Equal(t, userID, ticket.UserID)
+	assert.Equal(t, orgID, ticket.OrganizationID)
 	assert.Equal(t, "open", ticket.Status)
 }
 
@@ -69,11 +72,12 @@ func TestService_Get_Encontrado(t *testing.T) {
 	mock := newMockRepo()
 	svc := support.NewService(mock)
 	userID := uuid.New()
+	orgID := uuid.New()
 
-	created, _ := svc.Create(context.Background(), userID, support.CreateTicketInput{
+	created, _ := svc.Create(context.Background(), orgID, userID, support.CreateTicketInput{
 		Tipo: "DOUBT", Assunto: "Como funciona?", Descricao: "Quero entender o fluxo",
 	})
-	found, err := svc.Get(context.Background(), created.ID, userID)
+	found, err := svc.Get(context.Background(), created.ID, orgID, userID)
 	require.NoError(t, err)
 	assert.Equal(t, created.ID, found.ID)
 }
@@ -82,23 +86,27 @@ func TestService_Get_OutroUsuário(t *testing.T) {
 	mock := newMockRepo()
 	svc := support.NewService(mock)
 	userID := uuid.New()
+	otherUserID := uuid.New()
+	orgID := uuid.New()
 
-	created, _ := svc.Create(context.Background(), userID, support.CreateTicketInput{
+	created, _ := svc.Create(context.Background(), orgID, userID, support.CreateTicketInput{
 		Tipo: "BUG", Assunto: "Erro", Descricao: "Descrição",
 	})
-	_, err := svc.Get(context.Background(), created.ID, uuid.New())
+	_, err := svc.Get(context.Background(), created.ID, orgID, otherUserID)
 	assert.Error(t, err)
 }
 
 func TestService_Get_NãoEncontrado(t *testing.T) {
 	svc := support.NewService(newMockRepo())
-	_, err := svc.Get(context.Background(), uuid.New(), uuid.New())
+	_, err := svc.Get(context.Background(), uuid.New(), uuid.New(), uuid.New())
 	assert.Error(t, err)
 }
 
 func TestService_ListByUser_Vazio(t *testing.T) {
 	svc := support.NewService(newMockRepo())
-	list, err := svc.ListByUser(context.Background(), uuid.New())
+	userID := uuid.New()
+	orgID := uuid.New()
+	list, err := svc.ListByUser(context.Background(), orgID, userID)
 	require.NoError(t, err)
 	assert.Empty(t, list)
 }
@@ -108,15 +116,16 @@ func TestService_ListByUser_SóDoMesmoUsuário(t *testing.T) {
 	svc := support.NewService(mock)
 	userA := uuid.New()
 	userB := uuid.New()
+	orgID := uuid.New()
 
-	svc.Create(context.Background(), userA, support.CreateTicketInput{Tipo: "BUG", Assunto: "A1", Descricao: "d"})
-	svc.Create(context.Background(), userA, support.CreateTicketInput{Tipo: "FEATURE", Assunto: "A2", Descricao: "d"})
-	svc.Create(context.Background(), userB, support.CreateTicketInput{Tipo: "DOUBT", Assunto: "B1", Descricao: "d"})
+	svc.Create(context.Background(), orgID, userA, support.CreateTicketInput{Tipo: "BUG", Assunto: "A1", Descricao: "d"})
+	svc.Create(context.Background(), orgID, userA, support.CreateTicketInput{Tipo: "FEATURE", Assunto: "A2", Descricao: "d"})
+	svc.Create(context.Background(), orgID, userB, support.CreateTicketInput{Tipo: "DOUBT", Assunto: "B1", Descricao: "d"})
 
-	listA, err := svc.ListByUser(context.Background(), userA)
+	listA, err := svc.ListByUser(context.Background(), orgID, userA)
 	require.NoError(t, err)
 	assert.Len(t, listA, 2)
 
-	listB, _ := svc.ListByUser(context.Background(), userB)
+	listB, _ := svc.ListByUser(context.Background(), orgID, userB)
 	assert.Len(t, listB, 1)
 }

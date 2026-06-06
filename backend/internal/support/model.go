@@ -9,6 +9,7 @@ import (
 
 type Ticket struct {
 	ID          uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
 	UserID      uuid.UUID `json:"user_id"`
 	Tipo        string   `json:"tipo"`
 	Assunto     string   `json:"assunto"`
@@ -25,7 +26,7 @@ type CreateTicketInput struct {
 }
 
 type Repository interface {
-	Create(ctx context.Context, userID uuid.UUID, in CreateTicketInput) (*Ticket, error)
-	GetByID(ctx context.Context, id, userID uuid.UUID) (*Ticket, error)
-	ListByUser(ctx context.Context, userID uuid.UUID) ([]Ticket, error)
+	Create(ctx context.Context, orgID, userID uuid.UUID, in CreateTicketInput) (*Ticket, error)
+	GetByID(ctx context.Context, id, orgID, userID uuid.UUID) (*Ticket, error)
+	ListByUser(ctx context.Context, orgID, userID uuid.UUID) ([]Ticket, error)
 }

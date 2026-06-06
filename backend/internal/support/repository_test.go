@@ -22,7 +22,7 @@ func testDB(t *testing.T) *db.DB {
 	require.NoError(t, err)
 	require.NoError(t, db.RunMigrations(url, "../../migrations"))
 	t.Cleanup(func() {
-		d.Pool.Exec(context.Background(), "TRUNCATE users CASCADE")
+		d.Pool.Exec(context.Background(), "TRUNCATE users RESTART IDENTITY CASCADE")
 		d.Close()
 	})
 	return d
@@ -42,9 +42,10 @@ func seedUser(t *testing.T, database *db.DB) uuid.UUID {
 func TestSupportRepository_Create(t *testing.T) {
 	database := testDB(t)
 	userID := seedUser(t, database)
+	orgID := userID // For testing, use userID as orgID
 	repo := support.NewRepository(database)
 
-	ticket, err := repo.Create(context.Background(), userID, support.CreateTicketInput{
+	ticket, err := repo.Create(context.Background(), orgID, userID, support.CreateTicketInput{
 		Tipo:      "BUG",
 		Assunto:   "Erro ao carregar página",
 		Descricao: "A página de imóveis não carrega após o login",
@@ -53,17 +54,19 @@ func TestSupportRepository_Create(t *testing.T) {
 	assert.Equal(t, "BUG", ticket.Tipo)
 	assert.Equal(t, "open", ticket.Status)
 	assert.Equal(t, userID, ticket.UserID)
+	assert.Equal(t, orgID, ticket.OrganizationID)
 }
 
 func TestSupportRepository_GetByID_Encontrado(t *testing.T) {
 	database := testDB(t)
 	userID := seedUser(t, database)
+	orgID := userID // For testing, use userID as orgID
 	repo := support.NewRepository(database)
 
-	created, _ := repo.Create(context.Background(), userID, support.CreateTicketInput{
+	created, _ := repo.Create(context.Background(), orgID, userID, support.CreateTicketInput{
 		Tipo: "DOUBT", Assunto: "Como funciona?", Descricao: "Quero entender o fluxo de pagamentos",
 	})
-	found, err := repo.GetByID(context.Background(), created.ID, userID)
+	found, err := repo.GetByID(context.Background(), created.ID, orgID, userID)
 	require.NoError(t, err)
 	assert.Equal(t, created.ID, found.ID)
 }
@@ -71,28 +74,30 @@ func TestSupportRepository_GetByID_Encontrado(t *testing.T) {
 func TestSupportRepository_GetByID_OutroUsuário(t *testing.T) {
 	database := testDB(t)
 	userID := seedUser(t, database)
+	orgID := userID // For testing, use userID as orgID
 	repo := support.NewRepository(database)
 
-	created, _ := repo.Create(context.Background(), userID, support.CreateTicketInput{
+	created, _ := repo.Create(context.Background(), orgID, userID, support.CreateTicketInput{
 		Tipo: "BUG", Assunto: "Erro", Descricao: "Descrição",
 	})
-	_, err := repo.GetByID(context.Background(), created.ID, uuid.New())
+	_, err := repo.GetByID(context.Background(), created.ID, orgID, uuid.New())
 	assert.Error(t, err)
 }
 
 func TestSupportRepository_ListByUser(t *testing.T) {
 	database := testDB(t)
 	userID := seedUser(t, database)
+	orgID := userID // For testing, use userID as orgID
 	repo := support.NewRepository(database)
 
-	repo.Create(context.Background(), userID, support.CreateTicketInput{
+	repo.Create(context.Background(), orgID, userID, support.CreateTicketInput{
 		Tipo: "BUG", Assunto: "Bug 1", Descricao: "Descrição 1",
 	})
-	repo.Create(context.Background(), userID, support.CreateTicketInput{
+	repo.Create(context.Background(), orgID, userID, support.CreateTicketInput{
 		Tipo: "FEATURE", Assunto: "Feature 1", Descricao: "Descrição 2",
 	})
 
-	list, err := repo.ListByUser(context.Background(), userID)
+	list, err := repo.ListByUser(context.Background(), orgID, userID)
 	require.NoError(t, err)
 	assert.Len(t, list, 2)
 }
@@ -100,13 +105,14 @@ func TestSupportRepository_ListByUser(t *testing.T) {
 func TestSupportRepository_ListByUser_OutroUsuárioNãoVê(t *testing.T) {
 	database := testDB(t)
 	userID := seedUser(t, database)
+	orgID := userID // For testing, use userID as orgID
 	repo := support.NewRepository(database)
 
-	repo.Create(context.Background(), userID, support.CreateTicketInput{
+	repo.Create(context.Background(), orgID, userID, support.CreateTicketInput{
 		Tipo: "BUG", Assunto: "Privado", Descricao: "Não deve aparecer para outros",
 	})
 
-	list, err := repo.ListByUser(context.Background(), uuid.New())
+	list, err := repo.ListByUser(context.Background(), orgID, uuid.New())
 	require.NoError(t, err)
 	assert.Empty(t, list)
 }

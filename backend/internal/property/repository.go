@@ -17,27 +17,27 @@ func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
 }
 
-func (r *pgRepository) Create(ctx context.Context, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error) {
+func (r *pgRepository) Create(ctx context.Context, userID, orgID uuid.UUID, in CreatePropertyInput) (*Property, error) {
 	var p Property
 	err := r.db.Pool.QueryRow(ctx,
-		`INSERT INTO properties (owner_id, type, name, address_line, city, state)
-		 VALUES ($1,$2,$3,$4,$5,$6)
-		 RETURNING id, owner_id, type, name, address_line, city, state, is_active, created_at, updated_at`,
-		ownerID, in.Type, in.Name, in.AddressLine, in.City, in.State,
-	).Scan(&p.ID, &p.OwnerID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+		`INSERT INTO properties (organization_id, owner_id, type, name, address_line, city, state)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7)
+		 RETURNING id, organization_id, type, name, address_line, city, state, is_active, created_at, updated_at`,
+		orgID, userID, in.Type, in.Name, in.AddressLine, in.City, in.State,
+	).Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("property.repo: create: %w", err)
 	}
 	return &p, nil
 }
 
-func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Property, error) {
+func (r *pgRepository) GetByID(ctx context.Context, id, orgID uuid.UUID) (*Property, error) {
 	var p Property
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT id, owner_id, type, name, address_line, city, state, is_active, created_at, updated_at
-		 FROM properties WHERE id=$1 AND owner_id=$2 AND is_active=true`,
-		id, ownerID,
-	).Scan(&p.ID, &p.OwnerID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+		`SELECT id, organization_id, type, name, address_line, city, state, is_active, created_at, updated_at
+		 FROM properties WHERE id=$1 AND organization_id=$2 AND is_active=true`,
+		id, orgID,
+	).Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, apierr.ErrNotFound
@@ -47,11 +47,11 @@ func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Pro
 	return &p, nil
 }
 
-func (r *pgRepository) List(ctx context.Context, ownerID uuid.UUID) ([]Property, error) {
+func (r *pgRepository) List(ctx context.Context, orgID uuid.UUID) ([]Property, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		`SELECT id, owner_id, type, name, address_line, city, state, is_active, created_at, updated_at
-		 FROM properties WHERE owner_id=$1 AND is_active=true ORDER BY created_at DESC`,
-		ownerID,
+		`SELECT id, organization_id, type, name, address_line, city, state, is_active, created_at, updated_at
+		 FROM properties WHERE organization_id=$1 AND is_active=true ORDER BY created_at DESC`,
+		orgID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("property.repo: list: %w", err)
@@ -60,7 +60,7 @@ func (r *pgRepository) List(ctx context.Context, ownerID uuid.UUID) ([]Property,
 	var list []Property
 	for rows.Next() {
 		var p Property
-		if err := rows.Scan(&p.ID, &p.OwnerID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("property.repo: list scan: %w", err)
 		}
 		list = append(list, p)
@@ -71,24 +71,24 @@ func (r *pgRepository) List(ctx context.Context, ownerID uuid.UUID) ([]Property,
 	return list, nil
 }
 
-func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error) {
+func (r *pgRepository) Update(ctx context.Context, id, orgID uuid.UUID, in CreatePropertyInput) (*Property, error) {
 	var p Property
 	err := r.db.Pool.QueryRow(ctx,
 		`UPDATE properties SET type=$1, name=$2, address_line=$3, city=$4, state=$5, updated_at=NOW()
-		 WHERE id=$6 AND owner_id=$7 AND is_active=true
-		 RETURNING id, owner_id, type, name, address_line, city, state, is_active, created_at, updated_at`,
-		in.Type, in.Name, in.AddressLine, in.City, in.State, id, ownerID,
-	).Scan(&p.ID, &p.OwnerID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+		 WHERE id=$6 AND organization_id=$7 AND is_active=true
+		 RETURNING id, organization_id, type, name, address_line, city, state, is_active, created_at, updated_at`,
+		in.Type, in.Name, in.AddressLine, in.City, in.State, id, orgID,
+	).Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("property.repo: update: %w", err)
 	}
 	return &p, nil
 }
 
-func (r *pgRepository) Delete(ctx context.Context, id, ownerID uuid.UUID) error {
+func (r *pgRepository) Delete(ctx context.Context, id, orgID uuid.UUID) error {
 	tag, err := r.db.Pool.Exec(ctx,
-		`UPDATE properties SET is_active=false, updated_at=NOW() WHERE id=$1 AND owner_id=$2 AND is_active=true`,
-		id, ownerID,
+		`UPDATE properties SET is_active=false, updated_at=NOW() WHERE id=$1 AND organization_id=$2 AND is_active=true`,
+		id, orgID,
 	)
 	if err != nil {
 		return fmt.Errorf("property.repo: delete: %w", err)
@@ -112,14 +112,14 @@ func (r *pgRepository) CreateUnit(ctx context.Context, propertyID uuid.UUID, in 
 	return &u, nil
 }
 
-func (r *pgRepository) GetUnit(ctx context.Context, id, ownerID uuid.UUID) (*Unit, error) {
+func (r *pgRepository) GetUnit(ctx context.Context, id, orgID uuid.UUID) (*Unit, error) {
 	var u Unit
 	err := r.db.Pool.QueryRow(ctx,
 		`SELECT u.id, u.property_id, u.label, u.floor, u.notes, u.is_active, u.created_at, u.updated_at
 		 FROM units u
 		 JOIN properties p ON p.id = u.property_id
-		 WHERE u.id=$1 AND p.owner_id=$2 AND u.is_active=true AND p.is_active=true`,
-		id, ownerID,
+		 WHERE u.id=$1 AND p.organization_id=$2 AND u.is_active=true AND p.is_active=true`,
+		id, orgID,
 	).Scan(&u.ID, &u.PropertyID, &u.Label, &u.Floor, &u.Notes, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -154,14 +154,14 @@ func (r *pgRepository) ListUnits(ctx context.Context, propertyID uuid.UUID) ([]U
 	return list, nil
 }
 
-func (r *pgRepository) UpdateUnit(ctx context.Context, id, ownerID uuid.UUID, in CreateUnitInput) (*Unit, error) {
+func (r *pgRepository) UpdateUnit(ctx context.Context, id, orgID uuid.UUID, in CreateUnitInput) (*Unit, error) {
 	var u Unit
 	err := r.db.Pool.QueryRow(ctx,
 		`UPDATE units SET label=$1, floor=$2, notes=$3, updated_at=NOW()
 		 WHERE id=$4 AND is_active=true
-		   AND property_id IN (SELECT id FROM properties WHERE owner_id=$5 AND is_active=true)
+		   AND property_id IN (SELECT id FROM properties WHERE organization_id=$5 AND is_active=true)
 		 RETURNING id, property_id, label, floor, notes, is_active, created_at, updated_at`,
-		in.Label, in.Floor, in.Notes, id, ownerID,
+		in.Label, in.Floor, in.Notes, id, orgID,
 	).Scan(&u.ID, &u.PropertyID, &u.Label, &u.Floor, &u.Notes, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -172,12 +172,12 @@ func (r *pgRepository) UpdateUnit(ctx context.Context, id, ownerID uuid.UUID, in
 	return &u, nil
 }
 
-func (r *pgRepository) DeleteUnit(ctx context.Context, id, ownerID uuid.UUID) error {
+func (r *pgRepository) DeleteUnit(ctx context.Context, id, orgID uuid.UUID) error {
 	tag, err := r.db.Pool.Exec(ctx,
 		`UPDATE units SET is_active=false, updated_at=NOW()
 		 WHERE id=$1 AND is_active=true
-		   AND property_id IN (SELECT id FROM properties WHERE owner_id=$2 AND is_active=true)`,
-		id, ownerID,
+		   AND property_id IN (SELECT id FROM properties WHERE organization_id=$2 AND is_active=true)`,
+		id, orgID,
 	)
 	if err != nil {
 		return fmt.Errorf("property.repo: delete unit: %w", err)
@@ -215,16 +215,16 @@ func (r *pgRepository) ListUnitsByPropertyIDs(ctx context.Context, propertyIDs [
 	return list, nil
 }
 
-func (r *pgRepository) GetByField(ctx context.Context, ownerID uuid.UUID, field string, value string) (*Property, error) {
+func (r *pgRepository) GetByField(ctx context.Context, orgID uuid.UUID, field string, value string) (*Property, error) {
 	if field != "name" {
 		return nil, fmt.Errorf("property.repo: unsupported field %s", field)
 	}
 	var p Property
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT id, owner_id, type, name, address_line, city, state, is_active, created_at, updated_at
-		 FROM properties WHERE owner_id=$1 AND LOWER(name)=LOWER($2) AND is_active=true`,
-		ownerID, value,
-	).Scan(&p.ID, &p.OwnerID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+		`SELECT id, organization_id, type, name, address_line, city, state, is_active, created_at, updated_at
+		 FROM properties WHERE organization_id=$1 AND LOWER(name)=LOWER($2) AND is_active=true`,
+		orgID, value,
+	).Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil

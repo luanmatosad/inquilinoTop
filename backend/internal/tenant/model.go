@@ -8,16 +8,16 @@ import (
 )
 
 type Tenant struct {
-	ID         uuid.UUID `json:"id"`
-	OwnerID    uuid.UUID `json:"owner_id"`
-	Name       string    `json:"name"`
-	Email      *string   `json:"email,omitempty"`
-	Phone      *string   `json:"phone,omitempty"`
-	Document   *string   `json:"document,omitempty"`
-	PersonType string    `json:"person_type"`
-	IsActive   bool      `json:"is_active"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID  uuid.UUID `json:"organization_id"`
+	Name           string    `json:"name"`
+	Email          *string   `json:"email,omitempty"`
+	Phone          *string   `json:"phone,omitempty"`
+	Document       *string   `json:"document,omitempty"`
+	PersonType     string    `json:"person_type"`
+	IsActive       bool      `json:"is_active"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type CreateTenantInput struct {
@@ -29,10 +29,10 @@ type CreateTenantInput struct {
 }
 
 type Repository interface {
-	Create(ctx context.Context, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error)
-	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Tenant, error)
-	List(ctx context.Context, ownerID uuid.UUID) ([]Tenant, error)
-	Update(ctx context.Context, id, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error)
-	Delete(ctx context.Context, id, ownerID uuid.UUID) error
-	GetByField(ctx context.Context, ownerID uuid.UUID, field string, value string) (*Tenant, error)
+	Create(ctx context.Context, userID, orgID uuid.UUID, in CreateTenantInput) (*Tenant, error)
+	GetByID(ctx context.Context, id, orgID uuid.UUID) (*Tenant, error)
+	List(ctx context.Context, orgID uuid.UUID) ([]Tenant, error)
+	Update(ctx context.Context, id, orgID uuid.UUID, in CreateTenantInput) (*Tenant, error)
+	Delete(ctx context.Context, id, orgID uuid.UUID) error
+	GetByField(ctx context.Context, orgID uuid.UUID, field string, value string) (*Tenant, error)
 }

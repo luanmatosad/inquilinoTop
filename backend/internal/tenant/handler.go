@@ -21,12 +21,15 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/tenants", h.list)
-	r.With(authMW).Post("/tenants", h.create)
-	r.With(authMW).Get("/tenants/{id}", h.get)
-	r.With(authMW).Put("/tenants/{id}", h.update)
-	r.With(authMW).Delete("/tenants/{id}", h.delete)
+func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler, readMw func(http.Handler) http.Handler, writeMw func(http.Handler) http.Handler) {
+	r.Group(func(r chi.Router) {
+		r.Use(authMW)
+		r.With(readMw).Get("/tenants", h.list)
+		r.With(writeMw).Post("/tenants", h.create)
+		r.With(writeMw).Put("/tenants/{id}", h.update)
+		r.With(writeMw).Delete("/tenants/{id}", h.delete)
+		r.With(readMw).Get("/tenants/{id}", h.get)
+	})
 }
 
 // @Summary Lista inquilinos
@@ -36,8 +39,12 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 // @Success 200 {object} map[string]interface{}
 // @Router /tenants [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
-	list, err := h.svc.List(r.Context(), ownerID)
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	list, err := h.svc.List(r.Context(), orgID)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
@@ -57,17 +64,16 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 // @Success 201 {object} map[string]interface{}
 // @Router /tenants [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
 	var in CreateTenantInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", err.Error())
 		return
 	}
-	if err := validator.Validate(in); err != nil {
-		httputil.ValidationErr(w, err)
-		return
-	}
-	t, err := h.svc.Create(r.Context(), ownerID, in)
+
+	userID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+
+	t, err := h.svc.Create(r.Context(), userID, orgID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "CREATE_FAILED", err.Error())
 		return
@@ -83,13 +89,17 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /tenants/{id} [get]
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	t, err := h.svc.Get(r.Context(), id, ownerID)
+	t, err := h.svc.Get(r.Context(), id, orgID)
 	if err != nil {
 		if errors.Is(err, apierr.ErrNotFound) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "inquilino não encontrado")
@@ -111,7 +121,11 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /tenants/{id} [put]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
@@ -126,7 +140,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		httputil.ValidationErr(w, err)
 		return
 	}
-	t, err := h.svc.Update(r.Context(), id, ownerID, in)
+	t, err := h.svc.Update(r.Context(), id, orgID, in)
 	if err != nil {
 		if errors.Is(err, apierr.ErrNotFound) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "inquilino não encontrado")
@@ -146,13 +160,17 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /tenants/{id} [delete]
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	if err := h.svc.Delete(r.Context(), id, ownerID); err != nil {
+	if err := h.svc.Delete(r.Context(), id, orgID); err != nil {
 		if errors.Is(err, apierr.ErrNotFound) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "inquilino não encontrado")
 			return

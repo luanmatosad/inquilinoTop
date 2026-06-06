@@ -17,17 +17,21 @@ import (
 func noopAuthMWWithOwnerID(ownerID uuid.UUID) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := auth.WithOwnerID(r.Context(), ownerID)
+			ctx := auth.WithOwnerIDOrgID(r.Context(), ownerID, ownerID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func noopWriteMw(next http.Handler) http.Handler {
+	return next
 }
 
 func TestHandler_AnnualReport_YearInválido(t *testing.T) {
 	agg := &mockAggRepo{ownerName: "João"}
 	h := fiscal.NewHandler(fiscal.NewService(agg))
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMWWithOwnerID(uuid.New()))
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw)
 
 	req := httptest.NewRequest("GET", "/fiscal/annual-report?year=xx", nil)
 	w := httptest.NewRecorder()
@@ -40,7 +44,7 @@ func TestHandler_AnnualReport_YearObrigatório(t *testing.T) {
 	agg := &mockAggRepo{ownerName: "João"}
 	h := fiscal.NewHandler(fiscal.NewService(agg))
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMWWithOwnerID(uuid.New()))
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw)
 
 	req := httptest.NewRequest("GET", "/fiscal/annual-report", nil)
 	w := httptest.NewRecorder()
@@ -53,7 +57,7 @@ func TestHandler_AnnualReport_YearForaDoRange(t *testing.T) {
 	agg := &mockAggRepo{ownerName: "João"}
 	h := fiscal.NewHandler(fiscal.NewService(agg))
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMWWithOwnerID(uuid.New()))
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw)
 
 	req := httptest.NewRequest("GET", "/fiscal/annual-report?year=1800", nil)
 	w := httptest.NewRecorder()
@@ -66,7 +70,7 @@ func TestHandler_AnnualReport_SemAutenticação(t *testing.T) {
 	agg := &mockAggRepo{ownerName: "João"}
 	h := fiscal.NewHandler(fiscal.NewService(agg))
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMWWithOwnerID(uuid.Nil))
+	h.Register(r, noopAuthMWWithOwnerID(uuid.Nil), noopWriteMw)
 
 	req := httptest.NewRequest("GET", "/fiscal/annual-report?year=2026", nil)
 	w := httptest.NewRecorder()
@@ -103,7 +107,7 @@ func TestHandler_AnnualReport_Sucesso(t *testing.T) {
 
 	h := fiscal.NewHandler(fiscal.NewService(agg))
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMWWithOwnerID(ownerID))
+	h.Register(r, noopAuthMWWithOwnerID(ownerID), noopWriteMw)
 
 	req := httptest.NewRequest("GET", "/fiscal/annual-report?year=2026", nil)
 	w := httptest.NewRecorder()

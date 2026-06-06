@@ -10,7 +10,10 @@ import (
 )
 
 type Claims struct {
-	OwnerID uuid.UUID `json:"owner_id"`
+	OwnerID         uuid.UUID  `json:"owner_id"`
+	OrganizationID  uuid.UUID  `json:"organization_id"`
+	Role            string     `json:"role,omitempty"`
+	BranchID        *uuid.UUID `json:"branch_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -27,6 +30,31 @@ func NewJWTService(priv *rsa.PrivateKey, pub *rsa.PublicKey, expiry time.Duratio
 func (s *JWTService) Sign(ownerID uuid.UUID) (string, error) {
 	claims := Claims{
 		OwnerID: ownerID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.expiry)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	signed, err := token.SignedString(s.privateKey)
+	if err != nil {
+		return "", fmt.Errorf("jwt: sign: %w", err)
+	}
+	return signed, nil
+}
+
+func (s *JWTService) SignWithOrg(ownerID, orgID uuid.UUID, role string, branchID *uuid.UUID) (string, error) {
+	if ownerID == uuid.Nil {
+		return "", fmt.Errorf("jwt: ownerID cannot be nil")
+	}
+	if orgID == uuid.Nil {
+		return "", fmt.Errorf("jwt: orgID cannot be nil")
+	}
+	claims := Claims{
+		OwnerID:        ownerID,
+		OrganizationID: orgID,
+		Role:           role,
+		BranchID:       branchID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.expiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

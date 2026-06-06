@@ -9,6 +9,7 @@ import (
 
 type AuditLog struct {
 	ID          uuid.UUID   `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
 	OwnerID     uuid.UUID   `json:"owner_id"`
 	UserID      *uuid.UUID `json:"user_id,omitempty"`
 	EventType   string     `json:"event_type"`
@@ -43,6 +44,6 @@ type CreateInput struct {
 }
 
 type Repository interface {
-	Create(ctx context.Context, ownerID uuid.UUID, in CreateInput) (*AuditLog, error)
-	List(ctx context.Context, ownerID uuid.UUID, from, to *time.Time, eventType *string) ([]AuditLog, error)
+	Create(ctx context.Context, organizationID, ownerID uuid.UUID, in CreateInput) (*AuditLog, error)
+	List(ctx context.Context, organizationID, ownerID uuid.UUID, from, to *time.Time, eventType *string) ([]AuditLog, error)
 }

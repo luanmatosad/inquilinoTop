@@ -1,0 +1,24 @@
+/* UI Kit tokens — re-exports colors_and_type.css from the
+   root of the design system. Keeps the kit self-contained
+   but the source of truth is one level up. */
+@import url("./colors_and_type.css");
+
+/* Kit-specific defaults */
+*,*::before,*::after{box-sizing:border-box;}
+html,body,#root{height:100%;margin:0;}
+body{
+  font-family:var(--font-sans);
+  background:var(--surface);
+  color:var(--on-surface);
+  font-size:14px;
+}
+button{font-family:inherit;}
+
+/* Scrollbar polish */
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-thumb{background:var(--color-neutral-300);border-radius:6px;}
+::-webkit-scrollbar-thumb:hover{background:var(--color-neutral-400);}
+::-webkit-scrollbar-track{background:transparent;}
+
+/* Focus rings unified */
+:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(0,87,190,.25);border-color:var(--primary);}

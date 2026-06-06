@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/tenant"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,14 +22,14 @@ func newMockTenantRepo() *mockTenantRepo {
 	return &mockTenantRepo{tenants: map[uuid.UUID]*tenant.Tenant{}}
 }
 
-func (m *mockTenantRepo) Create(_ context.Context, ownerID uuid.UUID, in tenant.CreateTenantInput) (*tenant.Tenant, error) {
+func (m *mockTenantRepo) Create(_ context.Context, userID, orgID uuid.UUID, in tenant.CreateTenantInput) (*tenant.Tenant, error) {
 	pt := "PF"
 	if in.PersonType != nil {
 		pt = *in.PersonType
 	}
 	t := &tenant.Tenant{
-		ID:         uuid.New(),
-		OwnerID:    ownerID,
+		ID:           uuid.New(),
+		OrganizationID: orgID,
 		Name:       in.Name,
 		Email:      in.Email,
 		Phone:      in.Phone,
@@ -42,27 +43,27 @@ func (m *mockTenantRepo) Create(_ context.Context, ownerID uuid.UUID, in tenant.
 	return t, nil
 }
 
-func (m *mockTenantRepo) GetByID(_ context.Context, id, ownerID uuid.UUID) (*tenant.Tenant, error) {
+func (m *mockTenantRepo) GetByID(_ context.Context, id, orgID uuid.UUID) (*tenant.Tenant, error) {
 	t, ok := m.tenants[id]
-	if !ok || t.OwnerID != ownerID {
-		return nil, errors.New("not found")
+	if !ok || t.OrganizationID != orgID {
+		return nil, apierr.ErrNotFound
 	}
 	return t, nil
 }
 
-func (m *mockTenantRepo) List(_ context.Context, ownerID uuid.UUID) ([]tenant.Tenant, error) {
+func (m *mockTenantRepo) List(_ context.Context, orgID uuid.UUID) ([]tenant.Tenant, error) {
 	var list []tenant.Tenant
 	for _, t := range m.tenants {
-		if t.OwnerID == ownerID && t.IsActive {
+		if t.OrganizationID == orgID && t.IsActive {
 			list = append(list, *t)
 		}
 	}
 	return list, nil
 }
 
-func (m *mockTenantRepo) Update(_ context.Context, id, ownerID uuid.UUID, in tenant.CreateTenantInput) (*tenant.Tenant, error) {
+func (m *mockTenantRepo) Update(_ context.Context, id, orgID uuid.UUID, in tenant.CreateTenantInput) (*tenant.Tenant, error) {
 	t, ok := m.tenants[id]
-	if !ok || t.OwnerID != ownerID {
+	if !ok || t.OrganizationID != orgID {
 		return nil, errors.New("not found")
 	}
 	pt := t.PersonType
@@ -78,18 +79,18 @@ func (m *mockTenantRepo) Update(_ context.Context, id, ownerID uuid.UUID, in ten
 	return t, nil
 }
 
-func (m *mockTenantRepo) Delete(_ context.Context, id, ownerID uuid.UUID) error {
+func (m *mockTenantRepo) Delete(_ context.Context, id, orgID uuid.UUID) error {
 	t, ok := m.tenants[id]
-	if !ok || t.OwnerID != ownerID {
-		return errors.New("not found")
+	if !ok || t.OrganizationID != orgID {
+		return apierr.ErrNotFound
 	}
 	t.IsActive = false
 	return nil
 }
 
-func (m *mockTenantRepo) GetByField(_ context.Context, ownerID uuid.UUID, field string, value string) (*tenant.Tenant, error) {
+func (m *mockTenantRepo) GetByField(_ context.Context, orgID uuid.UUID, field string, value string) (*tenant.Tenant, error) {
 	for _, t := range m.tenants {
-		if t.OwnerID == ownerID && t.IsActive {
+		if t.OrganizationID == orgID && t.IsActive {
 			if field == "document" && t.Document != nil && *t.Document == value {
 				return t, nil
 			}
@@ -105,7 +106,7 @@ func (m *mockTenantRepo) GetByField(_ context.Context, ownerID uuid.UUID, field 
 
 func TestService_Create_PersonTypeObrigatório(t *testing.T) {
 	svc := tenant.NewService(newMockTenantRepo())
-	_, err := svc.Create(context.Background(), uuid.New(), tenant.CreateTenantInput{
+	_, err := svc.Create(context.Background(), uuid.New(), uuid.New(), tenant.CreateTenantInput{
 		Name: "Foo",
 	})
 	require.Error(t, err)
@@ -115,7 +116,7 @@ func TestService_Create_PersonTypeObrigatório(t *testing.T) {
 func TestService_Create_PersonTypeInválido(t *testing.T) {
 	svc := tenant.NewService(newMockTenantRepo())
 	invalid := "XX"
-	_, err := svc.Create(context.Background(), uuid.New(), tenant.CreateTenantInput{
+	_, err := svc.Create(context.Background(), uuid.New(), uuid.New(), tenant.CreateTenantInput{
 		Name:       "Foo",
 		PersonType: &invalid,
 	})
@@ -126,7 +127,7 @@ func TestService_Create_PersonTypeInválido(t *testing.T) {
 func TestService_Create_PersonTypePF(t *testing.T) {
 	svc := tenant.NewService(newMockTenantRepo())
 	pf := "PF"
-	out, err := svc.Create(context.Background(), uuid.New(), tenant.CreateTenantInput{
+	out, err := svc.Create(context.Background(), uuid.New(), uuid.New(), tenant.CreateTenantInput{
 		Name:       "Foo",
 		PersonType: &pf,
 	})
@@ -137,12 +138,12 @@ func TestService_Create_PersonTypePF(t *testing.T) {
 func TestService_Create_NameObrigatório(t *testing.T) {
 	svc := tenant.NewService(newMockTenantRepo())
 	pf := "PF"
-	_, err := svc.Create(context.Background(), uuid.New(), tenant.CreateTenantInput{
+	_, err := svc.Create(context.Background(), uuid.New(), uuid.New(), tenant.CreateTenantInput{
 		Name:       "",
 		PersonType: &pf,
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "name")
+	assert.Contains(t, err.Error(), "nome")
 }
 
 func TestService_Get_Encontrado(t *testing.T) {
@@ -151,7 +152,7 @@ func TestService_Get_Encontrado(t *testing.T) {
 	ownerID := uuid.New()
 	pf := "PF"
 
-	t1, _ := svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{
+	t1, _ := svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{
 		Name:       "Foo",
 		PersonType: &pf,
 	})
@@ -172,8 +173,8 @@ func TestService_List(t *testing.T) {
 	ownerID := uuid.New()
 	pf := "PF"
 
-	svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "A", PersonType: &pf})
-	svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "B", PersonType: &pf})
+	svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{Name: "A", PersonType: &pf})
+	svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{Name: "B", PersonType: &pf})
 
 	list, err := svc.List(context.Background(), ownerID)
 	require.NoError(t, err)
@@ -186,7 +187,7 @@ func TestService_Update(t *testing.T) {
 	ownerID := uuid.New()
 	pf := "PF"
 
-	t1, _ := svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "Foo", PersonType: &pf})
+	t1, _ := svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{Name: "Foo", PersonType: &pf})
 	updated, err := svc.Update(context.Background(), t1.ID, ownerID, tenant.CreateTenantInput{Name: "Bar", PersonType: &pf})
 	require.NoError(t, err)
 	assert.Equal(t, "Bar", updated.Name)
@@ -205,7 +206,7 @@ func TestService_Delete(t *testing.T) {
 	ownerID := uuid.New()
 	pf := "PF"
 
-	t1, _ := svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "Foo", PersonType: &pf})
+	t1, _ := svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{Name: "Foo", PersonType: &pf})
 	err := svc.Delete(context.Background(), t1.ID, ownerID)
 	require.NoError(t, err)
 

@@ -9,14 +9,14 @@ import (
 
 type User struct {
 	ID               uuid.UUID  `json:"id"`
-	Email            string    `json:"email"`
-	PasswordHash    string    `json:"-"`
-	Plan             string    `json:"plan"`
-	TotpSecret      string    `json:"totp_secret,omitempty"`
-	BackupCodes     []string  `json:"backup_codes,omitempty"`
-	TwoFactorEnabled bool    `json:"two_factor_enabled"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	Email            string     `json:"email"`
+	PasswordHash     string     `json:"-"`
+	Plan             string     `json:"plan"`
+	TotpSecret       string     `json:"totp_secret,omitempty"`
+	BackupCodes      []string   `json:"backup_codes,omitempty"`
+	TwoFactorEnabled bool       `json:"two_factor_enabled"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 type RefreshToken struct {
@@ -95,8 +95,8 @@ type Repository interface {
 }
 
 type TwoFactorSetup struct {
-	Secret       string `json:"secret"`
-	QRCodeURL    string `json:"qr_code_url"`
+	Secret      string   `json:"secret"`
+	QRCodeURL   string   `json:"qr_code_url"`
 	BackupCodes []string `json:"backup_codes"`
 }
 

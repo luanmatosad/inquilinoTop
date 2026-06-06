@@ -16,11 +16,13 @@ import (
 )
 
 type AuthResult struct {
-	User               *User  `json:"user"`
-	AccessToken       string `json:"access_token"`
-	RefreshToken      string `json:"refresh_token"`
-	TwoFactorRequired bool   `json:"two_factor_required,omitempty"`
-	TempToken         string `json:"temp_token,omitempty"`
+	User                *User   `json:"user"`
+	AccessToken         string  `json:"access_token"`
+	RefreshToken        string  `json:"refresh_token"`
+	TwoFactorRequired   bool    `json:"two_factor_required,omitempty"`
+	TempToken           string  `json:"temp_token,omitempty"`
+	OrganizationID      string  `json:"organization_id,omitempty"`
+	Role                string  `json:"role,omitempty"`
 }
 
 func (a *AuthResult) GetUserID() uuid.UUID {
@@ -29,7 +31,8 @@ func (a *AuthResult) GetUserID() uuid.UUID {
 
 type Service struct {
 	repo        Repository
-	jwtSvc     *auth.JWTService
+	orgRepo     OrgMembershipRepository
+	jwtSvc      *auth.JWTService
 	auditLogger AuditLogger
 }
 
@@ -39,6 +42,10 @@ func NewService(repo Repository, jwtSvc *auth.JWTService) *Service {
 
 func NewServiceWithAudit(repo Repository, jwtSvc *auth.JWTService, logger AuditLogger) *Service {
 	return &Service{repo: repo, jwtSvc: jwtSvc, auditLogger: logger}
+}
+
+func NewServiceWithOrgAndAudit(repo Repository, orgRepo OrgMembershipRepository, jwtSvc *auth.JWTService, logger AuditLogger) *Service {
+	return &Service{repo: repo, orgRepo: orgRepo, jwtSvc: jwtSvc, auditLogger: logger}
 }
 
 func (s *Service) GetProfile(ctx context.Context, userID uuid.UUID) (*UserProfile, error) {
@@ -168,7 +175,31 @@ func (s *Service) Logout(ctx context.Context, rawRefreshToken string) error {
 }
 
 func (s *Service) issueTokens(ctx context.Context, user *User) (*AuthResult, error) {
-	accessToken, err := s.jwtSvc.Sign(user.ID)
+	var accessToken string
+	var err error
+
+	if s.orgRepo != nil {
+		membership, orgErr := s.orgRepo.GetByUserID(ctx, user.ID)
+		if orgErr == nil && membership != nil {
+			accessToken, err = s.jwtSvc.SignWithOrg(user.ID, membership.OrganizationID, membership.Role, membership.BranchID)
+			if err == nil {
+				raw := uuid.New().String()
+				_, err = s.repo.CreateRefreshToken(ctx, user.ID, tokenHash(raw), time.Now().Add(30*24*time.Hour))
+				if err != nil {
+					return nil, fmt.Errorf("identity.svc: create refresh token: %w", err)
+				}
+				return &AuthResult{
+					User:           user,
+					AccessToken:    accessToken,
+					RefreshToken:   raw,
+					OrganizationID: membership.OrganizationID.String(),
+					Role:           membership.Role,
+				}, nil
+			}
+		}
+	}
+
+	accessToken, err = s.jwtSvc.Sign(user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("identity.svc: sign access token: %w", err)
 	}

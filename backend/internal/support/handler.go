@@ -21,10 +21,10 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/tickets", h.list)
-	r.With(authMW).Post("/tickets", h.create)
-	r.With(authMW).Get("/tickets/{id}", h.getByID)
+func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler, readMw func(http.Handler) http.Handler, writeMw func(http.Handler) http.Handler) {
+	r.With(authMW, readMw).Get("/tickets", h.list)
+	r.With(authMW, writeMw).Post("/tickets", h.create)
+	r.With(authMW, readMw).Get("/tickets/{id}", h.getByID)
 }
 
 // @Summary Lista tickets do usuário
@@ -35,7 +35,8 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 // @Router /tickets [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	userID := auth.OwnerIDFromCtx(r.Context())
-	tickets, err := h.svc.ListByUser(r.Context(), userID)
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	tickets, err := h.svc.ListByUser(r.Context(), orgID, userID)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
@@ -56,6 +57,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 // @Router /tickets [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	userID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 	var in CreateTicketInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
@@ -65,7 +67,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		httputil.ValidationErr(w, err)
 		return
 	}
-	ticket, err := h.svc.Create(r.Context(), userID, in)
+	ticket, err := h.svc.Create(r.Context(), orgID, userID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "CREATE_FAILED", err.Error())
 		return
@@ -82,12 +84,13 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 // @Router /tickets/{id} [get]
 func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) {
 	userID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	ticket, err := h.svc.Get(r.Context(), id, userID)
+	ticket, err := h.svc.Get(r.Context(), id, orgID, userID)
 	if err != nil {
 		if errors.Is(err, apierr.ErrNotFound) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "ticket não encontrado")

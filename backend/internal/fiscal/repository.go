@@ -47,14 +47,14 @@ func NewAggregateRepository(database *db.DB) AggregateRepository {
 	return &pgAggregateRepository{db: database}
 }
 
-func (r *pgAggregateRepository) ListPaidPaymentsForYear(ctx context.Context, ownerID uuid.UUID, year int) ([]PaidPayment, error) {
+func (r *pgAggregateRepository) ListPaidPaymentsForYear(ctx context.Context, orgID, ownerID uuid.UUID, year int) ([]PaidPayment, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT id, lease_id, competency, gross_amount, late_fee_amount, interest_amount, irrf_amount,
 		        COALESCE(net_amount, gross_amount + late_fee_amount + interest_amount - irrf_amount), type
 		 FROM payments
-		 WHERE owner_id=$1 AND status='PAID' AND competency IS NOT NULL
-		   AND substring(competency FROM 1 FOR 4)=$2`,
-		ownerID, fmt.Sprintf("%04d", year),
+		 WHERE organization_id=$1 AND owner_id=$2 AND status='PAID' AND competency IS NOT NULL
+		   AND substring(competency FROM 1 FOR 4)=$3`,
+		orgID, ownerID, fmt.Sprintf("%04d", year),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("fiscal.agg.repo: paid payments: %w", err)
@@ -72,13 +72,13 @@ func (r *pgAggregateRepository) ListPaidPaymentsForYear(ctx context.Context, own
 	return list, rows.Err()
 }
 
-func (r *pgAggregateRepository) ListTaxExpensesPaidInYear(ctx context.Context, ownerID uuid.UUID, year int) ([]TaxExpense, error) {
+func (r *pgAggregateRepository) ListTaxExpensesPaidInYear(ctx context.Context, orgID, ownerID uuid.UUID, year int) ([]TaxExpense, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT unit_id, amount
 		 FROM expenses
-		 WHERE owner_id=$1 AND category='TAX' AND is_active=true
-		   AND EXTRACT(YEAR FROM due_date) = $2`,
-		ownerID, year,
+		 WHERE organization_id=$1 AND owner_id=$2 AND category='TAX' AND is_active=true
+		   AND EXTRACT(YEAR FROM due_date) = $3`,
+		orgID, ownerID, year,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("fiscal.agg.repo: tax expenses: %w", err)
@@ -96,7 +96,7 @@ func (r *pgAggregateRepository) ListTaxExpensesPaidInYear(ctx context.Context, o
 	return list, rows.Err()
 }
 
-func (r *pgAggregateRepository) ListOwnerLeases(ctx context.Context, ownerID uuid.UUID) ([]LeaseSummary, error) {
+func (r *pgAggregateRepository) ListOwnerLeases(ctx context.Context, orgID, ownerID uuid.UUID) ([]LeaseSummary, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT l.id, l.tenant_id, t.name, t.document, t.person_type,
 		        u.id, u.label, p.address_line
@@ -104,8 +104,8 @@ func (r *pgAggregateRepository) ListOwnerLeases(ctx context.Context, ownerID uui
 		 JOIN tenants t ON t.id = l.tenant_id
 		 JOIN units u ON u.id = l.unit_id
 		 JOIN properties p ON p.id = u.property_id
-		 WHERE l.owner_id=$1`,
-		ownerID,
+		 WHERE l.organization_id=$1 AND l.owner_id=$2`,
+		orgID, ownerID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("fiscal.agg.repo: owner leases: %w", err)
@@ -123,10 +123,10 @@ func (r *pgAggregateRepository) ListOwnerLeases(ctx context.Context, ownerID uui
 	return list, rows.Err()
 }
 
-func (r *pgAggregateRepository) GetOwner(ctx context.Context, ownerID uuid.UUID) (*ReportParty, error) {
+func (r *pgAggregateRepository) GetOwner(ctx context.Context, orgID, ownerID uuid.UUID) (*ReportParty, error) {
 	var p ReportParty
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT email, NULL::text FROM users WHERE id=$1`, ownerID,
+		`SELECT email, NULL::text FROM users WHERE id=$1 AND organization_id=$2`, ownerID, orgID,
 	).Scan(&p.Name, &p.Document)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrOwnerNotFound

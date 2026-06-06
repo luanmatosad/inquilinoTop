@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/lease"
+	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,6 +25,19 @@ func noopAuthMW(next http.Handler) http.Handler {
 	})
 }
 
+func noopWriteMw(next http.Handler) http.Handler {
+	return next
+}
+
+func authMWWithOwnerID(ownerID uuid.UUID) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := auth.WithOwnerIDOrgID(r.Context(), ownerID, ownerID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 type mockLeaseRepo struct {
 	leases map[uuid.UUID]*lease.Lease
 }
@@ -32,9 +46,9 @@ func newMockLeaseRepo() *mockLeaseRepo {
 	return &mockLeaseRepo{leases: make(map[uuid.UUID]*lease.Lease)}
 }
 
-func (m *mockLeaseRepo) Create(_ context.Context, ownerID uuid.UUID, in lease.CreateLeaseInput) (*lease.Lease, error) {
+func (m *mockLeaseRepo) Create(_ context.Context, orgID, ownerID uuid.UUID, in lease.CreateLeaseInput) (*lease.Lease, error) {
 	l := &lease.Lease{
-		ID: uuid.New(), OwnerID: ownerID, UnitID: in.UnitID,
+		ID: uuid.New(), OrganizationID: orgID, OwnerID: ownerID, UnitID: in.UnitID,
 		TenantID: in.TenantID, StartDate: in.StartDate,
 		RentAmount: in.RentAmount, PaymentDay: in.PaymentDay, Status: "ACTIVE", IsActive: true,
 	}
@@ -42,26 +56,26 @@ func (m *mockLeaseRepo) Create(_ context.Context, ownerID uuid.UUID, in lease.Cr
 	return l, nil
 }
 
-func (m *mockLeaseRepo) GetByID(_ context.Context, id, ownerID uuid.UUID) (*lease.Lease, error) {
+func (m *mockLeaseRepo) GetByID(_ context.Context, id, orgID uuid.UUID) (*lease.Lease, error) {
 	l, ok := m.leases[id]
-	if !ok || l.OwnerID != ownerID {
+	if !ok || l.OrganizationID != orgID {
 		return nil, errors.New("not found")
 	}
 	return l, nil
 }
 
-func (m *mockLeaseRepo) List(_ context.Context, ownerID uuid.UUID) ([]lease.Lease, error) {
+func (m *mockLeaseRepo) List(_ context.Context, orgID uuid.UUID) ([]lease.Lease, error) {
 	var list []lease.Lease
 	for _, l := range m.leases {
-		if l.OwnerID == ownerID && l.IsActive {
+		if l.OrganizationID == orgID && l.IsActive {
 			list = append(list, *l)
 		}
 	}
 	return list, nil
 }
 
-func (m *mockLeaseRepo) Update(_ context.Context, id, ownerID uuid.UUID, in lease.UpdateLeaseInput) (*lease.Lease, error) {
-	l, err := m.GetByID(context.Background(), id, ownerID)
+func (m *mockLeaseRepo) Update(_ context.Context, id, orgID uuid.UUID, in lease.UpdateLeaseInput) (*lease.Lease, error) {
+	l, err := m.GetByID(context.Background(), id, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +84,8 @@ func (m *mockLeaseRepo) Update(_ context.Context, id, ownerID uuid.UUID, in leas
 	return l, nil
 }
 
-func (m *mockLeaseRepo) Delete(_ context.Context, id, ownerID uuid.UUID) error {
-	l, err := m.GetByID(context.Background(), id, ownerID)
+func (m *mockLeaseRepo) Delete(_ context.Context, id, orgID uuid.UUID) error {
+	l, err := m.GetByID(context.Background(), id, orgID)
 	if err != nil {
 		return err
 	}
@@ -79,8 +93,8 @@ func (m *mockLeaseRepo) Delete(_ context.Context, id, ownerID uuid.UUID) error {
 	return nil
 }
 
-func (m *mockLeaseRepo) End(_ context.Context, id, ownerID uuid.UUID) (*lease.Lease, error) {
-	l, err := m.GetByID(context.Background(), id, ownerID)
+func (m *mockLeaseRepo) End(_ context.Context, id, orgID uuid.UUID) (*lease.Lease, error) {
+	l, err := m.GetByID(context.Background(), id, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +104,8 @@ func (m *mockLeaseRepo) End(_ context.Context, id, ownerID uuid.UUID) (*lease.Le
 	return l, nil
 }
 
-func (m *mockLeaseRepo) Renew(_ context.Context, id, ownerID uuid.UUID, in lease.RenewLeaseInput) (*lease.Lease, error) {
-	l, err := m.GetByID(context.Background(), id, ownerID)
+func (m *mockLeaseRepo) Renew(_ context.Context, id, orgID uuid.UUID, in lease.RenewLeaseInput) (*lease.Lease, error) {
+	l, err := m.GetByID(context.Background(), id, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,9 +117,9 @@ func (m *mockLeaseRepo) Renew(_ context.Context, id, ownerID uuid.UUID, in lease
 	return l, nil
 }
 
-func (m *mockLeaseRepo) UpdateRentAmount(_ context.Context, id, ownerID uuid.UUID, amount float64) (*lease.Lease, error) {
+func (m *mockLeaseRepo) UpdateRentAmount(_ context.Context, id, orgID uuid.UUID, amount float64) (*lease.Lease, error) {
 	l, ok := m.leases[id]
-	if !ok || l.OwnerID != ownerID {
+	if !ok || l.OrganizationID != orgID {
 		return nil, errors.New("not found")
 	}
 	l.RentAmount = amount
@@ -131,7 +145,7 @@ func (m *mockReadjustmentRepo) Create(_ context.Context, in *lease.Readjustment)
 func (m *mockReadjustmentRepo) ListByLease(_ context.Context, leaseID, ownerID uuid.UUID) ([]lease.Readjustment, error) {
 	var out []lease.Readjustment
 	for _, r := range m.items {
-		if r.LeaseID == leaseID && r.OwnerID == ownerID {
+		if r.LeaseID == leaseID && r.OrganizationID == ownerID {
 			out = append(out, r)
 		}
 	}
@@ -140,7 +154,7 @@ func (m *mockReadjustmentRepo) ListByLease(_ context.Context, leaseID, ownerID u
 
 func seedLease(t *testing.T, mock *mockLeaseRepo) *lease.Lease {
 	t.Helper()
-	l, err := mock.Create(context.Background(), uuid.Nil, lease.CreateLeaseInput{
+	l, err := mock.Create(context.Background(), uuid.Nil, uuid.Nil, lease.CreateLeaseInput{
 		UnitID: uuid.New(), TenantID: uuid.New(),
 		StartDate: time.Now(), RentAmount: 1000,
 	})
@@ -162,7 +176,7 @@ func TestHandler_Create_BodyInválido(t *testing.T) {
 	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPost, "/leases", strings.NewReader("not-json"))
 	rr := httptest.NewRecorder()
@@ -175,7 +189,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	body, _ := json.Marshal(lease.CreateLeaseInput{
 		UnitID:     uuid.New(),
@@ -196,7 +210,7 @@ func TestHandler_Get_IDInválido(t *testing.T) {
 	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/leases/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -209,7 +223,7 @@ func TestHandler_Update_IDInválido(t *testing.T) {
 	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPut, "/leases/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -222,7 +236,7 @@ func TestHandler_Delete_IDInválido(t *testing.T) {
 	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodDelete, "/leases/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -233,12 +247,19 @@ func TestHandler_Delete_IDInválido(t *testing.T) {
 
 func TestHandler_EndLease_RouteExists(t *testing.T) {
 	mock := newMockLeaseRepo()
-	l := seedLease(t, mock)
+	orgID := uuid.New()
+	l, err := mock.Create(context.Background(), orgID, orgID, lease.CreateLeaseInput{
+		UnitID:     uuid.New(),
+		TenantID:   uuid.New(),
+		StartDate:  time.Now(),
+		RentAmount: 1000,
+	})
+	require.NoError(t, err)
 	svc := lease.NewService(mock, newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(orgID), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest("POST", "/leases/"+l.ID.String()+"/end", nil)
 	rr := httptest.NewRecorder()
@@ -249,12 +270,19 @@ func TestHandler_EndLease_RouteExists(t *testing.T) {
 
 func TestHandler_RenewLease_RouteExists(t *testing.T) {
 	mock := newMockLeaseRepo()
-	l := seedLease(t, mock)
+	orgID := uuid.New()
+	l, err := mock.Create(context.Background(), orgID, orgID, lease.CreateLeaseInput{
+		UnitID:     uuid.New(),
+		TenantID:   uuid.New(),
+		StartDate:  time.Now(),
+		RentAmount: 1000,
+	})
+	require.NoError(t, err)
 	svc := lease.NewService(mock, newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(orgID), noopWriteMw, noopWriteMw)
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"new_end_date": time.Now().Add(365 * 24 * time.Hour),
@@ -270,12 +298,19 @@ func TestHandler_RenewLease_RouteExists(t *testing.T) {
 
 func TestHandler_Readjust_RouteExists(t *testing.T) {
 	mock := newMockLeaseRepo()
-	l := seedLease(t, mock)
+	orgID := uuid.New()
+	l, err := mock.Create(context.Background(), orgID, orgID, lease.CreateLeaseInput{
+		UnitID:     uuid.New(),
+		TenantID:   uuid.New(),
+		StartDate:  time.Now(),
+		RentAmount: 1000,
+	})
+	require.NoError(t, err)
 	svc := lease.NewService(mock, newMockReadjustmentRepo(), &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(orgID), noopWriteMw, noopWriteMw)
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"percentage": 0.0523,
@@ -293,13 +328,13 @@ func TestHandler_Readjust_RouteExists(t *testing.T) {
 func TestHandler_Readjust_PercentagemInválida(t *testing.T) {
 	leaseMock := newMockLeaseRepo()
 	readjMock := newMockReadjustmentRepo()
-	ownerID, leaseID := uuid.New(), uuid.New()
-	leaseMock.leases[leaseID] = &lease.Lease{ID: leaseID, OwnerID: ownerID, Status: "ACTIVE", RentAmount: 2000, IsActive: true}
+	orgID, leaseID := uuid.New(), uuid.New()
+	leaseMock.leases[leaseID] = &lease.Lease{ID: leaseID, OrganizationID: orgID, Status: "ACTIVE", RentAmount: 2000, IsActive: true}
 	svc := lease.NewService(leaseMock, readjMock, &mockIndexRepo{})
 	h := lease.NewHandler(svc)
 
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	body := `{"percentage":0.0,"applied_at":"2026-04-01T00:00:00Z"}`
 	req := httptest.NewRequest("POST", "/leases/"+leaseID.String()+"/readjust", strings.NewReader(body))

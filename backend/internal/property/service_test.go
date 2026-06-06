@@ -27,32 +27,32 @@ func newMockRepo() *mockRepo {
 	}
 }
 
-func (m *mockRepo) Create(_ context.Context, ownerID uuid.UUID, in property.CreatePropertyInput) (*property.Property, error) {
-	p := &property.Property{ID: uuid.New(), OwnerID: ownerID, Type: in.Type, Name: in.Name, IsActive: true}
+func (m *mockRepo) Create(_ context.Context, userID, orgID uuid.UUID, in property.CreatePropertyInput) (*property.Property, error) {
+	p := &property.Property{ID: uuid.New(), OrganizationID: orgID, Type: in.Type, Name: in.Name, IsActive: true}
 	m.properties[p.ID] = p
 	return p, nil
 }
 
-func (m *mockRepo) GetByID(_ context.Context, id, ownerID uuid.UUID) (*property.Property, error) {
+func (m *mockRepo) GetByID(_ context.Context, id, orgID uuid.UUID) (*property.Property, error) {
 	p, ok := m.properties[id]
-	if !ok || p.OwnerID != ownerID || !p.IsActive {
+	if !ok || p.OrganizationID != orgID || !p.IsActive {
 		return nil, apierr.ErrNotFound
 	}
 	return p, nil
 }
 
-func (m *mockRepo) List(_ context.Context, ownerID uuid.UUID) ([]property.Property, error) {
+func (m *mockRepo) List(_ context.Context, orgID uuid.UUID) ([]property.Property, error) {
 	var list []property.Property
 	for _, p := range m.properties {
-		if p.OwnerID == ownerID && p.IsActive {
+		if p.OrganizationID == orgID && p.IsActive {
 			list = append(list, *p)
 		}
 	}
 	return list, nil
 }
 
-func (m *mockRepo) Update(_ context.Context, id, ownerID uuid.UUID, in property.CreatePropertyInput) (*property.Property, error) {
-	p, err := m.GetByID(context.Background(), id, ownerID)
+func (m *mockRepo) Update(_ context.Context, id, orgID uuid.UUID, in property.CreatePropertyInput) (*property.Property, error) {
+	p, err := m.GetByID(context.Background(), id, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -60,8 +60,8 @@ func (m *mockRepo) Update(_ context.Context, id, ownerID uuid.UUID, in property.
 	return p, nil
 }
 
-func (m *mockRepo) Delete(_ context.Context, id, ownerID uuid.UUID) error {
-	p, err := m.GetByID(context.Background(), id, ownerID)
+func (m *mockRepo) Delete(_ context.Context, id, orgID uuid.UUID) error {
+	p, err := m.GetByID(context.Background(), id, orgID)
 	if err != nil {
 		return err
 	}
@@ -78,12 +78,12 @@ func (m *mockRepo) CreateUnit(_ context.Context, propertyID uuid.UUID, in proper
 	return u, nil
 }
 
-func (m *mockRepo) GetUnit(_ context.Context, id, ownerID uuid.UUID) (*property.Unit, error) {
+func (m *mockRepo) GetUnit(_ context.Context, id, orgID uuid.UUID) (*property.Unit, error) {
 	u, ok := m.units[id]
 	if !ok || !u.IsActive {
 		return nil, apierr.ErrNotFound
 	}
-	if propOwner, exists := m.unitOwners[id]; exists && propOwner != ownerID {
+	if propOrg, exists := m.unitOwners[id]; exists && propOrg != orgID {
 		return nil, apierr.ErrNotFound
 	}
 	return u, nil
@@ -99,8 +99,8 @@ func (m *mockRepo) ListUnits(_ context.Context, propertyID uuid.UUID) ([]propert
 	return list, nil
 }
 
-func (m *mockRepo) UpdateUnit(_ context.Context, id, ownerID uuid.UUID, in property.CreateUnitInput) (*property.Unit, error) {
-	u, err := m.GetUnit(context.Background(), id, ownerID)
+func (m *mockRepo) UpdateUnit(_ context.Context, id, orgID uuid.UUID, in property.CreateUnitInput) (*property.Unit, error) {
+	u, err := m.GetUnit(context.Background(), id, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -108,8 +108,8 @@ func (m *mockRepo) UpdateUnit(_ context.Context, id, ownerID uuid.UUID, in prope
 	return u, nil
 }
 
-func (m *mockRepo) DeleteUnit(_ context.Context, id, ownerID uuid.UUID) error {
-	_, err := m.GetUnit(context.Background(), id, ownerID)
+func (m *mockRepo) DeleteUnit(_ context.Context, id, orgID uuid.UUID) error {
+	_, err := m.GetUnit(context.Background(), id, orgID)
 	if err != nil {
 		return err
 	}
@@ -130,9 +130,9 @@ func (m *mockRepo) ListUnitsByPropertyIDs(_ context.Context, propertyIDs []uuid.
 	return list, nil
 }
 
-func (m *mockRepo) GetByField(_ context.Context, ownerID uuid.UUID, field string, value string) (*property.Property, error) {
+func (m *mockRepo) GetByField(_ context.Context, orgID uuid.UUID, field string, value string) (*property.Property, error) {
 	for _, p := range m.properties {
-		if p.OwnerID == ownerID && p.IsActive && field == "name" && p.Name == value {
+		if p.OrganizationID == orgID && p.IsActive && field == "name" && p.Name == value {
 			return p, nil
 		}
 	}
@@ -144,7 +144,7 @@ func TestService_CreateSingleProperty_AutoCreatesUnit(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	p, err := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "SINGLE", Name: "Casa"})
+	p, err := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "SINGLE", Name: "Casa"})
 	require.NoError(t, err)
 
 	units, _ := svc.ListUnits(context.Background(), p.ID)
@@ -154,7 +154,7 @@ func TestService_CreateSingleProperty_AutoCreatesUnit(t *testing.T) {
 
 func TestService_CreateProperty_InvalidType(t *testing.T) {
 	svc := property.NewService(newMockRepo())
-	_, err := svc.CreateProperty(context.Background(), uuid.New(), property.CreatePropertyInput{Type: "INVALID", Name: "X"})
+	_, err := svc.CreateProperty(context.Background(), uuid.New(), uuid.New(), property.CreatePropertyInput{Type: "INVALID", Name: "X"})
 	assert.Error(t, err)
 }
 
@@ -163,7 +163,7 @@ func TestService_DeleteProperty(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	err := svc.DeleteProperty(context.Background(), p.ID, ownerID)
 	require.NoError(t, err)
 
@@ -176,7 +176,7 @@ func TestService_GetProperty_Encontrado(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa"})
 	found, err := svc.GetProperty(context.Background(), p.ID, ownerID)
 	require.NoError(t, err)
 	assert.Equal(t, p.ID, found.ID)
@@ -193,7 +193,7 @@ func TestService_UpdateProperty(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Antigo"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Antigo"})
 	updated, err := svc.UpdateProperty(context.Background(), p.ID, ownerID, property.CreatePropertyInput{Name: "Novo"})
 	require.NoError(t, err)
 	assert.Equal(t, "Novo", updated.Name)
@@ -204,7 +204,7 @@ func TestService_CreateUnit_Válido(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	u, err := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Apto 101"})
 	require.NoError(t, err)
 	assert.Equal(t, "Apto 101", u.Label)
@@ -217,7 +217,7 @@ func TestService_CreateUnit_ImóvelSemPermissão(t *testing.T) {
 	ownerID := uuid.New()
 	outroOwner := uuid.New()
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	_, err := svc.CreateUnit(context.Background(), p.ID, outroOwner, property.CreateUnitInput{Label: "Apto 101"})
 	assert.Error(t, err)
 }
@@ -227,7 +227,7 @@ func TestService_GetUnit_Encontrado(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	u, _ := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Apto 201"})
 
 	found, err := svc.GetUnit(context.Background(), u.ID, ownerID)
@@ -246,7 +246,7 @@ func TestService_ListUnits(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "A"})
 	svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "B"})
 
@@ -260,7 +260,7 @@ func TestService_UpdateUnit(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	u, _ := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Original"})
 
 	updated, err := svc.UpdateUnit(context.Background(), u.ID, ownerID, property.CreateUnitInput{Label: "Atualizado"})
@@ -273,7 +273,7 @@ func TestService_DeleteUnit(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	u, _ := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Para deletar"})
 
 	err := svc.DeleteUnit(context.Background(), u.ID, ownerID)
@@ -285,7 +285,7 @@ func TestService_DeleteUnit(t *testing.T) {
 
 func TestService_CreateProperty_NomeVazio(t *testing.T) {
 	svc := property.NewService(newMockRepo())
-	_, err := svc.CreateProperty(context.Background(), uuid.New(), property.CreatePropertyInput{
+	_, err := svc.CreateProperty(context.Background(), uuid.New(), uuid.New(), property.CreatePropertyInput{
 		Name: "", Type: "RESIDENTIAL",
 	})
 	require.Error(t, err)
@@ -297,8 +297,8 @@ func TestService_ListProperties(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa 1"})
-	svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa 2"})
+	svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa 1"})
+	svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa 2"})
 
 	list, err := svc.ListProperties(context.Background(), ownerID)
 	require.NoError(t, err)
@@ -310,7 +310,7 @@ func TestService_ListPropertiesWithUnits(t *testing.T) {
 	svc := property.NewService(mock)
 	ownerID := uuid.New()
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Apto 101"})
 
 	result, err := svc.ListPropertiesWithUnits(context.Background(), ownerID)
@@ -333,7 +333,7 @@ func TestService_CreateProperty_SingleUnitCreationError_ReturnsError(t *testing.
 	repo.failCreateUnit = true
 	svc := property.NewService(repo)
 
-	_, err := svc.CreateProperty(context.Background(), uuid.New(), property.CreatePropertyInput{
+	_, err := svc.CreateProperty(context.Background(), uuid.New(), uuid.New(), property.CreatePropertyInput{
 		Type: "SINGLE",
 		Name: "Casa Teste",
 	})

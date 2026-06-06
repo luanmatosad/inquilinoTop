@@ -24,20 +24,22 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/leases/{leaseId}/payments", h.listByLease)
-	r.With(authMW).Post("/leases/{leaseId}/payments", h.create)
-	r.With(authMW).Get("/payments", h.listByOwner)
-	r.With(authMW).Get("/payments/{id}", h.get)
-	r.With(authMW).Put("/payments/{id}", h.update)
-	r.With(authMW).Post("/leases/{leaseId}/payments/generate", h.Generate)
-	r.With(authMW).Get("/payments/{id}/receipt", h.Receipt)
-	r.With(authMW).Post("/payments/{id}/charge", h.handleCreateCharge)
-	r.With(authMW).Get("/payments/{id}/charge", h.handleGetChargeStatus)
-	r.With(authMW).Post("/payments/{id}/payout", h.handleCreatePayout)
-	r.With(authMW).Get("/payments/config", h.getFinancialConfig)
-	r.With(authMW).Put("/payments/config", h.updateFinancialConfig)
-	
+func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler, readMw func(http.Handler) http.Handler, writeMw func(http.Handler) http.Handler) {
+	r.Group(func(r chi.Router) {
+		r.Use(authMW)
+		r.With(readMw).Get("/leases/{leaseId}/payments", h.listByLease)
+		r.With(writeMw).Post("/leases/{leaseId}/payments", h.create)
+		r.With(writeMw).Post("/leases/{leaseId}/payments/generate", h.Generate)
+		r.With(readMw).Get("/payments", h.listByOwner)
+		r.With(readMw).Get("/payments/{id}", h.get)
+		r.With(writeMw).Put("/payments/{id}", h.update)
+		r.With(readMw).Get("/payments/{id}/receipt", h.Receipt)
+		r.With(writeMw).Post("/payments/{id}/charge", h.handleCreateCharge)
+		r.With(readMw).Get("/payments/{id}/charge", h.handleGetChargeStatus)
+		r.With(writeMw).Post("/payments/{id}/payout", h.handleCreatePayout)
+		r.With(readMw).Get("/payments/config", h.getFinancialConfig)
+		r.With(writeMw).Put("/payments/config", h.updateFinancialConfig)
+	})
 	r.Post("/webhook/{provider}", h.handleWebhook)
 }
 
@@ -49,11 +51,15 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 // @Success 200 {object} map[string]interface{}
 // @Router /payments [get]
 func (h *Handler) listByOwner(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
 	statusFilter := r.URL.Query().Get("status")
-	list, err := h.svc.ListByOwner(r.Context(), ownerID, statusFilter)
+	list, err := h.svc.ListByOwner(r.Context(), orgID, statusFilter)
 	if err != nil {
-		slog.Error("payment: list by owner failed", "owner_id", ownerID, "status_filter", statusFilter, "error", err)
+		slog.Error("payment: list by owner failed", "org_id", orgID, "status_filter", statusFilter, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
 	}
@@ -71,15 +77,19 @@ func (h *Handler) listByOwner(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /leases/{leaseId}/payments [get]
 func (h *Handler) listByLease(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
 	leaseID, err := uuid.Parse(chi.URLParam(r, "leaseId"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "leaseId inválido")
 		return
 	}
-	list, err := h.svc.ListByLease(r.Context(), leaseID, ownerID)
+	list, err := h.svc.ListByLease(r.Context(), leaseID, orgID)
 	if err != nil {
-		slog.Error("payment: list by lease failed", "lease_id", leaseID, "owner_id", ownerID, "error", err)
+		slog.Error("payment: list by lease failed", "lease_id", leaseID, "org_id", orgID, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
 	}
@@ -97,19 +107,23 @@ func (h *Handler) listByLease(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /payments/{id} [get]
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	p, err := h.svc.Get(r.Context(), id, ownerID)
+	p, err := h.svc.Get(r.Context(), id, orgID)
 	if err != nil {
 		if errors.Is(err, apierr.ErrNotFound) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "pagamento não encontrado")
 			return
 		}
-		slog.Error("payment: get failed", "payment_id", id, "owner_id", ownerID, "error", err)
+		slog.Error("payment: get failed", "payment_id", id, "org_id", orgID, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "GET_FAILED", err.Error())
 		return
 	}
@@ -126,7 +140,16 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 // @Success 201 {object} map[string]interface{}
 // @Router /leases/{leaseId}/payments [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	userID := auth.OwnerIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	if userID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "usuário não encontrado")
+		return
+	}
 	leaseID, err := uuid.Parse(chi.URLParam(r, "leaseId"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "leaseId inválido")
@@ -142,7 +165,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.LeaseID = leaseID
-	p, err := h.svc.Create(r.Context(), ownerID, in)
+	p, err := h.svc.Create(r.Context(), userID, orgID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "CREATE_FAILED", err.Error())
 		return
@@ -160,7 +183,11 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /payments/{id} [put]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
@@ -175,7 +202,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		httputil.ValidationErr(w, err)
 		return
 	}
-	p, err := h.svc.Update(r.Context(), id, ownerID, in)
+	p, err := h.svc.Update(r.Context(), id, orgID, in)
 	if err != nil {
 		if h.svc.IsAlreadyPaid(err) {
 			httputil.Err(w, http.StatusConflict, "ALREADY_PAID", "pagamento já foi registrado")
@@ -198,7 +225,16 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 // @Failure 409 {object} map[string]interface{}
 // @Router /leases/{leaseId}/payments/generate [post]
 func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	userID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	if userID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "usuário não encontrado")
+		return
+	}
 	leaseID, err := uuid.Parse(chi.URLParam(r, "leaseId"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "leaseId inválido")
@@ -209,7 +245,7 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_MONTH", "query param month obrigatório")
 		return
 	}
-	ps, err := h.svc.GenerateMonth(r.Context(), leaseID, ownerID, month)
+	ps, err := h.svc.GenerateMonth(r.Context(), userID, leaseID, orgID, month)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidMonth):

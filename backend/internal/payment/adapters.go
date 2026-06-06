@@ -12,12 +12,12 @@ type UnitReaderAdapter struct {
 	Repo property.Repository
 }
 
-func (a *UnitReaderAdapter) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*UnitSummary, error) {
-	u, err := a.Repo.GetUnit(ctx, id, ownerID)
+func (a *UnitReaderAdapter) GetByID(ctx context.Context, id, orgID uuid.UUID) (*UnitSummary, error) {
+	u, err := a.Repo.GetUnit(ctx, id, orgID)
 	if err != nil {
 		return nil, err
 	}
-	p, err := a.Repo.GetByID(ctx, u.PropertyID, ownerID)
+	p, err := a.Repo.GetByID(ctx, u.PropertyID, orgID)
 	if err != nil {
 		return nil, err
 	}

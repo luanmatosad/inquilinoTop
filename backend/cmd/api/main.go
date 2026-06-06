@@ -29,6 +29,7 @@ import (
 	"github.com/inquilinotop/api/internal/importexport"
 	"github.com/inquilinotop/api/internal/lease"
 	"github.com/inquilinotop/api/internal/notification"
+	"github.com/inquilinotop/api/internal/organization"
 	"github.com/inquilinotop/api/internal/payment"
 	"github.com/inquilinotop/api/internal/property"
 	"github.com/inquilinotop/api/internal/rbac"
@@ -82,8 +83,12 @@ func main() {
 	auditHandler := audit.NewHandler(auditSvc)
 
 	identityRepo := identity.NewRepository(database)
-	identitySvc := identity.NewServiceWithAudit(identityRepo, jwtSvc, &identityAuditAdapter{auditSvc: auditSvc})
+	orgRepo := organization.NewRepository(database)
+	orgAdapter := &identity.OrgMemberAdapter{Repo: orgRepo}
+	identitySvc := identity.NewServiceWithOrgAndAudit(identityRepo, orgAdapter, jwtSvc, &identityAuditAdapter{auditSvc: auditSvc})
 	identityHandler := identity.NewHandler(identitySvc)
+	orgSvc := organization.NewService(orgRepo)
+	orgHandler := organization.NewHandler(orgSvc)
 
 	propertyRepo := property.NewRepository(database)
 	propertySvc := property.NewService(propertyRepo)
@@ -150,6 +155,18 @@ func main() {
 	rbacSvc := rbac.NewService(rbacRepo)
 	rbacHandler := rbac.NewHandler(rbacSvc)
 
+	propertyReadMw := rbac.PermissionMiddleware(rbac.PermissionPropertyRead)
+	propertyWriteMw := rbac.PermissionMiddleware(rbac.PermissionPropertyWrite)
+	tenantReadMw := rbac.PermissionMiddleware(rbac.PermissionTenantRead)
+	tenantWriteMw := rbac.PermissionMiddleware(rbac.PermissionTenantWrite)
+	leaseReadMw := rbac.PermissionMiddleware(rbac.PermissionLeaseRead)
+	leaseWriteMw := rbac.PermissionMiddleware(rbac.PermissionLeaseWrite)
+	paymentReadMw := rbac.PermissionMiddleware(rbac.PermissionPaymentRead)
+	paymentWriteMw := rbac.PermissionMiddleware(rbac.PermissionPaymentWrite)
+	expenseReadMw := rbac.PermissionMiddleware(rbac.PermissionExpenseRead)
+	expenseWriteMw := rbac.PermissionMiddleware(rbac.PermissionExpenseWrite)
+	orgReadMw := rbac.PermissionMiddleware(rbac.PermissionOrgRead)
+
 	importRepo := importexport.NewRepository(database)
 	importSvc := importexport.NewService(importRepo, propertyRepo, tenantRepo)
 	importHandler := importexport.NewHandler(importSvc)
@@ -190,16 +207,17 @@ r := chi.NewRouter()
 
 	identityHandler.Register(r)
 	identityHandler.RegisterProtected(r, authMW)
-	propertyHandler.Register(r, authMW)
-	tenantHandler.Register(r, authMW)
-	leaseHandler.Register(r, authMW)
-	paymentHandler.Register(r, authMW)
-	expenseHandler.Register(r, authMW)
-	fiscalHandler.Register(r, authMW)
-	supportHandler.Register(r, authMW)
+	propertyHandler.Register(r, authMW, propertyReadMw, propertyWriteMw)
+	tenantHandler.Register(r, authMW, tenantReadMw, tenantWriteMw)
+	leaseHandler.Register(r, authMW, leaseReadMw, leaseWriteMw)
+	paymentHandler.Register(r, authMW, paymentReadMw, paymentWriteMw)
+	expenseHandler.Register(r, authMW, expenseReadMw, expenseWriteMw)
+	fiscalHandler.Register(r, authMW, orgReadMw)
+	supportHandler.Register(r, authMW, orgReadMw, orgReadMw)
 	auditHandler.Register(r, authMW)
 	documentHandler.Register(r, authMW)
 	notificationHandler.Register(r, authMW)
+	orgHandler.RegisterRoutes(r, authMW)
 	rbacHandler.Register(r, authMW)
 
 	importHandler.Register(r, authMW)

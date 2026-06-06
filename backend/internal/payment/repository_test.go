@@ -23,24 +23,38 @@ func testDB(t *testing.T) *db.DB {
 	require.NoError(t, err)
 	require.NoError(t, db.RunMigrations(url, "../../migrations"))
 	t.Cleanup(func() {
-		d.Pool.Exec(context.Background(), "TRUNCATE users CASCADE")
+		d.Pool.Exec(context.Background(), "TRUNCATE organization_members, leases, tenants, units, properties, organizations, users RESTART IDENTITY CASCADE")
 		d.Close()
 	})
 	return d
 }
 
-func seedLease(t *testing.T, database *db.DB) (ownerID uuid.UUID, leaseID uuid.UUID) {
+func seedLease(t *testing.T, database *db.DB) (orgID, ownerID uuid.UUID, leaseID uuid.UUID) {
 	t.Helper()
+
+	var newOrgID uuid.UUID
 	err := database.Pool.QueryRow(context.Background(),
-		`INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id`,
-		"owner-payment@test.com", "hash",
+		`INSERT INTO organizations (name) VALUES ($1) RETURNING id`,
+		"Test Org "+uuid.New().String()[:8],
+	).Scan(&newOrgID)
+	require.NoError(t, err)
+
+	err = database.Pool.QueryRow(context.Background(),
+		`INSERT INTO users (email, password_hash, organization_id) VALUES ($1, $2, $3) RETURNING id`,
+		"payment-"+uuid.New().String()[:8]+"@test.com", "hash", newOrgID,
 	).Scan(&ownerID)
+	require.NoError(t, err)
+
+	_, err = database.Pool.Exec(context.Background(),
+		`INSERT INTO organization_members (organization_id, user_id, role) VALUES ($1, $2, 'owner')`,
+		newOrgID, ownerID,
+	)
 	require.NoError(t, err)
 
 	var propertyID uuid.UUID
 	err = database.Pool.QueryRow(context.Background(),
-		`INSERT INTO properties (owner_id, type, name) VALUES ($1, 'RESIDENTIAL', 'Prédio') RETURNING id`,
-		ownerID,
+		`INSERT INTO properties (organization_id, owner_id, type, name) VALUES ($1, $2, 'RESIDENTIAL', 'Prédio') RETURNING id`,
+		newOrgID, ownerID,
 	).Scan(&propertyID)
 	require.NoError(t, err)
 
@@ -53,27 +67,27 @@ func seedLease(t *testing.T, database *db.DB) (ownerID uuid.UUID, leaseID uuid.U
 
 	var tenantID uuid.UUID
 	err = database.Pool.QueryRow(context.Background(),
-		`INSERT INTO tenants (owner_id, name) VALUES ($1, 'Inquilino') RETURNING id`,
-		ownerID,
+		`INSERT INTO tenants (organization_id, owner_id, name) VALUES ($1, $2, 'Inquilino') RETURNING id`,
+		newOrgID, ownerID,
 	).Scan(&tenantID)
 	require.NoError(t, err)
 
 	err = database.Pool.QueryRow(context.Background(),
-		`INSERT INTO leases (owner_id, unit_id, tenant_id, start_date, rent_amount)
-		 VALUES ($1, $2, $3, NOW(), 1000) RETURNING id`,
-		ownerID, unitID, tenantID,
+		`INSERT INTO leases (organization_id, owner_id, unit_id, tenant_id, start_date, rent_amount)
+		 VALUES ($1, $2, $3, $4, NOW(), 1000) RETURNING id`,
+		newOrgID, ownerID, unitID, tenantID,
 	).Scan(&leaseID)
 	require.NoError(t, err)
 
-	return ownerID, leaseID
+	return newOrgID, ownerID, leaseID
 }
 
 func TestPaymentRepository_CreateAndList(t *testing.T) {
 	database := testDB(t)
-	ownerID, leaseID := seedLease(t, database)
+	orgID, _, leaseID := seedLease(t, database)
 	repo := payment.NewRepository(database)
 
-	p, err := repo.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, err := repo.Create(context.Background(), orgID, orgID, payment.CreatePaymentInput{
 		LeaseID:     leaseID,
 		DueDate:     time.Now(),
 		GrossAmount: 1000.00,
@@ -83,22 +97,27 @@ func TestPaymentRepository_CreateAndList(t *testing.T) {
 	assert.Equal(t, "PENDING", p.Status)
 	assert.Equal(t, "RENT", p.Type)
 
-	list, err := repo.ListByLease(context.Background(), leaseID, ownerID)
+	list, err := repo.ListByLease(context.Background(), leaseID, orgID)
 	require.NoError(t, err)
 	assert.Len(t, list, 1)
 }
 
 func TestPaymentRepository_Update_MarkAsPaid(t *testing.T) {
 	database := testDB(t)
-	ownerID, leaseID := seedLease(t, database)
+	orgID, _, leaseID := seedLease(t, database)
 	repo := payment.NewRepository(database)
 
-	p, _ := repo.Create(context.Background(), ownerID, payment.CreatePaymentInput{
-		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
+	p, err := repo.Create(context.Background(), orgID, orgID, payment.CreatePaymentInput{
+		LeaseID:     leaseID,
+		DueDate:     time.Now(),
+		GrossAmount: 1000,
+		Type:        "RENT",
 	})
+	require.NoError(t, err)
+	require.NotNil(t, p)
 
 	paidDate := time.Now()
-	p, err := repo.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
+	p, err = repo.Update(context.Background(), p.ID, orgID, payment.UpdatePaymentInput{
 		Status:    "PAID",
 		PaidDate:  &paidDate,
 		GrossAmount: 1000,
@@ -112,13 +131,21 @@ func TestFinancialRepository_DeleteFinancialConfig_SoftDelete(t *testing.T) {
 	database := testDB(t)
 	repo := payment.NewRepository(database)
 
-	ownerID := uuid.New()
-	_, _ = database.Pool.Exec(context.Background(),
-		`INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)`,
-		ownerID, "owner@test.com", "hash",
-	)
+	var orgID uuid.UUID
+	err := database.Pool.QueryRow(context.Background(),
+		`INSERT INTO organizations (name) VALUES ($1) RETURNING id`,
+		"Test Org "+uuid.New().String()[:8],
+	).Scan(&orgID)
+	require.NoError(t, err)
 
-	cfg, err := repo.CreateFinancialConfig(context.Background(), ownerID, payment.CreateFinancialConfigInput{
+	var ownerID uuid.UUID
+	err = database.Pool.QueryRow(context.Background(),
+		`INSERT INTO users (email, password_hash, organization_id) VALUES ($1, $2, $3) RETURNING id`,
+		"fc-"+uuid.New().String()[:8]+"@test.com", "hash", orgID,
+	).Scan(&ownerID)
+	require.NoError(t, err)
+
+	cfg, err := repo.CreateFinancialConfig(context.Background(), orgID, payment.CreateFinancialConfigInput{
 		Provider: "MOCK",
 		Config:   map[string]any{"token": "123"},
 	})
@@ -126,7 +153,7 @@ func TestFinancialRepository_DeleteFinancialConfig_SoftDelete(t *testing.T) {
 	require.NotNil(t, cfg)
 
 	paidDate := time.Now()
-	err = repo.DeleteFinancialConfig(context.Background(), cfg.ID, ownerID)
+	err = repo.DeleteFinancialConfig(context.Background(), cfg.ID, orgID)
 	require.NoError(t, err)
 
 	var count int
@@ -149,19 +176,19 @@ func TestFinancialRepository_DeleteFinancialConfig_SoftDelete(t *testing.T) {
 func TestRepository_CreateIfAbsent_Idempotente(t *testing.T) {
 	d := testDB(t)
 	repo := payment.NewRepository(d)
-	ownerID, leaseID := seedLease(t, d)
+	orgID, _, leaseID := seedLease(t, d)
 
 	comp := "2026-04"
 	in := payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 		Competency: &comp,
 	}
-	p1, created, err := repo.CreateIfAbsent(context.Background(), ownerID, in)
+	p1, created, err := repo.CreateIfAbsent(context.Background(), orgID, orgID, in)
 	require.NoError(t, err)
 	require.True(t, created)
 	require.NotNil(t, p1)
 
-	p2, created, err := repo.CreateIfAbsent(context.Background(), ownerID, in)
+	p2, created, err := repo.CreateIfAbsent(context.Background(), orgID, orgID, in)
 	require.NoError(t, err)
 	assert.False(t, created)
 	assert.Equal(t, p1.ID, p2.ID)
@@ -170,13 +197,13 @@ func TestRepository_CreateIfAbsent_Idempotente(t *testing.T) {
 func TestRepository_MarkPaid_PersisteCamposDerivados(t *testing.T) {
 	d := testDB(t)
 	repo := payment.NewRepository(d)
-	ownerID, leaseID := seedLease(t, d)
-	p, err := repo.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	orgID, _, leaseID := seedLease(t, d)
+	p, err := repo.Create(context.Background(), orgID, orgID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
 	require.NoError(t, err)
 
-	paid, err := repo.MarkPaid(context.Background(), p.ID, ownerID, time.Now(),
+	paid, err := repo.MarkPaid(context.Background(), p.ID, orgID, time.Now(),
 		200, 30, 150, 2080)
 	require.NoError(t, err)
 	assert.Equal(t, "PAID", paid.Status)

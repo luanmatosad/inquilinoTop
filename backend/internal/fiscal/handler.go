@@ -20,8 +20,8 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/fiscal/annual-report", h.AnnualReport)
+func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler, readMw func(http.Handler) http.Handler) {
+	r.With(authMW, readMw).Get("/fiscal/annual-report", h.AnnualReport)
 }
 
 // @Summary Relatório fiscal anual para DIRPF
@@ -34,8 +34,13 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 // @Router /fiscal/annual-report [get]
 func (h *Handler) AnnualReport(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 	if ownerID == uuid.Nil {
 		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "owner não autenticado")
+		return
+	}
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
 		return
 	}
 
@@ -51,13 +56,13 @@ func (h *Handler) AnnualReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rep, err := h.svc.AnnualReport(r.Context(), ownerID, year)
+	rep, err := h.svc.AnnualReport(r.Context(), ownerID, orgID, year)
 	if err != nil {
 		if strings.Contains(err.Error(), "year inválido") {
 			httputil.Err(w, http.StatusBadRequest, "INVALID_YEAR", err.Error())
 			return
 		}
-		slog.Error("fiscal: annual report failed", "owner_id", ownerID, "year", year, "error", err)
+		slog.Error("fiscal: annual report failed", "owner_id", ownerID, "org_id", orgID, "year", year, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "REPORT_FAILED", err.Error())
 		return
 	}

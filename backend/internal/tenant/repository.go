@@ -17,31 +17,31 @@ func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
 }
 
-func (r *pgRepository) Create(ctx context.Context, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error) {
+func (r *pgRepository) Create(ctx context.Context, userID, orgID uuid.UUID, in CreateTenantInput) (*Tenant, error) {
 	var t Tenant
 	pt := "PF"
 	if in.PersonType != nil {
 		pt = *in.PersonType
 	}
 	err := r.db.Pool.QueryRow(ctx,
-		`INSERT INTO tenants (owner_id, name, email, phone, document, person_type)
-		 VALUES ($1,$2,$3,$4,$5,$6)
-		 RETURNING id, owner_id, name, email, phone, document, person_type, is_active, created_at, updated_at`,
-		ownerID, in.Name, in.Email, in.Phone, in.Document, pt,
-	).Scan(&t.ID, &t.OwnerID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
+		`INSERT INTO tenants (organization_id, owner_id, name, email, phone, document, person_type)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7)
+		 RETURNING id, organization_id, name, email, phone, document, person_type, is_active, created_at, updated_at`,
+		orgID, userID, in.Name, in.Email, in.Phone, in.Document, pt,
+	).Scan(&t.ID, &t.OrganizationID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("tenant.repo: create: %w", err)
 	}
 	return &t, nil
 }
 
-func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Tenant, error) {
+func (r *pgRepository) GetByID(ctx context.Context, id, orgID uuid.UUID) (*Tenant, error) {
 	var t Tenant
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT id, owner_id, name, email, phone, document, person_type, is_active, created_at, updated_at
-		 FROM tenants WHERE id=$1 AND owner_id=$2 AND is_active=true`,
-		id, ownerID,
-	).Scan(&t.ID, &t.OwnerID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
+		`SELECT id, organization_id, name, email, phone, document, person_type, is_active, created_at, updated_at
+		 FROM tenants WHERE id=$1 AND organization_id=$2 AND is_active=true`,
+		id, orgID,
+	).Scan(&t.ID, &t.OrganizationID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, apierr.ErrNotFound
@@ -51,11 +51,11 @@ func (r *pgRepository) GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Ten
 	return &t, nil
 }
 
-func (r *pgRepository) List(ctx context.Context, ownerID uuid.UUID) ([]Tenant, error) {
+func (r *pgRepository) List(ctx context.Context, orgID uuid.UUID) ([]Tenant, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		`SELECT id, owner_id, name, email, phone, document, person_type, is_active, created_at, updated_at
-		 FROM tenants WHERE owner_id=$1 AND is_active=true ORDER BY name`,
-		ownerID,
+		`SELECT id, organization_id, name, email, phone, document, person_type, is_active, created_at, updated_at
+		 FROM tenants WHERE organization_id=$1 AND is_active=true ORDER BY name`,
+		orgID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("tenant.repo: list: %w", err)
@@ -64,7 +64,7 @@ func (r *pgRepository) List(ctx context.Context, ownerID uuid.UUID) ([]Tenant, e
 	var list []Tenant
 	for rows.Next() {
 		var t Tenant
-		if err := rows.Scan(&t.ID, &t.OwnerID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.OrganizationID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("tenant.repo: list scan: %w", err)
 		}
 		list = append(list, t)
@@ -75,7 +75,7 @@ func (r *pgRepository) List(ctx context.Context, ownerID uuid.UUID) ([]Tenant, e
 	return list, nil
 }
 
-func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in CreateTenantInput) (*Tenant, error) {
+func (r *pgRepository) Update(ctx context.Context, id, orgID uuid.UUID, in CreateTenantInput) (*Tenant, error) {
 	var t Tenant
 	pt := "PF"
 	if in.PersonType != nil {
@@ -83,10 +83,10 @@ func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in Cre
 	}
 	err := r.db.Pool.QueryRow(ctx,
 		`UPDATE tenants SET name=$1, email=$2, phone=$3, document=$4, person_type=$5, updated_at=NOW()
-		 WHERE id=$6 AND owner_id=$7 AND is_active=true
-		 RETURNING id, owner_id, name, email, phone, document, person_type, is_active, created_at, updated_at`,
-		in.Name, in.Email, in.Phone, in.Document, pt, id, ownerID,
-	).Scan(&t.ID, &t.OwnerID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
+		 WHERE id=$6 AND organization_id=$7 AND is_active=true
+		 RETURNING id, organization_id, name, email, phone, document, person_type, is_active, created_at, updated_at`,
+		in.Name, in.Email, in.Phone, in.Document, pt, id, orgID,
+	).Scan(&t.ID, &t.OrganizationID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, apierr.ErrNotFound
@@ -96,10 +96,10 @@ func (r *pgRepository) Update(ctx context.Context, id, ownerID uuid.UUID, in Cre
 	return &t, nil
 }
 
-func (r *pgRepository) Delete(ctx context.Context, id, ownerID uuid.UUID) error {
+func (r *pgRepository) Delete(ctx context.Context, id, orgID uuid.UUID) error {
 	tag, err := r.db.Pool.Exec(ctx,
-		`UPDATE tenants SET is_active=false, updated_at=NOW() WHERE id=$1 AND owner_id=$2 AND is_active=true`,
-		id, ownerID,
+		`UPDATE tenants SET is_active=false, updated_at=NOW() WHERE id=$1 AND organization_id=$2 AND is_active=true`,
+		id, orgID,
 	)
 	if err != nil {
 		return fmt.Errorf("tenant.repo: delete: %w", err)
@@ -110,16 +110,16 @@ func (r *pgRepository) Delete(ctx context.Context, id, ownerID uuid.UUID) error 
 	return nil
 }
 
-func (r *pgRepository) GetByField(ctx context.Context, ownerID uuid.UUID, field string, value string) (*Tenant, error) {
+func (r *pgRepository) GetByField(ctx context.Context, orgID uuid.UUID, field string, value string) (*Tenant, error) {
 	var t Tenant
 	var err error
 	switch field {
 	case "document":
 		err = r.db.Pool.QueryRow(ctx,
-			`SELECT id, owner_id, name, email, phone, document, person_type, is_active, created_at, updated_at
-			 FROM tenants WHERE owner_id=$1 AND document=$2 AND is_active=true`,
-			ownerID, value,
-		).Scan(&t.ID, &t.OwnerID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
+			`SELECT id, organization_id, name, email, phone, document, person_type, is_active, created_at, updated_at
+			 FROM tenants WHERE organization_id=$1 AND document=$2 AND is_active=true`,
+			orgID, value,
+		).Scan(&t.ID, &t.OrganizationID, &t.Name, &t.Email, &t.Phone, &t.Document, &t.PersonType, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
 	default:
 		return nil, fmt.Errorf("tenant.repo: unsupported field %s", field)
 	}

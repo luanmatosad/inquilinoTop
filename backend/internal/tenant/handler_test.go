@@ -22,10 +22,15 @@ func noopAuthMW(next http.Handler) http.Handler {
 	})
 }
 
+func noopWriteMw(next http.Handler) http.Handler {
+	return next
+}
+
 func authMWWithOwnerID(ownerID uuid.UUID) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := auth.WithOwnerID(r.Context(), ownerID)
+			orgID := ownerID // Use same ID for consistency
+			ctx := auth.WithOwnerIDOrgIDRole(r.Context(), ownerID, orgID, "admin")
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -35,7 +40,7 @@ func TestHandler_Create_BodyInválido(t *testing.T) {
 	svc := tenant.NewService(newMockTenantRepo())
 	h := tenant.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPost, "/tenants", bytes.NewReader([]byte("invalid")))
 	rr := httptest.NewRecorder()
@@ -48,7 +53,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 	svc := tenant.NewService(newMockTenantRepo())
 	h := tenant.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	pf := "PF"
 	body, _ := json.Marshal(tenant.CreateTenantInput{
@@ -67,7 +72,7 @@ func TestHandler_Create_SemName(t *testing.T) {
 	svc := tenant.NewService(newMockTenantRepo())
 	h := tenant.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	pf := "PF"
 	body, _ := json.Marshal(tenant.CreateTenantInput{
@@ -85,7 +90,7 @@ func TestHandler_Get_IDInválido(t *testing.T) {
 	svc := tenant.NewService(newMockTenantRepo())
 	h := tenant.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/tenants/not-a-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -101,10 +106,10 @@ func TestHandler_Get_Válido(t *testing.T) {
 
 	ownerID := uuid.New()
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(ownerID))
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
 
 	pf := "PF"
-	t1, _ := svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{
+	t1, _ := svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{
 		Name: "Foo", PersonType: &pf,
 	})
 
@@ -119,7 +124,7 @@ func TestHandler_Update_IDInválido(t *testing.T) {
 	svc := tenant.NewService(newMockTenantRepo())
 	h := tenant.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPut, "/tenants/not-a-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -135,10 +140,10 @@ func TestHandler_Update_Válido(t *testing.T) {
 
 	ownerID := uuid.New()
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(ownerID))
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
 
 	pf := "PF"
-	t1, _ := svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{
+	t1, _ := svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{
 		Name: "Foo", PersonType: &pf,
 	})
 
@@ -158,7 +163,7 @@ func TestHandler_Delete_IDInválido(t *testing.T) {
 	svc := tenant.NewService(newMockTenantRepo())
 	h := tenant.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodDelete, "/tenants/not-a-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -174,10 +179,10 @@ func TestHandler_Delete_Válido(t *testing.T) {
 
 	ownerID := uuid.New()
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(ownerID))
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
 
 	pf := "PF"
-	t1, _ := svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{
+	t1, _ := svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{
 		Name: "Foo", PersonType: &pf,
 	})
 
@@ -195,11 +200,11 @@ func TestHandler_List_Válido(t *testing.T) {
 
 	ownerID := uuid.New()
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(ownerID))
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
 
 	pf := "PF"
-	svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "A", PersonType: &pf})
-	svc.Create(context.Background(), ownerID, tenant.CreateTenantInput{Name: "B", PersonType: &pf})
+	svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{Name: "A", PersonType: &pf})
+	svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{Name: "B", PersonType: &pf})
 
 	req := httptest.NewRequest(http.MethodGet, "/tenants", nil)
 	rr := httptest.NewRecorder()

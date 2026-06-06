@@ -64,11 +64,11 @@ func TestHandler_AssignRole_RoleInválida(t *testing.T) {
 
 func TestHandler_AssignRole_Válido(t *testing.T) {
 	r := newRBACRouter()
-	propID := uuid.New()
+	orgID := uuid.New()
 	body, _ := json.Marshal(map[string]interface{}{
-		"user_id":     uuid.New().String(),
-		"role":        "viewer",
-		"property_id": propID.String(),
+		"user_id":         uuid.New().String(),
+		"role":            "viewer",
+		"organization_id": orgID.String(),
 	})
 	req := httptest.NewRequest(http.MethodPost, "/api/v2/roles", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -85,13 +85,13 @@ func TestHandler_AssignRole_Duplicado(t *testing.T) {
 	h.Register(r, noopAuthMW)
 
 	userID := uuid.New()
-	propID := uuid.New()
-	svc.AssignRole(context.Background(), userID, rbac.RoleAdmin, &propID)
+	orgID := uuid.New()
+	svc.AssignRole(context.Background(), userID, rbac.RoleAdmin, &orgID, nil)
 
 	body, _ := json.Marshal(map[string]interface{}{
-		"user_id":     userID.String(),
-		"role":        "admin",
-		"property_id": propID.String(),
+		"user_id":         userID.String(),
+		"role":            "admin",
+		"organization_id": orgID.String(),
 	})
 	req := httptest.NewRequest(http.MethodPost, "/api/v2/roles", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -129,11 +129,13 @@ func TestHandler_RemoveRole_Válido(t *testing.T) {
 	h.Register(r, noopAuthMW)
 
 	userID := uuid.New()
-	svc.AssignRole(context.Background(), userID, rbac.RoleOwner, nil)
+	orgID := uuid.New()
+	svc.AssignRole(context.Background(), userID, rbac.RoleOwner, &orgID, nil)
 
 	body, _ := json.Marshal(map[string]interface{}{
-		"user_id": userID.String(),
-		"role":    "owner",
+		"user_id":         userID.String(),
+		"role":            "owner",
+		"organization_id": orgID.String(),
 	})
 	req := httptest.NewRequest(http.MethodDelete, "/api/v2/roles", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")

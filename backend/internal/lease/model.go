@@ -15,6 +15,7 @@ var (
 
 type Lease struct {
 	ID                   uuid.UUID  `json:"id"`
+	OrganizationID       uuid.UUID  `json:"organization_id"`
 	OwnerID              uuid.UUID  `json:"owner_id"`
 	UnitID               uuid.UUID  `json:"unit_id"`
 	TenantID             uuid.UUID  `json:"tenant_id"`
@@ -69,14 +70,14 @@ type RenewLeaseInput struct {
 }
 
 type Repository interface {
-	Create(ctx context.Context, ownerID uuid.UUID, in CreateLeaseInput) (*Lease, error)
-	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Lease, error)
-	List(ctx context.Context, ownerID uuid.UUID) ([]Lease, error)
-	Update(ctx context.Context, id, ownerID uuid.UUID, in UpdateLeaseInput) (*Lease, error)
-	Delete(ctx context.Context, id, ownerID uuid.UUID) error
-	End(ctx context.Context, id, ownerID uuid.UUID) (*Lease, error)
-	Renew(ctx context.Context, id, ownerID uuid.UUID, in RenewLeaseInput) (*Lease, error)
-	UpdateRentAmount(ctx context.Context, id, ownerID uuid.UUID, amount float64) (*Lease, error)
+	Create(ctx context.Context, orgID, ownerID uuid.UUID, in CreateLeaseInput) (*Lease, error)
+	GetByID(ctx context.Context, id, orgID uuid.UUID) (*Lease, error)
+	List(ctx context.Context, orgID uuid.UUID) ([]Lease, error)
+	Update(ctx context.Context, id, orgID uuid.UUID, in UpdateLeaseInput) (*Lease, error)
+	Delete(ctx context.Context, id, orgID uuid.UUID) error
+	End(ctx context.Context, id, orgID uuid.UUID) (*Lease, error)
+	Renew(ctx context.Context, id, orgID uuid.UUID, in RenewLeaseInput) (*Lease, error)
+	UpdateRentAmount(ctx context.Context, id, orgID uuid.UUID, amount float64) (*Lease, error)
 }
 
 type IndexValue struct {

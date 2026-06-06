@@ -8,16 +8,16 @@ import (
 )
 
 type Property struct {
-	ID          uuid.UUID `json:"id"`
-	OwnerID     uuid.UUID `json:"owner_id"`
-	Type        string    `json:"type"`
-	Name        string    `json:"name"`
-	AddressLine *string   `json:"address_line,omitempty"`
-	City        *string   `json:"city,omitempty"`
-	State       *string   `json:"state,omitempty"`
-	IsActive    bool      `json:"is_active"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Type           string    `json:"type"`
+	Name           string    `json:"name"`
+	AddressLine    *string   `json:"address_line,omitempty"`
+	City           *string   `json:"city,omitempty"`
+	State          *string   `json:"state,omitempty"`
+	IsActive       bool      `json:"is_active"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type Unit struct {
@@ -51,16 +51,16 @@ type PropertyWithUnits struct {
 }
 
 type Repository interface {
-	Create(ctx context.Context, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error)
-	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Property, error)
-	List(ctx context.Context, ownerID uuid.UUID) ([]Property, error)
-	Update(ctx context.Context, id, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error)
-	Delete(ctx context.Context, id, ownerID uuid.UUID) error
+	Create(ctx context.Context, userID, orgID uuid.UUID, in CreatePropertyInput) (*Property, error)
+	GetByID(ctx context.Context, id, orgID uuid.UUID) (*Property, error)
+	List(ctx context.Context, orgID uuid.UUID) ([]Property, error)
+	Update(ctx context.Context, id, orgID uuid.UUID, in CreatePropertyInput) (*Property, error)
+	Delete(ctx context.Context, id, orgID uuid.UUID) error
 	CreateUnit(ctx context.Context, propertyID uuid.UUID, in CreateUnitInput) (*Unit, error)
-	GetUnit(ctx context.Context, id, ownerID uuid.UUID) (*Unit, error)
+	GetUnit(ctx context.Context, id, orgID uuid.UUID) (*Unit, error)
 	ListUnits(ctx context.Context, propertyID uuid.UUID) ([]Unit, error)
 	ListUnitsByPropertyIDs(ctx context.Context, propertyIDs []uuid.UUID) ([]Unit, error)
-	UpdateUnit(ctx context.Context, id, ownerID uuid.UUID, in CreateUnitInput) (*Unit, error)
-	DeleteUnit(ctx context.Context, id, ownerID uuid.UUID) error
-	GetByField(ctx context.Context, ownerID uuid.UUID, field string, value string) (*Property, error)
+	UpdateUnit(ctx context.Context, id, orgID uuid.UUID, in CreateUnitInput) (*Unit, error)
+	DeleteUnit(ctx context.Context, id, orgID uuid.UUID) error
+	GetByField(ctx context.Context, orgID uuid.UUID, field string, value string) (*Property, error)
 }

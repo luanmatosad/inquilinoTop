@@ -24,11 +24,15 @@ func noopAuthMW(next http.Handler) http.Handler {
 	})
 }
 
+func noopWriteMw(next http.Handler) http.Handler {
+	return next
+}
+
 func TestHandler_ListByUnit_IDInválido(t *testing.T) {
 	svc := expense.NewService(newMockExpenseRepo())
 	h := expense.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/units/nao-e-uuid/expenses", nil)
 	rr := httptest.NewRecorder()
@@ -41,7 +45,7 @@ func TestHandler_ListByUnit_Válido(t *testing.T) {
 	svc := expense.NewService(newMockExpenseRepo())
 	h := expense.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
 	unitID := uuid.New()
 	req := httptest.NewRequest(http.MethodGet, "/units/"+unitID.String()+"/expenses", nil)
@@ -61,7 +65,7 @@ func TestHandler_Create_IDInválido(t *testing.T) {
 	svc := expense.NewService(newMockExpenseRepo())
 	h := expense.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPost, "/units/nao-e-uuid/expenses", nil)
 	rr := httptest.NewRecorder()
@@ -74,7 +78,7 @@ func TestHandler_Create_BodyInválido(t *testing.T) {
 	svc := expense.NewService(newMockExpenseRepo())
 	h := expense.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
 	unitID := uuid.New()
 	req := httptest.NewRequest(http.MethodPost, "/units/"+unitID.String()+"/expenses", strings.NewReader("not-json"))
@@ -88,7 +92,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 	svc := expense.NewService(newMockExpenseRepo())
 	h := expense.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
 	unitID := uuid.New()
 	body, _ := json.Marshal(map[string]interface{}{
@@ -120,7 +124,7 @@ func TestHandler_Update_NãoEncontrado_Retorna404(t *testing.T) {
 	svc := expense.NewService(mock)
 	h := expense.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"description": "Água",
@@ -140,7 +144,7 @@ func TestHandler_Update_IDInválido(t *testing.T) {
 	svc := expense.NewService(newMockExpenseRepo())
 	h := expense.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPut, "/expenses/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -153,7 +157,7 @@ func TestHandler_Update_BodyInválido(t *testing.T) {
 	svc := expense.NewService(newMockExpenseRepo())
 	h := expense.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPut, "/expenses/"+uuid.New().String(), strings.NewReader("not-json"))
 	rr := httptest.NewRecorder()
@@ -166,7 +170,7 @@ func TestHandler_Delete_IDInválido(t *testing.T) {
 	svc := expense.NewService(newMockExpenseRepo())
 	h := expense.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expenses/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -179,7 +183,7 @@ func TestHandler_Delete_NãoEncontrado(t *testing.T) {
 	svc := expense.NewService(newMockExpenseRepo())
 	h := expense.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodDelete, "/expenses/"+uuid.New().String(), nil)
 	rr := httptest.NewRecorder()
@@ -194,7 +198,7 @@ func TestHandler_Delete_Válido(t *testing.T) {
 	svc := expense.NewService(mock)
 	h := expense.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
 	// noopAuthMW não injeta ownerID, então OwnerIDFromCtx retorna uuid.Nil
 	ownerID := uuid.Nil
@@ -214,7 +218,7 @@ func TestHandler_ListByOwner_Vazio(t *testing.T) {
 	svc := expense.NewService(newMockExpenseRepo())
 	h := expense.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)
 	rr := httptest.NewRecorder()

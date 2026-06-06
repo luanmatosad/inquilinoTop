@@ -18,27 +18,28 @@ func NewRepository(pool *pgxpool.Pool) *pgRepository {
 	return &pgRepository{pool: pool}
 }
 
-func (r *pgRepository) Create(ctx context.Context, ownerID uuid.UUID, in CreateInput) (*AuditLog, error) {
+func (r *pgRepository) Create(ctx context.Context, organizationID, ownerID uuid.UUID, in CreateInput) (*AuditLog, error) {
 	detailsJSON, _ := json.Marshal(in.Details)
 
 	log := &AuditLog{
-		ID:         uuid.New(),
-		OwnerID:    ownerID,
-		UserID:     in.UserID,
-		EventType:  in.EventType,
-		EntityType: in.EntityType,
-		EntityID:   in.EntityID,
-		IPAddress:  in.IPAddress,
-		UserAgent:  in.UserAgent,
-		Details:    in.Details,
-		CreatedAt:  time.Now().UTC(),
+		ID:             uuid.New(),
+		OrganizationID: organizationID,
+		OwnerID:        ownerID,
+		UserID:         in.UserID,
+		EventType:      in.EventType,
+		EntityType:     in.EntityType,
+		EntityID:       in.EntityID,
+		IPAddress:      in.IPAddress,
+		UserAgent:      in.UserAgent,
+		Details:        in.Details,
+		CreatedAt:      time.Now().UTC(),
 	}
 
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO audit_logs (id, owner_id, user_id, event_type, entity_type, entity_id, ip_address, user_agent, details, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO audit_logs (id, organization_id, owner_id, user_id, event_type, entity_type, entity_id, ip_address, user_agent, details, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`,
-		log.ID, log.OwnerID, log.UserID, log.EventType, log.EntityType, log.EntityID,
+		log.ID, log.OrganizationID, log.OwnerID, log.UserID, log.EventType, log.EntityType, log.EntityID,
 		log.IPAddress, log.UserAgent, detailsJSON, log.CreatedAt,
 	)
 	if err != nil {
@@ -48,14 +49,14 @@ func (r *pgRepository) Create(ctx context.Context, ownerID uuid.UUID, in CreateI
 	return log, nil
 }
 
-func (r *pgRepository) List(ctx context.Context, ownerID uuid.UUID, from, to *time.Time, eventType *string) ([]AuditLog, error) {
+func (r *pgRepository) List(ctx context.Context, organizationID, ownerID uuid.UUID, from, to *time.Time, eventType *string) ([]AuditLog, error) {
 	query := `
-		SELECT id, owner_id, user_id, event_type, entity_type, entity_id, ip_address, user_agent, details, created_at
+		SELECT id, organization_id, owner_id, user_id, event_type, entity_type, entity_id, ip_address, user_agent, details, created_at
 		FROM audit_logs
-		WHERE owner_id = $1
+		WHERE organization_id = $1 AND owner_id = $2
 	`
-	args := []interface{}{ownerID}
-	argIdx := 2
+	args := []interface{}{organizationID, ownerID}
+	argIdx := 3
 
 	if from != nil {
 		query += fmt.Sprintf(` AND created_at >= $%d`, argIdx)
@@ -86,7 +87,7 @@ func (r *pgRepository) List(ctx context.Context, ownerID uuid.UUID, from, to *ti
 		var log AuditLog
 		var detailsJSON []byte
 		err := rows.Scan(
-			&log.ID, &log.OwnerID, &log.UserID, &log.EventType, &log.EntityType, &log.EntityID,
+			&log.ID, &log.OrganizationID, &log.OwnerID, &log.UserID, &log.EventType, &log.EntityType, &log.EntityID,
 			&log.IPAddress, &log.UserAgent, &detailsJSON, &log.CreatedAt,
 		)
 		if err != nil {

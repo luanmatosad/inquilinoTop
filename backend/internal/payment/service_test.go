@@ -22,29 +22,28 @@ func newMockPaymentRepo() *mockPaymentRepo {
 	return &mockPaymentRepo{payments: make(map[uuid.UUID]*payment.Payment)}
 }
 
-func (m *mockPaymentRepo) Create(_ context.Context, ownerID uuid.UUID, in payment.CreatePaymentInput) (*payment.Payment, error) {
+func (m *mockPaymentRepo) Create(_ context.Context, userID, orgID uuid.UUID, in payment.CreatePaymentInput) (*payment.Payment, error) {
 	p := &payment.Payment{
-		ID:          uuid.New(),
-		OwnerID:     ownerID,
-		LeaseID:     in.LeaseID,
-		DueDate:     in.DueDate,
-		GrossAmount: in.GrossAmount,
-		Type:        in.Type,
-		Status:      "PENDING",
-		Competency:  in.Competency,
-		Description: in.Description,
+		ID:             uuid.New(),
+		OrganizationID: orgID,
+		LeaseID:        in.LeaseID,
+		DueDate:        in.DueDate,
+		GrossAmount:    in.GrossAmount,
+		Type:           in.Type,
+		Status:         "PENDING",
+		Competency:     in.Competency,
 	}
 	m.payments[p.ID] = p
 	return p, nil
 }
 
-func (m *mockPaymentRepo) CreateIfAbsent(_ context.Context, ownerID uuid.UUID, in payment.CreatePaymentInput) (*payment.Payment, bool, error) {
+func (m *mockPaymentRepo) CreateIfAbsent(_ context.Context, userID, orgID uuid.UUID, in payment.CreatePaymentInput) (*payment.Payment, bool, error) {
 	for _, p := range m.payments {
 		if p.LeaseID == in.LeaseID && p.Type == in.Type && p.Competency != nil && in.Competency != nil && *p.Competency == *in.Competency {
 			return p, false, nil
 		}
 	}
-	p, err := m.Create(context.Background(), ownerID, in)
+	p, err := m.Create(context.Background(), userID, orgID, in)
 	if err != nil {
 		return nil, false, err
 	}
@@ -53,7 +52,7 @@ func (m *mockPaymentRepo) CreateIfAbsent(_ context.Context, ownerID uuid.UUID, i
 
 func (m *mockPaymentRepo) GetByID(_ context.Context, id, ownerID uuid.UUID) (*payment.Payment, error) {
 	p, ok := m.payments[id]
-	if !ok || p.OwnerID != ownerID {
+	if !ok || p.OrganizationID != ownerID {
 		return nil, errors.New("not found")
 	}
 	return p, nil
@@ -62,7 +61,7 @@ func (m *mockPaymentRepo) GetByID(_ context.Context, id, ownerID uuid.UUID) (*pa
 func (m *mockPaymentRepo) ListByLease(_ context.Context, leaseID, ownerID uuid.UUID) ([]payment.Payment, error) {
 	var list []payment.Payment
 	for _, p := range m.payments {
-		if p.LeaseID == leaseID && p.OwnerID == ownerID {
+		if p.LeaseID == leaseID && p.OrganizationID == ownerID {
 			list = append(list, *p)
 		}
 	}
@@ -129,7 +128,7 @@ func (m *mockPaymentRepo) GetFinancialConfig(_ context.Context, ownerID uuid.UUI
 func (m *mockPaymentRepo) UpsertFinancialConfig(_ context.Context, ownerID uuid.UUID, in payment.UpsertFinancialConfigInput) (*payment.FinancialConfig, error) {
 	cfg := &payment.FinancialConfig{
 		ID:       uuid.New(),
-		OwnerID:  ownerID,
+		OrganizationID:  ownerID,
 		Provider: in.Provider,
 		IsActive: true,
 	}
@@ -139,7 +138,7 @@ func (m *mockPaymentRepo) UpsertFinancialConfig(_ context.Context, ownerID uuid.
 func (m *mockPaymentRepo) CreateFinancialConfig(_ context.Context, ownerID uuid.UUID, in payment.CreateFinancialConfigInput) (*payment.FinancialConfig, error) {
 	cfg := &payment.FinancialConfig{
 		ID:       uuid.New(),
-		OwnerID:  ownerID,
+		OrganizationID:  ownerID,
 		Provider: in.Provider,
 		IsActive: true,
 	}
@@ -162,7 +161,7 @@ func (m *mockPaymentRepo) GetByChargeID(_ context.Context, chargeID string) (*pa
 func (m *mockPaymentRepo) ListByOwner(_ context.Context, ownerID uuid.UUID, statusFilter string) ([]payment.Payment, error) {
 	var list []payment.Payment
 	for _, p := range m.payments {
-		if p.OwnerID != ownerID {
+		if p.OrganizationID != ownerID {
 			continue
 		}
 		if statusFilter != "" && p.Status != statusFilter {
@@ -183,7 +182,7 @@ func newMockLeaseReader() *mockLeaseReader {
 
 func (m *mockLeaseReader) GetByID(_ context.Context, id, ownerID uuid.UUID) (*lease.Lease, error) {
 	l, ok := m.leases[id]
-	if !ok || l.OwnerID != ownerID {
+	if !ok || l.OrganizationID != ownerID {
 		return nil, errors.New("not found")
 	}
 	return l, nil
@@ -199,7 +198,7 @@ func newMockTenantReader() *mockTenantReader {
 
 func (m *mockTenantReader) GetByID(_ context.Context, id, ownerID uuid.UUID) (*tenant.Tenant, error) {
 	t, ok := m.tenants[id]
-	if !ok || t.OwnerID != ownerID {
+	if !ok || t.OrganizationID != ownerID {
 		return nil, errors.New("not found")
 	}
 	return t, nil
@@ -292,7 +291,7 @@ func setupLease(svc *testService, leaseID, ownerID uuid.UUID, lateFeePercent, da
 	tenantID := uuid.New()
 	l := &lease.Lease{
 		ID:                   leaseID,
-		OwnerID:              ownerID,
+		OrganizationID:              ownerID,
 		TenantID:             tenantID,
 		StartDate:            time.Now().AddDate(0, -6, 0),
 		RentAmount:           2000,
@@ -304,7 +303,7 @@ func setupLease(svc *testService, leaseID, ownerID uuid.UUID, lateFeePercent, da
 
 	t := &tenant.Tenant{
 		ID:         tenantID,
-		OwnerID:    ownerID,
+		OrganizationID:    ownerID,
 		Name:       "Tenant Test",
 		PersonType: "PF",
 	}
@@ -314,7 +313,7 @@ func setupLease(svc *testService, leaseID, ownerID uuid.UUID, lateFeePercent, da
 func setupLeaseBasic(svc *testService, leaseID, ownerID uuid.UUID, rentAmount float64, startDate time.Time, iptuReimbursable bool, annualIPTU float64) {
 	l := &lease.Lease{
 		ID:                   leaseID,
-		OwnerID:              ownerID,
+		OrganizationID:              ownerID,
 		TenantID:             uuid.New(),
 		StartDate:            startDate,
 		RentAmount:           rentAmount,
@@ -332,7 +331,7 @@ func setupLeaseBasic(svc *testService, leaseID, ownerID uuid.UUID, rentAmount fl
 func setupLeaseEnded(svc *testService, leaseID, ownerID uuid.UUID) {
 	l := &lease.Lease{
 		ID:         leaseID,
-		OwnerID:    ownerID,
+		OrganizationID:    ownerID,
 		TenantID:   uuid.New(),
 		StartDate:  time.Now().AddDate(0, -6, 0),
 		RentAmount: 2000,
@@ -344,7 +343,7 @@ func setupLeaseEnded(svc *testService, leaseID, ownerID uuid.UUID) {
 func setupLeaseIPTUMissing(svc *testService, leaseID, ownerID uuid.UUID) {
 	l := &lease.Lease{
 		ID:               leaseID,
-		OwnerID:          ownerID,
+		OrganizationID:          ownerID,
 		TenantID:         uuid.New(),
 		StartDate:        time.Now().AddDate(0, -6, 0),
 		RentAmount:       2000,
@@ -359,7 +358,7 @@ func TestService_Create_Válido(t *testing.T) {
 	ownerID := uuid.New()
 	leaseID := uuid.New()
 
-	p, err := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, err := svc.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID:     leaseID,
 		DueDate:     time.Now(),
 		GrossAmount: 1500,
@@ -372,7 +371,7 @@ func TestService_Create_Válido(t *testing.T) {
 
 func TestService_Create_LeaseIDNil(t *testing.T) {
 	svc := newTestService()
-	_, err := svc.Create(context.Background(), uuid.New(), payment.CreatePaymentInput{
+	_, err := svc.Create(context.Background(), uuid.New(), uuid.New(), payment.CreatePaymentInput{
 		DueDate:     time.Now(),
 		GrossAmount: 1000,
 		Type:        "RENT",
@@ -382,7 +381,7 @@ func TestService_Create_LeaseIDNil(t *testing.T) {
 
 func TestService_Create_AmountZero(t *testing.T) {
 	svc := newTestService()
-	_, err := svc.Create(context.Background(), uuid.New(), payment.CreatePaymentInput{
+	_, err := svc.Create(context.Background(), uuid.New(), uuid.New(), payment.CreatePaymentInput{
 		LeaseID: uuid.New(),
 		DueDate: time.Now(),
 		Type:    "RENT",
@@ -392,7 +391,7 @@ func TestService_Create_AmountZero(t *testing.T) {
 
 func TestService_Create_TypeInválido(t *testing.T) {
 	svc := newTestService()
-	_, err := svc.Create(context.Background(), uuid.New(), payment.CreatePaymentInput{
+	_, err := svc.Create(context.Background(), uuid.New(), uuid.New(), payment.CreatePaymentInput{
 		LeaseID:     uuid.New(),
 		DueDate:     time.Now(),
 		GrossAmount: 1000,
@@ -405,7 +404,7 @@ func TestService_Get_Encontrado(t *testing.T) {
 	svc := newTestService()
 	ownerID := uuid.New()
 
-	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, _ := svc.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: uuid.New(), DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
 	})
 	found, err := svc.Get(context.Background(), p.ID, ownerID)
@@ -418,10 +417,10 @@ func TestService_ListByLease(t *testing.T) {
 	ownerID := uuid.New()
 	leaseID := uuid.New()
 
-	svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	svc.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
 	})
-	svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	svc.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 500, Type: "DEPOSIT",
 	})
 
@@ -434,7 +433,7 @@ func TestService_Update_StatusInválido(t *testing.T) {
 	svc := newTestService()
 	ownerID := uuid.New()
 
-	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, _ := svc.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: uuid.New(), DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
 	})
 	_, err := svc.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
@@ -448,13 +447,13 @@ func TestService_Update_MarcarPago(t *testing.T) {
 	ownerID, leaseID := uuid.New(), uuid.New()
 	setupLease(svc, leaseID, ownerID, 0.05, 0.001)
 
-	p, _ := svc.mockRepo.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, _ := svc.mockRepo.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
 	
 	// Add tenant since the mock uses it for the receipt
 	tenantID := svc.leaseReader.leases[leaseID].TenantID
-	svc.tenantReader.tenants[tenantID] = &tenant.Tenant{ID: tenantID, OwnerID: ownerID, PersonType: "PF"}
+	svc.tenantReader.tenants[tenantID] = &tenant.Tenant{ID: tenantID, OrganizationID: ownerID, PersonType: "PF"}
 	doc := "123"
 	svc.ownerReader.owners[ownerID] = &payment.OwnerSummary{ID: ownerID, Document: &doc}
 	svc.unitReader.units[svc.leaseReader.leases[leaseID].UnitID] = &payment.UnitSummary{ID: svc.leaseReader.leases[leaseID].UnitID}
@@ -474,7 +473,7 @@ func TestService_Enrich_NãoAtrasado(t *testing.T) {
 	setupLease(svc, leaseID, ownerID, 0.10, 0.000333)
 
 	p := payment.Payment{
-		LeaseID: leaseID, OwnerID: ownerID,
+		LeaseID: leaseID, OrganizationID: ownerID,
 		DueDate: time.Now().AddDate(0, 0, 5), GrossAmount: 2000, Status: "PENDING", Type: "RENT",
 	}
 	out := svc.Enrich(context.Background(), p)
@@ -489,7 +488,7 @@ func TestService_Enrich_Atrasado(t *testing.T) {
 	setupLease(svc, leaseID, ownerID, 0.10, 0.001)
 
 	p := payment.Payment{
-		LeaseID: leaseID, OwnerID: ownerID,
+		LeaseID: leaseID, OrganizationID: ownerID,
 		DueDate: time.Now().AddDate(0, 0, -10), GrossAmount: 2000, Status: "PENDING", Type: "RENT",
 	}
 	out := svc.Enrich(context.Background(), p)
@@ -503,7 +502,7 @@ func TestService_GenerateMonth_RentESemIPTU(t *testing.T) {
 	leaseID, ownerID := uuid.New(), uuid.New()
 	setupLeaseBasic(svc, leaseID, ownerID, 2000, time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), false, 0)
 
-	ps, err := svc.GenerateMonth(context.Background(), leaseID, ownerID, "2026-04")
+	ps, err := svc.GenerateMonth(context.Background(), ownerID, leaseID, ownerID, "2026-04")
 	require.NoError(t, err)
 	require.Len(t, ps, 1)
 	assert.Equal(t, "RENT", ps[0].Type)
@@ -516,7 +515,7 @@ func TestService_GenerateMonth_ComIPTU(t *testing.T) {
 	leaseID, ownerID := uuid.New(), uuid.New()
 	setupLeaseBasic(svc, leaseID, ownerID, 2000, time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC), true, 1800)
 
-	ps, err := svc.GenerateMonth(context.Background(), leaseID, ownerID, "2026-04")
+	ps, err := svc.GenerateMonth(context.Background(), ownerID, leaseID, ownerID, "2026-04")
 	require.NoError(t, err)
 	require.Len(t, ps, 2)
 	var iptu *payment.Payment
@@ -534,8 +533,8 @@ func TestService_GenerateMonth_Idempotente(t *testing.T) {
 	leaseID, ownerID := uuid.New(), uuid.New()
 	setupLeaseBasic(svc, leaseID, ownerID, 2000, time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), false, 0)
 
-	ps1, _ := svc.GenerateMonth(context.Background(), leaseID, ownerID, "2026-04")
-	ps2, err := svc.GenerateMonth(context.Background(), leaseID, ownerID, "2026-04")
+	ps1, _ := svc.GenerateMonth(context.Background(), ownerID, leaseID, ownerID, "2026-04")
+	ps2, err := svc.GenerateMonth(context.Background(), ownerID, leaseID, ownerID, "2026-04")
 	require.NoError(t, err)
 	assert.Equal(t, ps1[0].ID, ps2[0].ID)
 }
@@ -545,7 +544,7 @@ func TestService_GenerateMonth_LeaseEnded(t *testing.T) {
 	leaseID, ownerID := uuid.New(), uuid.New()
 	setupLeaseEnded(svc, leaseID, ownerID)
 
-	_, err := svc.GenerateMonth(context.Background(), leaseID, ownerID, "2026-04")
+	_, err := svc.GenerateMonth(context.Background(), ownerID, leaseID, ownerID, "2026-04")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, payment.ErrLeaseNotActive)
 }
@@ -555,7 +554,7 @@ func TestService_GenerateMonth_MonthForaRange(t *testing.T) {
 	leaseID, ownerID := uuid.New(), uuid.New()
 	setupLeaseBasic(svc, leaseID, ownerID, 2000, time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), false, 0)
 
-	_, err := svc.GenerateMonth(context.Background(), leaseID, ownerID, "2025-01")
+	_, err := svc.GenerateMonth(context.Background(), ownerID, leaseID, ownerID, "2025-01")
 	require.Error(t, err)
 }
 
@@ -564,7 +563,7 @@ func TestService_GenerateMonth_IPTUMissing(t *testing.T) {
 	leaseID, ownerID := uuid.New(), uuid.New()
 	setupLeaseIPTUMissing(svc, leaseID, ownerID)
 
-	_, err := svc.GenerateMonth(context.Background(), leaseID, ownerID, "2026-04")
+	_, err := svc.GenerateMonth(context.Background(), ownerID, leaseID, ownerID, "2026-04")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, payment.ErrIPTUMissing)
 }
@@ -574,7 +573,7 @@ func TestService_GenerateMonth_DiaInexistenteNoMes(t *testing.T) {
 	leaseID, ownerID := uuid.New(), uuid.New()
 	setupLeaseBasic(svc, leaseID, ownerID, 2000, time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC), false, 0)
 
-	ps, err := svc.GenerateMonth(context.Background(), leaseID, ownerID, "2026-02")
+	ps, err := svc.GenerateMonth(context.Background(), ownerID, leaseID, ownerID, "2026-02")
 	require.NoError(t, err)
 	assert.Equal(t, 28, ps[0].DueDate.Day())
 }
@@ -590,13 +589,13 @@ func TestService_BuildReceipt_Pago(t *testing.T) {
 
 	// Add tenant since the mock uses it for the receipt
 	tenantID := svc.leaseReader.leases[leaseID].TenantID
-	svc.tenantReader.tenants[tenantID] = &tenant.Tenant{ID: tenantID, OwnerID: ownerID, PersonType: "PF"}
+	svc.tenantReader.tenants[tenantID] = &tenant.Tenant{ID: tenantID, OrganizationID: ownerID, PersonType: "PF"}
 	doc := "123"
 	svc.ownerReader.owners[ownerID] = &payment.OwnerSummary{ID: ownerID, Document: &doc}
 	svc.unitReader.units[svc.leaseReader.leases[leaseID].UnitID] = &payment.UnitSummary{ID: svc.leaseReader.leases[leaseID].UnitID}
 
 	paidDate := time.Now()
-	p, _ := svc.mockRepo.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, _ := svc.mockRepo.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
 	svc.mockRepo.MarkPaid(context.Background(), p.ID, ownerID, paidDate, 0, 0, 0, 2000)
@@ -610,7 +609,7 @@ func TestService_BuildReceipt_NãoPago(t *testing.T) {
 	svc := newTestService()
 	ownerID, leaseID := uuid.New(), uuid.New()
 
-	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, _ := svc.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
 
@@ -630,7 +629,7 @@ func TestService_Update_PaidDateVazio(t *testing.T) {
 	svc := newTestService()
 	ownerID, leaseID := uuid.New(), uuid.New()
 
-	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, _ := svc.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
 
@@ -645,7 +644,7 @@ func TestService_Update_StatusInválidoNaCriação(t *testing.T) {
 	svc := newTestService()
 	ownerID, leaseID := uuid.New(), uuid.New()
 
-	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, _ := svc.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
 
@@ -663,14 +662,14 @@ func TestService_MarkPaid_PagoAnteriormente(t *testing.T) {
 
 	tenantID := uuid.New()
 	tn := &tenant.Tenant{
-		ID: tenantID, OwnerID: ownerID, Name: "Tenant", PersonType: "PF",
+		ID: tenantID, OrganizationID: ownerID, Name: "Tenant", PersonType: "PF",
 	}
 	svc.addTenant(tn)
 
 	l := svc.leaseReader.leases[leaseID]
 	l.TenantID = tenantID
 
-	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, _ := svc.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
 
@@ -688,12 +687,12 @@ func TestService_CreateIfAbsent_JáExiste(t *testing.T) {
 	ownerID, leaseID := uuid.New(), uuid.New()
 	month := "2026-01"
 
-	p, created, _ := svc.mockRepo.CreateIfAbsent(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, created, _ := svc.mockRepo.CreateIfAbsent(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT", Competency: &month,
 	})
 	require.True(t, created)
 
-	p2, created2, err := svc.mockRepo.CreateIfAbsent(context.Background(), ownerID, payment.CreatePaymentInput{
+	p2, created2, err := svc.mockRepo.CreateIfAbsent(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT", Competency: &month,
 	})
 	require.NoError(t, err)
@@ -707,12 +706,12 @@ func TestService_CreateIfAbsent_Novo(t *testing.T) {
 	month1 := "2026-01"
 	month2 := "2026-02"
 
-	_, created1, _ := svc.mockRepo.CreateIfAbsent(context.Background(), ownerID, payment.CreatePaymentInput{
+	_, created1, _ := svc.mockRepo.CreateIfAbsent(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT", Competency: &month1,
 	})
 	require.True(t, created1)
 
-	_, created2, err := svc.mockRepo.CreateIfAbsent(context.Background(), ownerID, payment.CreatePaymentInput{
+	_, created2, err := svc.mockRepo.CreateIfAbsent(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT", Competency: &month2,
 	})
 	require.NoError(t, err)
@@ -723,7 +722,7 @@ func TestService_ProcessWebhook_PaymentRecebido(t *testing.T) {
 	svc := newTestService()
 	ownerID, leaseID := uuid.New(), uuid.New()
 
-	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, _ := svc.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
 
@@ -779,7 +778,7 @@ func TestService_Enrich_PaymentPago(t *testing.T) {
 	svc := newTestService()
 	ownerID, leaseID := uuid.New(), uuid.New()
 
-	p, _ := svc.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, _ := svc.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now().Add(-48 * time.Hour), GrossAmount: 2000, Type: "RENT",
 	})
 
@@ -795,7 +794,7 @@ func TestService_Enrich_LeaseNãoEncontrado(t *testing.T) {
 	ownerID := uuid.New()
 
 	p := payment.Payment{
-		ID: uuid.New(), OwnerID: ownerID, LeaseID: uuid.New(),
+		ID: uuid.New(), OrganizationID: ownerID, LeaseID: uuid.New(),
 		DueDate: time.Now().Add(-48 * time.Hour), GrossAmount: 2000, Type: "RENT", Status: "PENDING",
 	}
 

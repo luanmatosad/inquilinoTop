@@ -18,11 +18,11 @@ type mockAuditRepo struct {
 	err error
 }
 
-func (m *mockAuditRepo) Create(ctx context.Context, ownerID uuid.UUID, in CreateInput) (*AuditLog, error) {
+func (m *mockAuditRepo) Create(ctx context.Context, organizationID, ownerID uuid.UUID, in CreateInput) (*AuditLog, error) {
 	return &AuditLog{ID: uuid.New()}, nil
 }
 
-func (m *mockAuditRepo) List(ctx context.Context, ownerID uuid.UUID, from, to *time.Time, eventType *string) ([]AuditLog, error) {
+func (m *mockAuditRepo) List(ctx context.Context, organizationID, ownerID uuid.UUID, from, to *time.Time, eventType *string) ([]AuditLog, error) {
 	return m.logs, m.err
 }
 

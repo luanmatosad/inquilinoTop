@@ -26,7 +26,7 @@ func NewService(repo Repository, lr LeaseReader, tr TenantReader, ur UnitReader,
 	return &Service{repo: repo, leaseReader: lr, tenantReader: tr, unitReader: ur, ownerReader: ow, irrf: irrf}
 }
 
-func (s *Service) Create(ctx context.Context, ownerID uuid.UUID, in CreatePaymentInput) (*Payment, error) {
+func (s *Service) Create(ctx context.Context, userID, orgID uuid.UUID, in CreatePaymentInput) (*Payment, error) {
 	if in.LeaseID == uuid.Nil {
 		return nil, fmt.Errorf("payment.svc: lease_id obrigatório")
 	}
@@ -37,11 +37,11 @@ func (s *Service) Create(ctx context.Context, ownerID uuid.UUID, in CreatePaymen
 	if !valid[in.Type] {
 		return nil, fmt.Errorf("payment.svc: type inválido")
 	}
-	return s.repo.Create(ctx, ownerID, in)
+	return s.repo.Create(ctx, userID, orgID, in)
 }
 
-func (s *Service) Get(ctx context.Context, id, ownerID uuid.UUID) (*Payment, error) {
-	p, err := s.repo.GetByID(ctx, id, ownerID)
+func (s *Service) Get(ctx context.Context, id, orgID uuid.UUID) (*Payment, error) {
+	p, err := s.repo.GetByID(ctx, id, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +49,8 @@ func (s *Service) Get(ctx context.Context, id, ownerID uuid.UUID) (*Payment, err
 	return &enriched, nil
 }
 
-func (s *Service) ListByLease(ctx context.Context, leaseID, ownerID uuid.UUID) ([]Payment, error) {
-	list, err := s.repo.ListByLease(ctx, leaseID, ownerID)
+func (s *Service) ListByLease(ctx context.Context, leaseID, orgID uuid.UUID) ([]Payment, error) {
+	list, err := s.repo.ListByLease(ctx, leaseID, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -60,8 +60,8 @@ func (s *Service) ListByLease(ctx context.Context, leaseID, ownerID uuid.UUID) (
 	return list, nil
 }
 
-func (s *Service) ListByOwner(ctx context.Context, ownerID uuid.UUID, statusFilter string) ([]Payment, error) {
-	return s.repo.ListByOwner(ctx, ownerID, statusFilter)
+func (s *Service) ListByOwner(ctx context.Context, orgID uuid.UUID, statusFilter string) ([]Payment, error) {
+	return s.repo.ListByOwner(ctx, orgID, statusFilter)
 }
 
 func (s *Service) Enrich(ctx context.Context, p Payment) Payment {
@@ -71,7 +71,7 @@ func (s *Service) Enrich(ctx context.Context, p Payment) Payment {
 	if !time.Now().After(p.DueDate) {
 		return p
 	}
-	l, err := s.leaseReader.GetByID(ctx, p.LeaseID, p.OwnerID)
+	l, err := s.leaseReader.GetByID(ctx, p.LeaseID, p.OrganizationID)
 	if err != nil {
 		return p
 	}
@@ -85,22 +85,22 @@ func (s *Service) Enrich(ctx context.Context, p Payment) Payment {
 	return p
 }
 
-func (s *Service) Update(ctx context.Context, id, ownerID uuid.UUID, in UpdatePaymentInput) (*Payment, error) {
+func (s *Service) Update(ctx context.Context, id, orgID uuid.UUID, in UpdatePaymentInput) (*Payment, error) {
 	validStatuses := map[string]bool{"PENDING": true, "PAID": true, "LATE": true}
 	if !validStatuses[in.Status] {
 		return nil, fmt.Errorf("payment.svc: status inválido")
 	}
 	if in.PaidDate != nil && in.Status == "PAID" {
-		return s.markPaid(ctx, id, ownerID, *in.PaidDate)
+		return s.markPaid(ctx, id, orgID, *in.PaidDate)
 	}
-	return s.repo.Update(ctx, id, ownerID, in)
+	return s.repo.Update(ctx, id, orgID, in)
 }
 
 var errAlreadyPaid = errors.New("payment already paid")
 var errNotPaid = errors.New("payment not paid")
 
-func (s *Service) markPaid(ctx context.Context, id, ownerID uuid.UUID, paidDate time.Time) (*Payment, error) {
-	current, err := s.repo.GetByID(ctx, id, ownerID)
+func (s *Service) markPaid(ctx context.Context, id, orgID uuid.UUID, paidDate time.Time) (*Payment, error) {
+	current, err := s.repo.GetByID(ctx, id, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: %w", err)
 	}
@@ -108,7 +108,7 @@ func (s *Service) markPaid(ctx context.Context, id, ownerID uuid.UUID, paidDate 
 		return nil, errAlreadyPaid
 	}
 
-	l, err := s.leaseReader.GetByID(ctx, current.LeaseID, ownerID)
+	l, err := s.leaseReader.GetByID(ctx, current.LeaseID, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: load lease: %w", err)
 	}
@@ -124,7 +124,7 @@ func (s *Service) markPaid(ctx context.Context, id, ownerID uuid.UUID, paidDate 
 
 	var irrf float64
 	if current.Type == "RENT" {
-		tn, err := s.tenantReader.GetByID(ctx, l.TenantID, ownerID)
+		tn, err := s.tenantReader.GetByID(ctx, l.TenantID, orgID)
 		if err != nil {
 			return nil, fmt.Errorf("payment.svc: load tenant: %w", err)
 		}
@@ -139,7 +139,7 @@ func (s *Service) markPaid(ctx context.Context, id, ownerID uuid.UUID, paidDate 
 	}
 
 	net := round2(current.GrossAmount + lateFee + interest - irrf)
-	return s.repo.MarkPaid(ctx, id, ownerID, paidDate, lateFee, interest, irrf, net)
+	return s.repo.MarkPaid(ctx, id, orgID, paidDate, lateFee, interest, irrf, net)
 }
 
 func (s *Service) IsAlreadyPaid(err error) bool {
@@ -168,13 +168,13 @@ func (s *Service) getProvider(fc *FinancialConfig) (provider.PaymentProvider, er
 	return provider.NewProvider(fc.Provider, stringConfig)
 }
 
-func (s *Service) GenerateMonth(ctx context.Context, leaseID, ownerID uuid.UUID, month string) ([]Payment, error) {
+func (s *Service) GenerateMonth(ctx context.Context, userID, leaseID, orgID uuid.UUID, month string) ([]Payment, error) {
 	monthStart, err := time.Parse("2006-01", month)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: %w", ErrInvalidMonth)
 	}
 
-	l, err := s.leaseReader.GetByID(ctx, leaseID, ownerID)
+	l, err := s.leaseReader.GetByID(ctx, leaseID, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: %w", err)
 	}
@@ -201,7 +201,7 @@ func (s *Service) GenerateMonth(ctx context.Context, leaseID, ownerID uuid.UUID,
 		LeaseID: leaseID, DueDate: dueDate, GrossAmount: l.RentAmount,
 		Type: "RENT", Competency: &month,
 	}
-	p, _, err := s.repo.CreateIfAbsent(ctx, ownerID, rentInput)
+	p, _, err := s.repo.CreateIfAbsent(ctx, userID, orgID, rentInput)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: generate rent: %w", err)
 	}
@@ -222,7 +222,7 @@ func (s *Service) GenerateMonth(ctx context.Context, leaseID, ownerID uuid.UUID,
 			LeaseID: leaseID, DueDate: dueDate, GrossAmount: parcelaValor,
 			Type: "EXPENSE", Competency: &month, Description: &desc,
 		}
-		p2, _, err := s.repo.CreateIfAbsent(ctx, ownerID, iptuInput)
+		p2, _, err := s.repo.CreateIfAbsent(ctx, userID, orgID, iptuInput)
 		if err != nil {
 			return nil, fmt.Errorf("payment.svc: generate iptu: %w", err)
 		}
@@ -241,27 +241,27 @@ func dueDateForMonth(leaseStart time.Time, monthStart time.Time) time.Time {
 	return time.Date(y, m, day, 0, 0, 0, 0, time.UTC)
 }
 
-func (s *Service) BuildReceipt(ctx context.Context, id, ownerID uuid.UUID) (*Receipt, error) {
-	p, err := s.repo.GetByID(ctx, id, ownerID)
+func (s *Service) BuildReceipt(ctx context.Context, id, orgID uuid.UUID) (*Receipt, error) {
+	p, err := s.repo.GetByID(ctx, id, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: %w", err)
 	}
 	if p.Status != "PAID" || p.PaidDate == nil {
 		return nil, errNotPaid
 	}
-	l, err := s.leaseReader.GetByID(ctx, p.LeaseID, ownerID)
+	l, err := s.leaseReader.GetByID(ctx, p.LeaseID, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: load lease: %w", err)
 	}
-	tn, err := s.tenantReader.GetByID(ctx, l.TenantID, ownerID)
+	tn, err := s.tenantReader.GetByID(ctx, l.TenantID, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: load tenant: %w", err)
 	}
-	ow, err := s.ownerReader.GetByID(ctx, ownerID)
+	ow, err := s.ownerReader.GetByID(ctx, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: load owner: %w", err)
 	}
-	un, err := s.unitReader.GetByID(ctx, l.UnitID, ownerID)
+	un, err := s.unitReader.GetByID(ctx, l.UnitID, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: load unit: %w", err)
 	}
@@ -302,8 +302,8 @@ var (
 	errInvalidMethod   = fmt.Errorf("invalid method")
 )
 
-func (s *Service) CreateCharge(ctx context.Context, paymentID, ownerID uuid.UUID, method string) (*provider.ChargeResponse, error) {
-	payment, err := s.repo.GetByID(ctx, paymentID, ownerID)
+func (s *Service) CreateCharge(ctx context.Context, paymentID, orgID uuid.UUID, method string) (*provider.ChargeResponse, error) {
+	payment, err := s.repo.GetByID(ctx, paymentID, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: get payment: %w", err)
 	}
@@ -312,12 +312,12 @@ func (s *Service) CreateCharge(ctx context.Context, paymentID, ownerID uuid.UUID
 		return nil, fmt.Errorf("payment already paid")
 	}
 
-	l, err := s.leaseReader.GetByID(ctx, payment.LeaseID, ownerID)
+	l, err := s.leaseReader.GetByID(ctx, payment.LeaseID, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: load lease: %w", err)
 	}
 
-	tn, err := s.tenantReader.GetByID(ctx, l.TenantID, ownerID)
+	tn, err := s.tenantReader.GetByID(ctx, l.TenantID, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: load tenant: %w", err)
 	}
@@ -334,7 +334,7 @@ func (s *Service) CreateCharge(ctx context.Context, paymentID, ownerID uuid.UUID
 		customer.Document = *tn.Document
 	}
 
-	fc, err := s.getActiveFinancialConfig(ctx, ownerID)
+	fc, err := s.getActiveFinancialConfig(ctx, orgID)
 	if err != nil {
 		return nil, errNoFinancialConfig
 	}
@@ -367,7 +367,7 @@ func (s *Service) CreateCharge(ctx context.Context, paymentID, ownerID uuid.UUID
 		return nil, fmt.Errorf("payment.svc: create charge: %w", err)
 	}
 
-	err = s.repo.UpdateChargeInfo(ctx, paymentID, ownerID, UpdateChargeInfoInput{
+	err = s.repo.UpdateChargeInfo(ctx, paymentID, orgID, UpdateChargeInfoInput{
 		ChargeID:     resp.ChargeID,
 		ChargeMethod: method,
 		QRCode:      resp.QRCode,
@@ -382,8 +382,8 @@ func (s *Service) CreateCharge(ctx context.Context, paymentID, ownerID uuid.UUID
 	return resp, nil
 }
 
-func (s *Service) GetChargeStatus(ctx context.Context, paymentID, ownerID uuid.UUID) (*provider.ChargeStatus, error) {
-	payment, err := s.repo.GetByID(ctx, paymentID, ownerID)
+func (s *Service) GetChargeStatus(ctx context.Context, paymentID, orgID uuid.UUID) (*provider.ChargeStatus, error) {
+	payment, err := s.repo.GetByID(ctx, paymentID, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: get payment: %w", err)
 	}
@@ -392,7 +392,7 @@ func (s *Service) GetChargeStatus(ctx context.Context, paymentID, ownerID uuid.U
 		return nil, errNoChargeCreated
 	}
 
-	fc, err := s.getActiveFinancialConfig(ctx, ownerID)
+	fc, err := s.getActiveFinancialConfig(ctx, orgID)
 	if err != nil {
 		return nil, errNoFinancialConfig
 	}
@@ -405,8 +405,8 @@ func (s *Service) GetChargeStatus(ctx context.Context, paymentID, ownerID uuid.U
 	return prov.GetChargeStatus(ctx, *payment.ChargeID)
 }
 
-func (s *Service) CreatePayout(ctx context.Context, paymentID, ownerID uuid.UUID, dest provider.Destination) (*provider.PayoutResponse, error) {
-	payment, err := s.repo.GetByID(ctx, paymentID, ownerID)
+func (s *Service) CreatePayout(ctx context.Context, paymentID, orgID uuid.UUID, dest provider.Destination) (*provider.PayoutResponse, error) {
+	payment, err := s.repo.GetByID(ctx, paymentID, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: get payment: %w", err)
 	}
@@ -419,7 +419,7 @@ func (s *Service) CreatePayout(ctx context.Context, paymentID, ownerID uuid.UUID
 		return nil, fmt.Errorf("payment net amount is nil")
 	}
 
-	fc, err := s.getActiveFinancialConfig(ctx, ownerID)
+	fc, err := s.getActiveFinancialConfig(ctx, orgID)
 	if err != nil {
 		return nil, errNoFinancialConfig
 	}
@@ -441,7 +441,7 @@ func (s *Service) CreatePayout(ctx context.Context, paymentID, ownerID uuid.UUID
 		return nil, fmt.Errorf("payment.svc: create payout: %w", err)
 	}
 
-	err = s.repo.UpdatePayoutInfo(ctx, paymentID, ownerID, resp.PayoutID, resp.Status)
+	err = s.repo.UpdatePayoutInfo(ctx, paymentID, orgID, resp.PayoutID, resp.Status)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: update payout info: %w", err)
 	}
@@ -474,7 +474,7 @@ func (s *Service) ProcessWebhook(ctx context.Context, providerName string, event
 	}
 
 	now := time.Now()
-	_, err = s.repo.Update(ctx, payment.ID, payment.OwnerID, UpdatePaymentInput{
+	_, err = s.repo.Update(ctx, payment.ID, payment.OrganizationID, UpdatePaymentInput{
 		Status:    "PAID",
 		PaidDate: &now,
 	})
@@ -485,17 +485,17 @@ func (s *Service) ProcessWebhook(ctx context.Context, providerName string, event
 	return nil
 }
 
-func (s *Service) GetFinancialConfig(ctx context.Context, ownerID uuid.UUID) (*FinancialConfig, error) {
-	return s.repo.GetFinancialConfig(ctx, ownerID)
+func (s *Service) GetFinancialConfig(ctx context.Context, orgID uuid.UUID) (*FinancialConfig, error) {
+	return s.repo.GetFinancialConfig(ctx, orgID)
 }
 
-func (s *Service) UpdateFinancialConfig(ctx context.Context, ownerID uuid.UUID, in UpsertFinancialConfigInput) (*FinancialConfig, error) {
+func (s *Service) UpdateFinancialConfig(ctx context.Context, orgID uuid.UUID, in UpsertFinancialConfigInput) (*FinancialConfig, error) {
 	// Simple validation, let repo handle strict types
-	return s.repo.UpsertFinancialConfig(ctx, ownerID, in)
+	return s.repo.UpsertFinancialConfig(ctx, orgID, in)
 }
 
-func (s *Service) getActiveFinancialConfig(ctx context.Context, ownerID uuid.UUID) (*FinancialConfig, error) {
-	return s.repo.GetActiveFinancialConfig(ctx, ownerID)
+func (s *Service) getActiveFinancialConfig(ctx context.Context, orgID uuid.UUID) (*FinancialConfig, error) {
+	return s.repo.GetActiveFinancialConfig(ctx, orgID)
 }
 
 var _ = lease.Lease{}

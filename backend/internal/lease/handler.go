@@ -22,18 +22,21 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/leases", h.list)
-	r.With(authMW).Post("/leases", h.create)
-	r.With(authMW).Get("/leases/{id}", h.get)
-	r.With(authMW).Put("/leases/{id}", h.update)
-	r.With(authMW).Delete("/leases/{id}", h.delete)
-	r.With(authMW).Post("/leases/{id}/end", h.end)
-	r.With(authMW).Post("/leases/{id}/renew", h.renew)
-	r.With(authMW).Post("/leases/{id}/readjust", h.readjust)
-	r.With(authMW).Get("/leases/{id}/readjustments", h.listReadjustments)
-	r.With(authMW).Get("/indices/{type}/history", h.getIndexHistory)
-	r.With(authMW).Post("/leases/{id}/adjust", h.autoAdjust)
+func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler, readMw func(http.Handler) http.Handler, writeMw func(http.Handler) http.Handler) {
+	r.Group(func(r chi.Router) {
+		r.Use(authMW)
+		r.With(readMw).Get("/leases", h.list)
+		r.With(writeMw).Post("/leases", h.create)
+		r.With(writeMw).Put("/leases/{id}", h.update)
+		r.With(writeMw).Delete("/leases/{id}", h.delete)
+		r.With(writeMw).Post("/leases/{id}/end", h.end)
+		r.With(writeMw).Post("/leases/{id}/renew", h.renew)
+		r.With(writeMw).Post("/leases/{id}/readjust", h.readjust)
+		r.With(readMw).Get("/leases/{id}/readjustments", h.listReadjustments)
+		r.Get("/indices/{type}/history", h.getIndexHistory)
+		r.With(writeMw).Post("/leases/{id}/adjust", h.autoAdjust)
+		r.With(readMw).Get("/leases/{id}", h.get)
+	})
 }
 
 // @Summary Lista contratos
@@ -43,10 +46,19 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 // @Success 200 {object} map[string]interface{}
 // @Router /leases [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 	ownerID := auth.OwnerIDFromCtx(r.Context())
-	list, err := h.svc.List(r.Context(), ownerID)
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	if ownerID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "owner não encontrado")
+		return
+	}
+	list, err := h.svc.List(r.Context(), orgID)
 	if err != nil {
-		slog.Error("lease: list failed", "owner_id", ownerID, "error", err)
+		slog.Error("lease: list failed", "org_id", orgID, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
 	}
@@ -56,16 +68,17 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, list)
 }
 
-// @Summary Cria contrato
-// @Tags leases
-// @Security BearerAuth
-// @Accept json
-// @Produce json
-// @Param body body CreateLeaseInput true "Dados do contrato"
-// @Success 201 {object} map[string]interface{}
-// @Router /leases [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 	ownerID := auth.OwnerIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	if ownerID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "owner não encontrado")
+		return
+	}
 	var in CreateLeaseInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
@@ -75,7 +88,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		httputil.ValidationErr(w, err)
 		return
 	}
-	l, err := h.svc.Create(r.Context(), ownerID, in)
+	l, err := h.svc.Create(r.Context(), orgID, ownerID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "CREATE_FAILED", err.Error())
 		return
@@ -83,27 +96,29 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	httputil.Created(w, l)
 }
 
-// @Summary Busca contrato por ID
-// @Tags leases
-// @Security BearerAuth
-// @Produce json
-// @Param id path string true "ID do contrato"
-// @Success 200 {object} map[string]interface{}
-// @Router /leases/{id} [get]
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 	ownerID := auth.OwnerIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	if ownerID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "owner não encontrado")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	l, err := h.svc.Get(r.Context(), id, ownerID)
+	l, err := h.svc.Get(r.Context(), id, orgID)
 	if err != nil {
 		if errors.Is(err, apierr.ErrNotFound) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "contrato não encontrado")
 			return
 		}
-		slog.Error("lease: get failed", "lease_id", id, "owner_id", ownerID, "error", err)
+		slog.Error("lease: get failed", "lease_id", id, "org_id", orgID, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "GET_FAILED", err.Error())
 		return
 	}
@@ -120,7 +135,16 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /leases/{id} [put]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 	ownerID := auth.OwnerIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	if ownerID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "owner não encontrado")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
@@ -135,7 +159,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		httputil.ValidationErr(w, err)
 		return
 	}
-	l, err := h.svc.Update(r.Context(), id, ownerID, in)
+	l, err := h.svc.Update(r.Context(), id, orgID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "UPDATE_FAILED", err.Error())
 		return
@@ -143,21 +167,23 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, l)
 }
 
-// @Summary Remove contrato (soft-delete)
-// @Tags leases
-// @Security BearerAuth
-// @Produce json
-// @Param id path string true "ID do contrato"
-// @Success 200 {object} map[string]interface{}
-// @Router /leases/{id} [delete]
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 	ownerID := auth.OwnerIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	if ownerID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "owner não encontrado")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	if err := h.svc.Delete(r.Context(), id, ownerID); err != nil {
+	if err := h.svc.Delete(r.Context(), id, orgID); err != nil {
 		if errors.Is(err, apierr.ErrNotFound) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "contrato não encontrado")
 			return
@@ -168,21 +194,23 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, map[string]bool{"deleted": true})
 }
 
-// @Summary Encerra contrato
-// @Tags leases
-// @Security BearerAuth
-// @Produce json
-// @Param id path string true "ID do contrato"
-// @Success 200 {object} map[string]interface{}
-// @Router /leases/{id}/end [post]
 func (h *Handler) end(w http.ResponseWriter, r *http.Request) {
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 	ownerID := auth.OwnerIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	if ownerID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "owner não encontrado")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	l, err := h.svc.End(r.Context(), id, ownerID)
+	l, err := h.svc.End(r.Context(), id, orgID)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "END_FAILED", err.Error())
 		return
@@ -190,17 +218,12 @@ func (h *Handler) end(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, l)
 }
 
-// @Summary Renova contrato
-// @Tags leases
-// @Security BearerAuth
-// @Accept json
-// @Produce json
-// @Param id path string true "ID do contrato"
-// @Param body body RenewLeaseInput true "Dados de renovação"
-// @Success 200 {object} map[string]interface{}
-// @Router /leases/{id}/renew [post]
 func (h *Handler) renew(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
@@ -215,7 +238,7 @@ func (h *Handler) renew(w http.ResponseWriter, r *http.Request) {
 		httputil.ValidationErr(w, err)
 		return
 	}
-	l, err := h.svc.Renew(r.Context(), id, ownerID, in)
+	l, err := h.svc.Renew(r.Context(), id, orgID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "RENEW_FAILED", err.Error())
 		return
@@ -223,19 +246,12 @@ func (h *Handler) renew(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, l)
 }
 
-// @Summary Aplica reajuste manual ao aluguel
-// @Tags leases
-// @Security BearerAuth
-// @Accept json
-// @Produce json
-// @Param id path string true "ID do contrato"
-// @Param body body ReadjustInput true "Dados do reajuste"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Router /leases/{id}/readjust [post]
 func (h *Handler) readjust(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
@@ -246,7 +262,7 @@ func (h *Handler) readjust(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
 		return
 	}
-	out, err := h.svc.Readjust(r.Context(), id, ownerID, in)
+	out, err := h.svc.Readjust(r.Context(), id, orgID, in)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidPercentage):
@@ -271,13 +287,17 @@ func (h *Handler) readjust(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /leases/{id}/readjustments [get]
 func (h *Handler) listReadjustments(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	list, err := h.svc.ListReadjustments(r.Context(), id, ownerID)
+	list, err := h.svc.ListReadjustments(r.Context(), id, orgID)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
@@ -323,7 +343,11 @@ func (h *Handler) getIndexHistory(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]interface{}
 // @Router /leases/{id}/adjust [post]
 func (h *Handler) autoAdjust(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
@@ -338,7 +362,7 @@ func (h *Handler) autoAdjust(w http.ResponseWriter, r *http.Request) {
 		httputil.ValidationErr(w, err)
 		return
 	}
-	out, err := h.svc.AdjustByAutoIndex(r.Context(), id, ownerID, in)
+	out, err := h.svc.AdjustByAutoIndex(r.Context(), id, orgID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "AUTO_ADJUST_FAILED", err.Error())
 		return

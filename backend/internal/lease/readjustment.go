@@ -8,16 +8,16 @@ import (
 )
 
 type Readjustment struct {
-	ID         uuid.UUID `json:"id"`
-	LeaseID    uuid.UUID `json:"lease_id"`
-	OwnerID    uuid.UUID `json:"owner_id"`
-	AppliedAt  time.Time `json:"applied_at"`
-	OldAmount  float64   `json:"old_amount"`
-	NewAmount  float64   `json:"new_amount"`
-	Percentage float64   `json:"percentage"`
-	IndexName  *string   `json:"index_name,omitempty"`
-	Notes      *string   `json:"notes,omitempty"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID             uuid.UUID `json:"id"`
+	LeaseID        uuid.UUID `json:"lease_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	AppliedAt      time.Time `json:"applied_at"`
+	OldAmount      float64   `json:"old_amount"`
+	NewAmount      float64   `json:"new_amount"`
+	Percentage     float64   `json:"percentage"`
+	IndexName      *string   `json:"index_name,omitempty"`
+	Notes          *string   `json:"notes,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type ReadjustInput struct {

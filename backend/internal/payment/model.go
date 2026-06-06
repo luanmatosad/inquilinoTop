@@ -17,11 +17,11 @@ var (
 )
 
 type LeaseReader interface {
-	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*lease.Lease, error)
+	GetByID(ctx context.Context, id, orgID uuid.UUID) (*lease.Lease, error)
 }
 
 type TenantReader interface {
-	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*tenant.Tenant, error)
+	GetByID(ctx context.Context, id, orgID uuid.UUID) (*tenant.Tenant, error)
 }
 
 type IRRFCalculator interface {
@@ -30,7 +30,7 @@ type IRRFCalculator interface {
 
 type Payment struct {
 	ID               uuid.UUID  `json:"id"`
-	OwnerID          uuid.UUID  `json:"owner_id"`
+	OrganizationID   uuid.UUID  `json:"organization_id"`
 	LeaseID          uuid.UUID  `json:"lease_id"`
 	DueDate          time.Time  `json:"due_date"`
 	PaidDate         *time.Time `json:"paid_date,omitempty"`
@@ -78,22 +78,22 @@ type UpdateChargeInfoInput struct {
 }
 
 type Repository interface {
-	Create(ctx context.Context, ownerID uuid.UUID, in CreatePaymentInput) (*Payment, error)
-	CreateIfAbsent(ctx context.Context, ownerID uuid.UUID, in CreatePaymentInput) (*Payment, bool, error)
-	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Payment, error)
+	Create(ctx context.Context, userID, orgID uuid.UUID, in CreatePaymentInput) (*Payment, error)
+	CreateIfAbsent(ctx context.Context, userID, orgID uuid.UUID, in CreatePaymentInput) (*Payment, bool, error)
+	GetByID(ctx context.Context, id, orgID uuid.UUID) (*Payment, error)
 	GetByChargeID(ctx context.Context, chargeID string) (*Payment, error)
-	ListByLease(ctx context.Context, leaseID, ownerID uuid.UUID) ([]Payment, error)
-	ListByOwner(ctx context.Context, ownerID uuid.UUID, statusFilter string) ([]Payment, error)
-	Update(ctx context.Context, id, ownerID uuid.UUID, in UpdatePaymentInput) (*Payment, error)
-	MarkPaid(ctx context.Context, id, ownerID uuid.UUID, paidDate time.Time,
+	ListByLease(ctx context.Context, leaseID, orgID uuid.UUID) ([]Payment, error)
+	ListByOwner(ctx context.Context, orgID uuid.UUID, statusFilter string) ([]Payment, error)
+	Update(ctx context.Context, id, orgID uuid.UUID, in UpdatePaymentInput) (*Payment, error)
+	MarkPaid(ctx context.Context, id, orgID uuid.UUID, paidDate time.Time,
 		lateFee, interest, irrf, netAmount float64) (*Payment, error)
-	UpdateChargeInfo(ctx context.Context, id, ownerID uuid.UUID, in UpdateChargeInfoInput) error
-	UpdatePayoutInfo(ctx context.Context, id, ownerID uuid.UUID, payoutID, status string) error
-	GetActiveFinancialConfig(ctx context.Context, ownerID uuid.UUID) (*FinancialConfig, error)
-	GetFinancialConfig(ctx context.Context, ownerID uuid.UUID) (*FinancialConfig, error)
-	CreateFinancialConfig(ctx context.Context, ownerID uuid.UUID, in CreateFinancialConfigInput) (*FinancialConfig, error)
-	UpsertFinancialConfig(ctx context.Context, ownerID uuid.UUID, in UpsertFinancialConfigInput) (*FinancialConfig, error)
-	DeleteFinancialConfig(ctx context.Context, id, ownerID uuid.UUID) error
+	UpdateChargeInfo(ctx context.Context, id, orgID uuid.UUID, in UpdateChargeInfoInput) error
+	UpdatePayoutInfo(ctx context.Context, id, orgID uuid.UUID, payoutID, status string) error
+	GetActiveFinancialConfig(ctx context.Context, orgID uuid.UUID) (*FinancialConfig, error)
+	GetFinancialConfig(ctx context.Context, orgID uuid.UUID) (*FinancialConfig, error)
+	CreateFinancialConfig(ctx context.Context, orgID uuid.UUID, in CreateFinancialConfigInput) (*FinancialConfig, error)
+	UpsertFinancialConfig(ctx context.Context, orgID uuid.UUID, in UpsertFinancialConfigInput) (*FinancialConfig, error)
+	DeleteFinancialConfig(ctx context.Context, id, orgID uuid.UUID) error
 }
 
 type OwnerReader interface {
@@ -107,7 +107,7 @@ type OwnerSummary struct {
 }
 
 type UnitReader interface {
-	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*UnitSummary, error)
+	GetByID(ctx context.Context, id, orgID uuid.UUID) (*UnitSummary, error)
 }
 
 type UnitSummary struct {
@@ -149,7 +149,7 @@ type Amounts struct {
 
 type FinancialConfig struct {
 	ID        uuid.UUID         `json:"id"`
-	OwnerID   uuid.UUID         `json:"owner_id"`
+	OrganizationID   uuid.UUID         `json:"organization_id"`
 	Provider  string            `json:"provider" validate:"required,oneof=ASAAS BRADESCO ITAU SICOOB MOCK"`
 	Config    map[string]any    `json:"config,omitempty"`
 	PixKey    *string           `json:"pix_key,omitempty" validate:"omitempty,max=100"`

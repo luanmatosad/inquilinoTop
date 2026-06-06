@@ -13,21 +13,29 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/support"
+	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func noopAuthMW(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r)
-	})
+func authMWWithOwnerID(ownerID uuid.UUID) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := auth.WithOwnerIDOrgID(r.Context(), ownerID, ownerID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+func noopWriteMw(next http.Handler) http.Handler {
+	return next
 }
 
 func newRouter() (chi.Router, *support.Handler) {
 	svc := support.NewService(newMockRepo())
 	h := support.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 	return r, h
 }
 
@@ -108,7 +116,7 @@ type mockRepoInternalErr struct {
 	*mockRepo
 }
 
-func (m *mockRepoInternalErr) GetByID(_ context.Context, _ uuid.UUID, _ uuid.UUID) (*support.Ticket, error) {
+func (m *mockRepoInternalErr) GetByID(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ uuid.UUID) (*support.Ticket, error) {
 	return nil, errors.New("database connection reset")
 }
 
@@ -117,7 +125,7 @@ func TestHandler_GetByID_ErroInterno_Retorna500(t *testing.T) {
 	svc := support.NewService(mock)
 	h := support.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/tickets/"+uuid.New().String(), nil)
 	rr := httptest.NewRecorder()
@@ -127,15 +135,14 @@ func TestHandler_GetByID_ErroInterno_Retorna500(t *testing.T) {
 }
 
 func TestHandler_GetByID_Válido(t *testing.T) {
+	userID := uuid.New()
 	mock := newMockRepo()
 	svc := support.NewService(mock)
 	h := support.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(userID), noopWriteMw, noopWriteMw)
 
-	// noopAuthMW não injeta userID → OwnerIDFromCtx retorna uuid.Nil
-	userID := uuid.Nil
-	ticket, _ := svc.Create(nil, userID, support.CreateTicketInput{ //nolint:staticcheck
+	ticket, _ := svc.Create(nil, userID, userID, support.CreateTicketInput{ //nolint:staticcheck
 		Tipo: "FEATURE", Assunto: "Melhoria", Descricao: "Adicionar dark mode",
 	})
 

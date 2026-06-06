@@ -15,14 +15,14 @@ func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) CreateProperty(ctx context.Context, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error) {
+func (s *Service) CreateProperty(ctx context.Context, userID, orgID uuid.UUID, in CreatePropertyInput) (*Property, error) {
 	if in.Name == "" {
 		return nil, fmt.Errorf("property.svc: nome é obrigatório")
 	}
 	if in.Type != "RESIDENTIAL" && in.Type != "SINGLE" {
 		return nil, fmt.Errorf("property.svc: tipo inválido")
 	}
-	p, err := s.repo.Create(ctx, ownerID, in)
+	p, err := s.repo.Create(ctx, userID, orgID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -35,16 +35,16 @@ func (s *Service) CreateProperty(ctx context.Context, ownerID uuid.UUID, in Crea
 	return p, nil
 }
 
-func (s *Service) GetProperty(ctx context.Context, id, ownerID uuid.UUID) (*Property, error) {
-	return s.repo.GetByID(ctx, id, ownerID)
+func (s *Service) GetProperty(ctx context.Context, id, orgID uuid.UUID) (*Property, error) {
+	return s.repo.GetByID(ctx, id, orgID)
 }
 
-func (s *Service) ListProperties(ctx context.Context, ownerID uuid.UUID) ([]Property, error) {
-	return s.repo.List(ctx, ownerID)
+func (s *Service) ListProperties(ctx context.Context, orgID uuid.UUID) ([]Property, error) {
+	return s.repo.List(ctx, orgID)
 }
 
-func (s *Service) ListPropertiesWithUnits(ctx context.Context, ownerID uuid.UUID) ([]PropertyWithUnits, error) {
-	properties, err := s.repo.List(ctx, ownerID)
+func (s *Service) ListPropertiesWithUnits(ctx context.Context, orgID uuid.UUID) ([]PropertyWithUnits, error) {
+	properties, err := s.repo.List(ctx, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -81,33 +81,33 @@ func (s *Service) ListPropertiesWithUnits(ctx context.Context, ownerID uuid.UUID
 	return result, nil
 }
 
-func (s *Service) UpdateProperty(ctx context.Context, id, ownerID uuid.UUID, in CreatePropertyInput) (*Property, error) {
-	return s.repo.Update(ctx, id, ownerID, in)
+func (s *Service) UpdateProperty(ctx context.Context, id, orgID uuid.UUID, in CreatePropertyInput) (*Property, error) {
+	return s.repo.Update(ctx, id, orgID, in)
 }
 
-func (s *Service) DeleteProperty(ctx context.Context, id, ownerID uuid.UUID) error {
-	return s.repo.Delete(ctx, id, ownerID)
+func (s *Service) DeleteProperty(ctx context.Context, id, orgID uuid.UUID) error {
+	return s.repo.Delete(ctx, id, orgID)
 }
 
-func (s *Service) CreateUnit(ctx context.Context, propertyID uuid.UUID, ownerID uuid.UUID, in CreateUnitInput) (*Unit, error) {
-	if _, err := s.repo.GetByID(ctx, propertyID, ownerID); err != nil {
+func (s *Service) CreateUnit(ctx context.Context, propertyID uuid.UUID, orgID uuid.UUID, in CreateUnitInput) (*Unit, error) {
+	if _, err := s.repo.GetByID(ctx, propertyID, orgID); err != nil {
 		return nil, fmt.Errorf("property.svc: imóvel não encontrado ou sem permissão")
 	}
 	return s.repo.CreateUnit(ctx, propertyID, in)
 }
 
-func (s *Service) GetUnit(ctx context.Context, id, ownerID uuid.UUID) (*Unit, error) {
-	return s.repo.GetUnit(ctx, id, ownerID)
+func (s *Service) GetUnit(ctx context.Context, id, orgID uuid.UUID) (*Unit, error) {
+	return s.repo.GetUnit(ctx, id, orgID)
 }
 
 func (s *Service) ListUnits(ctx context.Context, propertyID uuid.UUID) ([]Unit, error) {
 	return s.repo.ListUnits(ctx, propertyID)
 }
 
-func (s *Service) UpdateUnit(ctx context.Context, id, ownerID uuid.UUID, in CreateUnitInput) (*Unit, error) {
-	return s.repo.UpdateUnit(ctx, id, ownerID, in)
+func (s *Service) UpdateUnit(ctx context.Context, id, orgID uuid.UUID, in CreateUnitInput) (*Unit, error) {
+	return s.repo.UpdateUnit(ctx, id, orgID, in)
 }
 
-func (s *Service) DeleteUnit(ctx context.Context, id, ownerID uuid.UUID) error {
-	return s.repo.DeleteUnit(ctx, id, ownerID)
+func (s *Service) DeleteUnit(ctx context.Context, id, orgID uuid.UUID) error {
+	return s.repo.DeleteUnit(ctx, id, orgID)
 }

@@ -23,10 +23,14 @@ func noopAuthMW(next http.Handler) http.Handler {
 	})
 }
 
+func noopWriteMw(next http.Handler) http.Handler {
+	return next
+}
+
 func authMWWithOwnerID(ownerID uuid.UUID) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := auth.WithOwnerID(r.Context(), ownerID)
+			ctx := auth.WithOwnerIDOrgIDRole(r.Context(), ownerID, ownerID, "admin")
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -36,7 +40,7 @@ func TestHandler_Create_BodyInválido(t *testing.T) {
 	svc := property.NewService(newMockRepo())
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPost, "/properties", strings.NewReader("not-json"))
 	rr := httptest.NewRecorder()
@@ -49,7 +53,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 	svc := property.NewService(newMockRepo())
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	body, _ := json.Marshal(property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	req := httptest.NewRequest(http.MethodPost, "/properties", bytes.NewReader(body))
@@ -64,7 +68,7 @@ func TestHandler_Get_IDInválido(t *testing.T) {
 	svc := property.NewService(newMockRepo())
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/properties/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -77,7 +81,7 @@ func TestHandler_Delete_IDInválido(t *testing.T) {
 	svc := property.NewService(newMockRepo())
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodDelete, "/properties/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -90,7 +94,7 @@ func TestHandler_CreateUnit_IDInválido(t *testing.T) {
 	svc := property.NewService(newMockRepo())
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPost, "/properties/nao-e-uuid/units", nil)
 	rr := httptest.NewRecorder()
@@ -103,7 +107,7 @@ func TestHandler_CreateUnit_BodyInválido(t *testing.T) {
 	svc := property.NewService(newMockRepo())
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	propertyID := uuid.New()
 	req := httptest.NewRequest(http.MethodPost, "/properties/"+propertyID.String()+"/units", strings.NewReader("not-json"))
@@ -117,7 +121,7 @@ func TestHandler_GetUnit_IDInválido(t *testing.T) {
 	svc := property.NewService(newMockRepo())
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/units/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -130,7 +134,7 @@ func TestHandler_UpdateUnit_IDInválido(t *testing.T) {
 	svc := property.NewService(newMockRepo())
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPut, "/units/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -143,7 +147,7 @@ func TestHandler_DeleteUnit_IDInválido(t *testing.T) {
 	svc := property.NewService(newMockRepo())
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodDelete, "/units/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -156,7 +160,7 @@ func TestHandler_ListUnits_IDInválido(t *testing.T) {
 	svc := property.NewService(newMockRepo())
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/properties/nao-e-uuid/units", nil)
 	rr := httptest.NewRecorder()
@@ -172,9 +176,9 @@ func TestHandler_ListUnits_RouteExists(t *testing.T) {
 
 	ownerID := uuid.New()
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(ownerID))
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa"})
 	req := httptest.NewRequest(http.MethodGet, "/properties/"+p.ID.String()+"/units", nil)
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
@@ -195,9 +199,9 @@ func TestHandler_Get_Válido(t *testing.T) {
 
 	ownerID := uuid.New()
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(ownerID))
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa"})
 
 	req := httptest.NewRequest(http.MethodGet, "/properties/"+p.ID.String(), nil)
 	rr := httptest.NewRecorder()
@@ -213,9 +217,9 @@ func TestHandler_Update_Válido(t *testing.T) {
 
 	ownerID := uuid.New()
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(ownerID))
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa"})
 
 	body, _ := json.Marshal(property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa Atualizada"})
 	req := httptest.NewRequest(http.MethodPut, "/properties/"+p.ID.String(), bytes.NewReader(body))
@@ -230,7 +234,7 @@ func TestHandler_Update_BodyInválido(t *testing.T) {
 	svc := property.NewService(newMockRepo())
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	propertyID := uuid.New()
 	req := httptest.NewRequest(http.MethodPut, "/properties/"+propertyID.String(), strings.NewReader("not-json"))
@@ -247,9 +251,9 @@ func TestHandler_Delete_Válido(t *testing.T) {
 
 	ownerID := uuid.New()
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(ownerID))
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Casa"})
 
 	req := httptest.NewRequest(http.MethodDelete, "/properties/"+p.ID.String(), nil)
 	rr := httptest.NewRecorder()
@@ -265,9 +269,9 @@ func TestHandler_CreateUnit_Válido(t *testing.T) {
 
 	ownerID := uuid.New()
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(ownerID))
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 
 	body, _ := json.Marshal(property.CreateUnitInput{Label: "Apto 101"})
 	req := httptest.NewRequest(http.MethodPost, "/properties/"+p.ID.String()+"/units", bytes.NewReader(body))
@@ -285,9 +289,9 @@ func TestHandler_UpdateUnit_Válido(t *testing.T) {
 
 	ownerID := uuid.New()
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(ownerID))
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	u, _ := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Apto 101"})
 
 	body, _ := json.Marshal(property.CreateUnitInput{Label: "Apto 102"})
@@ -316,7 +320,7 @@ func TestHandler_GetUnit_RequiresOwnerMatch(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusNotFound, rr.Code, "ownerB não deve acessar unit de ownerA")
@@ -335,11 +339,10 @@ func TestHandler_GetUnit_AllowsCorrectOwner(t *testing.T) {
 	h := property.NewHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/units/"+unitID.String(), nil)
-	req = req.WithContext(auth.WithOwnerID(req.Context(), ownerA))
 	rr := httptest.NewRecorder()
 
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(ownerA), noopWriteMw, noopWriteMw)
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code, "ownerA deve acessar sua própria unit")
@@ -352,9 +355,9 @@ func TestHandler_DeleteUnit_Válido(t *testing.T) {
 
 	ownerID := uuid.New()
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(ownerID))
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
 
-	p, _ := svc.CreateProperty(context.Background(), ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
 	u, _ := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Apto 101"})
 
 	req := httptest.NewRequest(http.MethodDelete, "/units/"+u.ID.String(), nil)

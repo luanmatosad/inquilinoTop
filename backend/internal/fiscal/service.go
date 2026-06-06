@@ -19,12 +19,12 @@ func NewService(agg AggregateRepository) *Service {
 	return &Service{agg: agg}
 }
 
-func (s *Service) AnnualReport(ctx context.Context, ownerID uuid.UUID, year int) (*AnnualReport, error) {
+func (s *Service) AnnualReport(ctx context.Context, orgID, ownerID uuid.UUID, year int) (*AnnualReport, error) {
 	if year < 1900 || year > 2999 {
 		return nil, fmt.Errorf("fiscal.svc: year inválido")
 	}
 
-	owner, err := s.agg.GetOwner(ctx, ownerID)
+	owner, err := s.agg.GetOwner(ctx, orgID, ownerID)
 	if err != nil {
 		if errors.Is(err, ErrOwnerNotFound) {
 			return nil, fmt.Errorf("fiscal.svc: owner não encontrado")
@@ -32,17 +32,17 @@ func (s *Service) AnnualReport(ctx context.Context, ownerID uuid.UUID, year int)
 		return nil, fmt.Errorf("fiscal.svc: %w", err)
 	}
 
-	leases, err := s.agg.ListOwnerLeases(ctx, ownerID)
+	leases, err := s.agg.ListOwnerLeases(ctx, orgID, ownerID)
 	if err != nil {
 		return nil, fmt.Errorf("fiscal.svc: %w", err)
 	}
 
-	payments, err := s.agg.ListPaidPaymentsForYear(ctx, ownerID, year)
+	payments, err := s.agg.ListPaidPaymentsForYear(ctx, orgID, ownerID, year)
 	if err != nil {
 		return nil, fmt.Errorf("fiscal.svc: %w", err)
 	}
 
-	taxes, err := s.agg.ListTaxExpensesPaidInYear(ctx, ownerID, year)
+	taxes, err := s.agg.ListTaxExpensesPaidInYear(ctx, orgID, ownerID, year)
 	if err != nil {
 		return nil, fmt.Errorf("fiscal.svc: %w", err)
 	}

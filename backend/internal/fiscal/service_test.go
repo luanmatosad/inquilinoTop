@@ -18,22 +18,22 @@ type mockAggRepo struct {
 	taxes        []fiscal.TaxExpense
 }
 
-func (m *mockAggRepo) GetOwner(_ context.Context, _ uuid.UUID) (*fiscal.ReportParty, error) {
+func (m *mockAggRepo) GetOwner(_ context.Context, _orgID, _ownerID uuid.UUID) (*fiscal.ReportParty, error) {
 	if m.ownerErr != nil {
 		return nil, m.ownerErr
 	}
 	return &fiscal.ReportParty{Name: m.ownerName}, nil
 }
 
-func (m *mockAggRepo) ListOwnerLeases(_ context.Context, _ uuid.UUID) ([]fiscal.LeaseSummary, error) {
+func (m *mockAggRepo) ListOwnerLeases(_ context.Context, _orgID, _ownerID uuid.UUID) ([]fiscal.LeaseSummary, error) {
 	return m.leases, nil
 }
 
-func (m *mockAggRepo) ListPaidPaymentsForYear(_ context.Context, _ uuid.UUID, _ int) ([]fiscal.PaidPayment, error) {
+func (m *mockAggRepo) ListPaidPaymentsForYear(_ context.Context, _orgID, _ownerID uuid.UUID, _ int) ([]fiscal.PaidPayment, error) {
 	return m.payments, nil
 }
 
-func (m *mockAggRepo) ListTaxExpensesPaidInYear(_ context.Context, _ uuid.UUID, _ int) ([]fiscal.TaxExpense, error) {
+func (m *mockAggRepo) ListTaxExpensesPaidInYear(_ context.Context, _orgID, _ownerID uuid.UUID, _ int) ([]fiscal.TaxExpense, error) {
 	return m.taxes, nil
 }
 
@@ -43,6 +43,7 @@ func newFiscalTestService() *fiscal.Service {
 
 func TestService_AnnualReport_SeparaPFePJ(t *testing.T) {
 	ownerID := uuid.New()
+	orgID := uuid.New()
 	leasePFID := uuid.New()
 	leasePJID := uuid.New()
 	unit1ID := uuid.New()
@@ -82,7 +83,7 @@ func TestService_AnnualReport_SeparaPFePJ(t *testing.T) {
 		taxes: []fiscal.TaxExpense{},
 	})
 
-	rep, err := svc.AnnualReport(context.Background(), ownerID, 2026)
+	rep, err := svc.AnnualReport(context.Background(), orgID, ownerID, 2026)
 	require.NoError(t, err)
 	require.Len(t, rep.Leases, 2)
 	assert.Equal(t, 2026, rep.Year)
@@ -94,7 +95,9 @@ func TestService_AnnualReport_SeparaPFePJ(t *testing.T) {
 
 func TestService_AnnualReport_AnoVazio(t *testing.T) {
 	svc := newFiscalTestService()
-	rep, err := svc.AnnualReport(context.Background(), uuid.New(), 2099)
+	orgID := uuid.New()
+	ownerID := uuid.New()
+	rep, err := svc.AnnualReport(context.Background(), orgID, ownerID, 2099)
 	require.NoError(t, err)
 	assert.Len(t, rep.Leases, 0)
 	assert.Zero(t, rep.Totals.ReceivedFromPF)
@@ -103,10 +106,12 @@ func TestService_AnnualReport_AnoVazio(t *testing.T) {
 
 func TestService_AnnualReport_YearInválido(t *testing.T) {
 	svc := newFiscalTestService()
-	_, err := svc.AnnualReport(context.Background(), uuid.New(), 1800)
+	orgID := uuid.New()
+	ownerID := uuid.New()
+	_, err := svc.AnnualReport(context.Background(), orgID, ownerID, 1800)
 	assert.Error(t, err)
 
-	_, err = svc.AnnualReport(context.Background(), uuid.New(), 3000)
+	_, err = svc.AnnualReport(context.Background(), orgID, ownerID, 3000)
 	assert.Error(t, err)
 }
 
@@ -138,7 +143,8 @@ func TestService_AnnualReport_ComIPTU(t *testing.T) {
 		},
 	})
 
-	rep, err := svc.AnnualReport(context.Background(), ownerID, 2026)
+    orgID := uuid.New()
+    rep, err := svc.AnnualReport(context.Background(), orgID, ownerID, 2026)
 	require.NoError(t, err)
 	require.Len(t, rep.Leases, 1)
 	assert.InDelta(t, 500.0, rep.Totals.DeductibleIPTU, 0.01)
@@ -150,7 +156,9 @@ func TestService_AnnualReport_OwnerNãoEncontrado(t *testing.T) {
 		ownerErr: fiscal.ErrOwnerNotFound,
 	})
 
-	_, err := svc.AnnualReport(context.Background(), uuid.New(), 2026)
+	orgID := uuid.New()
+	    ownerID := uuid.New()
+	    _, err := svc.AnnualReport(context.Background(), orgID, ownerID, 2026)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "owner não encontrado")
 }
@@ -161,7 +169,9 @@ func TestService_AnnualReport_EmptyYear(t *testing.T) {
 		leases:    []fiscal.LeaseSummary{},
 	})
 
-	rep, err := svc.AnnualReport(context.Background(), uuid.New(), 2026)
+	orgID := uuid.New()
+	    ownerID := uuid.New()
+	    rep, err := svc.AnnualReport(context.Background(), orgID, ownerID, 2026)
 	require.NoError(t, err)
 	assert.Len(t, rep.Leases, 0)
 }

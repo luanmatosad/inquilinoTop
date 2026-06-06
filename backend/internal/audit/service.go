@@ -3,8 +3,10 @@ package audit
 import (
 	"context"
 	"time"
-
+	
 	"github.com/google/uuid"
+	
+	"github.com/inquilinotop/api/pkg/auth"
 )
 
 type Service struct {
@@ -16,7 +18,8 @@ func NewService(repo Repository) *Service {
 }
 
 func (s *Service) LogLogin(ctx context.Context, ownerID, userID uuid.UUID, ipAddress string) {
-	s.repo.Create(ctx, ownerID, CreateInput{
+	organizationID := auth.OrganizationIDFromCtx(ctx)
+	s.repo.Create(ctx, organizationID, ownerID, CreateInput{
 		UserID:    &userID,
 		EventType: string(EventLogin),
 		IPAddress: &ipAddress,
@@ -24,7 +27,8 @@ func (s *Service) LogLogin(ctx context.Context, ownerID, userID uuid.UUID, ipAdd
 }
 
 func (s *Service) LogLogout(ctx context.Context, ownerID, userID uuid.UUID, ipAddress string) {
-	s.repo.Create(ctx, ownerID, CreateInput{
+	organizationID := auth.OrganizationIDFromCtx(ctx)
+	s.repo.Create(ctx, organizationID, ownerID, CreateInput{
 		UserID:    &userID,
 		EventType: string(EventLogout),
 		IPAddress: &ipAddress,
@@ -32,14 +36,16 @@ func (s *Service) LogLogout(ctx context.Context, ownerID, userID uuid.UUID, ipAd
 }
 
 func (s *Service) LogFailedLogin(ctx context.Context, ownerID uuid.UUID, ipAddress string) {
-	s.repo.Create(ctx, ownerID, CreateInput{
+	organizationID := auth.OrganizationIDFromCtx(ctx)
+	s.repo.Create(ctx, organizationID, ownerID, CreateInput{
 		EventType: string(EventFailedLogin),
 		IPAddress: &ipAddress,
 	})
 }
 
 func (s *Service) LogCreate(ctx context.Context, ownerID uuid.UUID, entityType string, entityID uuid.UUID, userID uuid.UUID, ipAddress string) {
-	s.repo.Create(ctx, ownerID, CreateInput{
+	organizationID := auth.OrganizationIDFromCtx(ctx)
+	s.repo.Create(ctx, organizationID, ownerID, CreateInput{
 		UserID:     &userID,
 		EventType:  string(EventCreate),
 		EntityType: &entityType,
@@ -49,17 +55,19 @@ func (s *Service) LogCreate(ctx context.Context, ownerID uuid.UUID, entityType s
 }
 
 func (s *Service) LogUpdate(ctx context.Context, ownerID uuid.UUID, entityType string, entityID uuid.UUID, userID uuid.UUID, ipAddress string) {
-	s.repo.Create(ctx, ownerID, CreateInput{
+	organizationID := auth.OrganizationIDFromCtx(ctx)
+	s.repo.Create(ctx, organizationID, ownerID, CreateInput{
 		UserID:     &userID,
 		EventType:  string(EventUpdate),
 		EntityType: &entityType,
 		EntityID:   &entityID,
 		IPAddress:  &ipAddress,
-	})
+		})
 }
 
 func (s *Service) LogDelete(ctx context.Context, ownerID uuid.UUID, entityType string, entityID uuid.UUID, userID uuid.UUID, ipAddress string) {
-	s.repo.Create(ctx, ownerID, CreateInput{
+	organizationID := auth.OrganizationIDFromCtx(ctx)
+	s.repo.Create(ctx, organizationID, ownerID, CreateInput{
 		UserID:     &userID,
 		EventType:  string(EventDelete),
 		EntityType: &entityType,
@@ -69,7 +77,8 @@ func (s *Service) LogDelete(ctx context.Context, ownerID uuid.UUID, entityType s
 }
 
 func (s *Service) LogPermissionDenied(ctx context.Context, ownerID uuid.UUID, userID uuid.UUID, resource string, ipAddress string) {
-	s.repo.Create(ctx, ownerID, CreateInput{
+	organizationID := auth.OrganizationIDFromCtx(ctx)
+	s.repo.Create(ctx, organizationID, ownerID, CreateInput{
 		UserID:    &userID,
 		EventType: string(EventPermissionDenied),
 		Details:  map[string]string{"resource": resource},
@@ -78,5 +87,6 @@ func (s *Service) LogPermissionDenied(ctx context.Context, ownerID uuid.UUID, us
 }
 
 func (s *Service) ListLogs(ctx context.Context, ownerID uuid.UUID, from, to *time.Time, eventType *string) ([]AuditLog, error) {
-	return s.repo.List(ctx, ownerID, from, to, eventType)
+	organizationID := auth.OrganizationIDFromCtx(ctx)
+	return s.repo.List(ctx, organizationID, ownerID, from, to, eventType)
 }

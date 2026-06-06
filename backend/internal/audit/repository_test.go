@@ -30,29 +30,30 @@ func testDB(t *testing.T) *db.DB {
 }
 
 func TestRepository_List_WithAllFilters(t *testing.T) {
-	d := testDB(t)
-	repo := audit.NewRepository(d.Pool)
-	ownerID := uuid.New()
+  d := testDB(t)
+  repo := audit.NewRepository(d.Pool)
+  ownerID := uuid.New()
+  organizationID := ownerID // For testing, use ownerID as organizationID
 
-	_, _ = d.Pool.Exec(context.Background(),
-		`INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)`,
-		ownerID, "audit@test.com", "hash",
-	)
+  _, _ = d.Pool.Exec(context.Background(),
+    `INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)`,
+    ownerID, "audit@test.com", "hash",
+  )
 
-	now := time.Now().UTC()
-	eventType := "LOGIN"
-	entityType := "user"
+  now := time.Now().UTC()
+  eventType := "LOGIN"
+  entityType := "user"
 
-	_, err := repo.Create(context.Background(), ownerID, audit.CreateInput{
-		EventType:  eventType,
-		EntityType: &entityType,
-	})
-	require.NoError(t, err)
+  _, err := repo.Create(context.Background(), organizationID, ownerID, audit.CreateInput{
+    EventType:  eventType,
+    EntityType: &entityType,
+  })
+  require.NoError(t, err)
 
-	from := now.Add(-time.Minute)
-	to := now.Add(time.Minute)
+  from := now.Add(-time.Minute)
+  to := now.Add(time.Minute)
 
-	logs, err := repo.List(context.Background(), ownerID, &from, &to, &eventType)
-	require.NoError(t, err, "List com 3 filtros não deve retornar erro de SQL")
-	assert.Len(t, logs, 1)
+  logs, err := repo.List(context.Background(), organizationID, ownerID, &from, &to, &eventType)
+  require.NoError(t, err, "List com 3 filtros não deve retornar erro de SQL")
+  assert.Len(t, logs, 1)
 }

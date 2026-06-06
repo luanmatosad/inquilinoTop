@@ -15,6 +15,7 @@ import (
 	"github.com/inquilinotop/api/internal/lease"
 	"github.com/inquilinotop/api/internal/payment"
 	"github.com/inquilinotop/api/internal/tenant"
+	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,10 +34,14 @@ func noopAuthMW(next http.Handler) http.Handler {
 	})
 }
 
+func noopWriteMw(next http.Handler) http.Handler {
+	return next
+}
+
 func noopAuthMWWithOwnerID(ownerID uuid.UUID) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := context.WithValue(r.Context(), ownerIDKey, ownerID)
+			ctx := auth.WithOwnerIDOrgIDRole(r.Context(), ownerID, ownerID, "admin")
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -50,7 +55,7 @@ func newTestHandler() *payment.Handler {
 func TestHandler_ListByLease_IDInválido(t *testing.T) {
 	h := newTestHandler()
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/leases/nao-e-uuid/payments", nil)
 	rr := httptest.NewRecorder()
@@ -62,7 +67,7 @@ func TestHandler_ListByLease_IDInválido(t *testing.T) {
 func TestHandler_ListByLease_Válido(t *testing.T) {
 	h := newTestHandler()
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	leaseID := uuid.New()
 	req := httptest.NewRequest(http.MethodGet, "/leases/"+leaseID.String()+"/payments", nil)
@@ -81,7 +86,7 @@ func TestHandler_ListByLease_Válido(t *testing.T) {
 func TestHandler_Get_IDInválido(t *testing.T) {
 	h := newTestHandler()
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/payments/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -93,7 +98,7 @@ func TestHandler_Get_IDInválido(t *testing.T) {
 func TestHandler_Create_LeaseIDInválido(t *testing.T) {
 	h := newTestHandler()
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPost, "/leases/nao-e-uuid/payments", nil)
 	rr := httptest.NewRecorder()
@@ -105,7 +110,7 @@ func TestHandler_Create_LeaseIDInválido(t *testing.T) {
 func TestHandler_Create_BodyInválido(t *testing.T) {
 	h := newTestHandler()
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	leaseID := uuid.New()
 	req := httptest.NewRequest(http.MethodPost, "/leases/"+leaseID.String()+"/payments", strings.NewReader("not-json"))
@@ -118,7 +123,7 @@ func TestHandler_Create_BodyInválido(t *testing.T) {
 func TestHandler_Create_Válido(t *testing.T) {
 	h := newTestHandler()
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	leaseID := uuid.New()
 	body, _ := json.Marshal(map[string]interface{}{
@@ -137,7 +142,7 @@ func TestHandler_Create_Válido(t *testing.T) {
 func TestHandler_Update_IDInválido(t *testing.T) {
 	h := newTestHandler()
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPut, "/payments/nao-e-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -149,7 +154,7 @@ func TestHandler_Update_IDInválido(t *testing.T) {
 func TestHandler_Update_BodyInválido(t *testing.T) {
 	h := newTestHandler()
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodPut, "/payments/"+uuid.New().String(), strings.NewReader("not-json"))
 	rr := httptest.NewRecorder()
@@ -161,7 +166,7 @@ func TestHandler_Update_BodyInválido(t *testing.T) {
 func setupLeaseInHandler(ts *testService, leaseID, ownerID uuid.UUID) {
 	l := &lease.Lease{
 		ID:         leaseID,
-		OwnerID:    ownerID,
+		OrganizationID:    ownerID,
 		TenantID:   uuid.New(),
 		StartDate:  time.Now().AddDate(0, -6, 0),
 		RentAmount: 2000,
@@ -171,7 +176,7 @@ func setupLeaseInHandler(ts *testService, leaseID, ownerID uuid.UUID) {
 
 	t := &tenant.Tenant{
 		ID:         l.TenantID,
-		OwnerID:    ownerID,
+		OrganizationID:    ownerID,
 		Name:       "Tenant Test",
 		PersonType: "PF",
 	}
@@ -182,7 +187,7 @@ func seedPendingPayment(ts *testService, ownerID uuid.UUID) *payment.Payment {
 	leaseID := uuid.New()
 	setupLeaseInHandler(ts, leaseID, ownerID)
 
-	p, _ := ts.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, _ := ts.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
 	})
 	return p
@@ -240,7 +245,7 @@ func TestHandler_HandleWebhook_RejectsWhenSecretNotConfigured(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
@@ -257,7 +262,7 @@ func TestHandler_HandleWebhook_AcceptsWithCorrectSecret(t *testing.T) {
 	// Set up a payment with a chargeID so webhook processing succeeds
 	chargeID := "ch_123"
 	leaseID := uuid.New()
-	p, _ := ts.Create(context.Background(), ownerID, payment.CreatePaymentInput{
+	p, _ := ts.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT",
 	})
 	ts.mockRepo.payments[p.ID].ChargeID = &chargeID
@@ -269,7 +274,7 @@ func TestHandler_HandleWebhook_AcceptsWithCorrectSecret(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -278,7 +283,7 @@ func TestHandler_HandleWebhook_AcceptsWithCorrectSecret(t *testing.T) {
 func TestHandler_ListByOwner_Vazio(t *testing.T) {
 	h := newTestHandler()
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/payments", nil)
 	rr := httptest.NewRecorder()
@@ -293,7 +298,7 @@ func TestHandler_ListByOwner_Vazio(t *testing.T) {
 func TestHandler_ListByOwner_ComFiltroStatus(t *testing.T) {
 	h := newTestHandler()
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, noopAuthMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/payments?status=PENDING", nil)
 	rr := httptest.NewRecorder()

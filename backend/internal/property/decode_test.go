@@ -18,12 +18,12 @@ func TestHandler_UpdateProperty_InvalidBody(t *testing.T) {
 	mock := newMockRepo()
 	svc := property.NewService(mock)
 
-	p, err := svc.CreateProperty(context.Background(), uuid.Nil, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Test"})
+	p, err := svc.CreateProperty(context.Background(), uuid.Nil, uuid.Nil, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Test"})
 	require.NoError(t, err)
 
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest("PUT", "/properties/"+p.ID.String(), strings.NewReader("{bad json"))
 	req.Header.Set("Content-Type", "application/json")
@@ -37,12 +37,12 @@ func TestHandler_CreateUnit_InvalidBody(t *testing.T) {
 	mock := newMockRepo()
 	svc := property.NewService(mock)
 
-	p, err := svc.CreateProperty(context.Background(), uuid.Nil, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Test"})
+	p, err := svc.CreateProperty(context.Background(), uuid.Nil, uuid.Nil, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Test"})
 	require.NoError(t, err)
 
 	h := property.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
 
 	req := httptest.NewRequest("POST", "/properties/"+p.ID.String()+"/units", strings.NewReader("{bad"))
 	req.Header.Set("Content-Type", "application/json")

@@ -69,10 +69,10 @@ type AnnualTotals struct {
 }
 
 type AggregateRepository interface {
-	ListPaidPaymentsForYear(ctx context.Context, ownerID uuid.UUID, year int) ([]PaidPayment, error)
-	ListTaxExpensesPaidInYear(ctx context.Context, ownerID uuid.UUID, year int) ([]TaxExpense, error)
-	ListOwnerLeases(ctx context.Context, ownerID uuid.UUID) ([]LeaseSummary, error)
-	GetOwner(ctx context.Context, ownerID uuid.UUID) (*ReportParty, error)
+	ListPaidPaymentsForYear(ctx context.Context, orgID, ownerID uuid.UUID, year int) ([]PaidPayment, error)
+	ListTaxExpensesPaidInYear(ctx context.Context, orgID, ownerID uuid.UUID, year int) ([]TaxExpense, error)
+	ListOwnerLeases(ctx context.Context, orgID, ownerID uuid.UUID) ([]LeaseSummary, error)
+	GetOwner(ctx context.Context, orgID, ownerID uuid.UUID) (*ReportParty, error)
 }
 
 type PaidPayment struct {
