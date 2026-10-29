@@ -30,21 +30,21 @@
 
 ## 5. Frontend: consolidação de rotas
 
-- [ ] 5.1 Comparar `/owner/properties|tenants` com `/properties|tenants` e listar funcionalidades que só existem nas rotas `/owner`
-- [ ] 5.2 Portar o que faltar para `/properties` e `/tenants`
-- [ ] 5.3 Unificar DALs e actions em um cliente por domínio e remover duplicados
-- [ ] 5.4 Remover `/owner/properties/**` e `/owner/tenants/**`; adicionar redirects permanentes em `next.config.ts`
+- [x] 5.1 Comparar `/owner/properties|tenants` com `/properties|tenants` e listar funcionalidades que só existem nas rotas `/owner` (resultado: `/owner/properties` era cópia de `/properties` e o link de editar apontava para rota inexistente; só o detalhe do inquilino era exclusivo de `/owner`, e a lista de contratos dele nunca funcionou porque o backend não embute contratos no inquilino)
+- [x] 5.2 Portar o que faltar para `/properties` e `/tenants` (detalhe `/tenants/[id]` criado; contratos vêm de `GET /leases` filtrado por `tenant_id`; removido o toggle de status do inquilino, que enviava PUT sem `name`/`person_type` e nunca funcionou; removida a criação duplicada de "Unidade 01" no frontend, pois o backend já a cria)
+- [x] 5.3 Unificar DALs e actions em um cliente por domínio e remover duplicados
+- [x] 5.4 Remover `/owner/properties/**` e `/owner/tenants/**`; adicionar redirects permanentes em `next.config.ts`
 
 ## 6. Frontend: formulários
 
-- [ ] 6.1 Schemas Zod de imóvel, unidade e inquilino em `src/lib/schemas.ts` (CPF/CNPJ, CEP, UF)
-- [ ] 6.2 Formulário de imóvel e unidade com campos novos (shadcn/ui, react-hook-form)
-- [ ] 6.3 Formulário de inquilino com endereço, máscaras e erro `DUPLICATE_DOCUMENT` no campo
-- [ ] 6.4 Estados de carregamento, vazio e erro nas listas de imóveis e inquilinos
+- [x] 6.1 Schemas Zod de imóvel, unidade e inquilino em `src/lib/schemas.ts` (CPF/CNPJ, CEP, UF)
+- [x] 6.2 Formulário de imóvel e unidade com campos novos (shadcn/ui, react-hook-form)
+- [x] 6.3 Formulário de inquilino com endereço, máscaras e erro `DUPLICATE_DOCUMENT` no campo
+- [x] 6.4 Estados de carregamento, vazio e erro nas listas de imóveis e inquilinos
 
 ## 7. Documentação e verificação
 
-- [ ] 7.1 Atualizar `CLAUDE.md` raiz (status Frontend dos módulos: Go API)
-- [ ] 7.2 `make frontend-lint` e build sem erros
+- [x] 7.1 Atualizar `CLAUDE.md` raiz (status Frontend dos módulos: Go API)
+- [x] 7.2 `make frontend-lint` e build sem erros
 - [ ] 7.3 Fluxo manual: criar imóvel SINGLE, unidade, inquilino PF, tentar duplicar CPF e unidade
-- [ ] 7.4 `openspec validate mvp-cadastros`
+- [x] 7.4 `openspec validate mvp-cadastros`

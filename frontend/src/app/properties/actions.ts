@@ -2,23 +2,33 @@
 
 import { revalidatePath } from "next/cache"
 import { goFetch } from "@/lib/go/client"
-import { propertySchema, unitSchema, PropertyFormValues, UnitFormValues } from "@/lib/schemas"
+import { goErrorInfo } from "@/lib/go/errors"
+import {
+  propertySchema,
+  unitSchema,
+  toPropertyPayload,
+  toUnitPayload,
+  PropertyFormValues,
+  UnitFormValues,
+} from "@/lib/schemas"
 
 type ActionResponse<T = void> = {
   success?: boolean
   data?: T
   error?: string
-  details?: Record<string, string[]>
+  details?: Record<string, string[] | undefined>
 }
 
 export interface Property {
   id: string
-  owner_id: string
+  organization_id: string
   type: 'RESIDENTIAL' | 'SINGLE'
   name: string
   address_line?: string
+  neighborhood?: string
   city?: string
   state?: string
+  postal_code?: string
   is_active: boolean
   created_at: string
   updated_at: string
@@ -30,10 +40,15 @@ interface Unit {
   label: string
   floor?: string
   notes?: string
+  area_m2?: number
+  bedrooms?: number
+  bathrooms?: number
   is_active: boolean
   created_at: string
   updated_at: string
 }
+
+const DUPLICATE_LABEL = "Já existe uma unidade com essa identificação neste imóvel."
 
 export async function createProperty(data: PropertyFormValues): Promise<ActionResponse<Property>> {
   const validated = propertySchema.safeParse(data)
@@ -42,17 +57,11 @@ export async function createProperty(data: PropertyFormValues): Promise<ActionRe
   }
 
   try {
+    // O backend cria "Unidade 01" sozinho quando o tipo é SINGLE.
     const property = await goFetch<Property>("/api/v1/properties", {
       method: "POST",
-      body: JSON.stringify(validated.data),
+      body: JSON.stringify(toPropertyPayload(validated.data)),
     })
-
-    if (validated.data.type === "SINGLE") {
-      await goFetch<Unit>("/api/v1/properties/" + property.id + "/units", {
-        method: "POST",
-        body: JSON.stringify({ label: "Unidade 01", notes: "Unidade criada automaticamente" }),
-      })
-    }
 
     revalidatePath("/properties")
     return { success: true, data: property }
@@ -71,7 +80,7 @@ export async function updateProperty(id: string, data: PropertyFormValues): Prom
   try {
     await goFetch<Property>("/api/v1/properties/" + id, {
       method: "PUT",
-      body: JSON.stringify(validated.data),
+      body: JSON.stringify(toPropertyPayload(validated.data)),
     })
 
     revalidatePath("/properties")
@@ -106,12 +115,15 @@ export async function createUnit(propertyId: string, data: UnitFormValues): Prom
   try {
     await goFetch<Unit>("/api/v1/properties/" + propertyId + "/units", {
       method: "POST",
-      body: JSON.stringify(validated.data),
+      body: JSON.stringify(toUnitPayload(validated.data)),
     })
 
     revalidatePath("/properties/" + propertyId)
     return { success: true }
   } catch (error) {
+    if (goErrorInfo(error).code === "DUPLICATE_UNIT_LABEL") {
+      return { error: DUPLICATE_LABEL, details: { label: [DUPLICATE_LABEL] } }
+    }
     console.error("Erro ao criar unidade:", error)
     return { error: "Erro ao criar unidade" }
   }
@@ -126,12 +138,15 @@ export async function updateUnit(id: string, propertyId: string, data: UnitFormV
   try {
     await goFetch<Unit>("/api/v1/units/" + id, {
       method: "PUT",
-      body: JSON.stringify(validated.data),
+      body: JSON.stringify(toUnitPayload(validated.data)),
     })
 
     revalidatePath("/properties/" + propertyId)
     return { success: true }
   } catch (error) {
+    if (goErrorInfo(error).code === "DUPLICATE_UNIT_LABEL") {
+      return { error: DUPLICATE_LABEL, details: { label: [DUPLICATE_LABEL] } }
+    }
     console.error("Erro ao atualizar unidade:", error)
     return { error: "Erro ao atualizar unidade" }
   }

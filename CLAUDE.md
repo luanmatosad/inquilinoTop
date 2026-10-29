@@ -57,11 +57,11 @@ Integração exige `-p 1` (um pacote por vez) para não paralelizar acesso ao DB
 |---|---|---|
 | Backend geral | [backend/CLAUDE.md](backend/CLAUDE.md) | — |
 | identity | [backend/internal/identity/CLAUDE.md](backend/internal/identity/CLAUDE.md) | **MIGRADO** — Go API |
-| property + unit | [backend/internal/property/CLAUDE.md](backend/internal/property/CLAUDE.md) | Supabase (TODO migrar) |
-| tenant | [backend/internal/tenant/CLAUDE.md](backend/internal/tenant/CLAUDE.md) | Supabase (TODO migrar) |
-| lease | [backend/internal/lease/CLAUDE.md](backend/internal/lease/CLAUDE.md) | Supabase (TODO migrar) |
-| payment | [backend/internal/payment/CLAUDE.md](backend/internal/payment/CLAUDE.md) | Supabase (TODO migrar) |
-| expense | [backend/internal/expense/CLAUDE.md](backend/internal/expense/CLAUDE.md) | Supabase (TODO migrar) |
+| property + unit | [backend/internal/property/CLAUDE.md](backend/internal/property/CLAUDE.md) | **MIGRADO** — Go API |
+| tenant | [backend/internal/tenant/CLAUDE.md](backend/internal/tenant/CLAUDE.md) | **MIGRADO** — Go API |
+| lease | [backend/internal/lease/CLAUDE.md](backend/internal/lease/CLAUDE.md) | **MIGRADO** — Go API |
+| payment | [backend/internal/payment/CLAUDE.md](backend/internal/payment/CLAUDE.md) | **MIGRADO** — Go API |
+| expense | [backend/internal/expense/CLAUDE.md](backend/internal/expense/CLAUDE.md) | **MIGRADO** — Go API |
 | fiscal | [backend/internal/fiscal/CLAUDE.md](backend/internal/fiscal/CLAUDE.md) | — |
 | audit | [backend/internal/audit/CLAUDE.md](backend/internal/audit/CLAUDE.md) | — |
 | rbac | [backend/internal/rbac/CLAUDE.md](backend/internal/rbac/CLAUDE.md) | — |
