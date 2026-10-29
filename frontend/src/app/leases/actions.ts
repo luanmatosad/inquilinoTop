@@ -2,122 +2,141 @@
 
 import { revalidatePath } from "next/cache"
 import { goFetch } from "@/lib/go/client"
-import { z } from "zod"
+import { goErrorInfo } from "@/lib/go/errors"
+import {
+  leaseSchema,
+  renewSchema,
+  readjustSchema,
+  toLeasePayload,
+  toRenewPayload,
+  toReadjustPayload,
+  type LeaseFormValues,
+  type RenewFormValues,
+  type ReadjustFormValues,
+} from "@/lib/lease-schemas"
 
-const leaseSchema = z.object({
-  unit_id: z.string().uuid(),
-  tenant_id: z.string().uuid({ message: "Selecione um inquilino." }),
-  start_date: z.string().min(1, { message: "Data de início obrigatória." }),
-  end_date: z.string().optional().or(z.literal("")),
-  rent_amount: z.coerce.number().min(0.01, { message: "Valor do aluguel deve ser maior que zero." }),
-  deposit_amount: z.coerce.number().optional(),
-  payment_day: z.coerce.number().min(1).max(31, { message: "Dia de vencimento deve ser entre 1 e 31." }),
-  notes: z.string().optional(),
-  late_fee_percent: z.coerce.number().optional(),
-  daily_interest_percent: z.coerce.number().optional(),
-  iptu_reimbursable: z.boolean().optional(),
-  annual_iptu_amount: z.coerce.number().optional(),
-})
-
-export type LeaseActionState = {
+export type LeaseActionResponse<T = unknown> = {
+  success?: boolean
+  data?: T
   error?: string
-  success?: string
-  fieldErrors?: {
-    [key: string]: string[]
-  }
-} | null
+  fieldErrors?: Record<string, string[] | undefined>
+}
 
 interface Lease {
   id: string
   unit_id: string
   tenant_id: string
-  start_date: string
-  end_date?: string
-  rent_amount: number
-  deposit_amount?: number
-  payment_day: number
   status: string
-  is_active: boolean
-  created_at: string
 }
 
-export async function createLease(prevState: LeaseActionState, formData: FormData) {
-  const rawData = {
-    unit_id: formData.get("unit_id"),
-    tenant_id: formData.get("tenant_id"),
-    start_date: formData.get("start_date"),
-    end_date: formData.get("end_date"),
-    rent_amount: formData.get("rent_amount"),
-    deposit_amount: formData.get("deposit_amount"),
-    payment_day: formData.get("payment_day"),
-    notes: formData.get("notes"),
-    late_fee_percent: formData.get("late_fee_percent"),
-    daily_interest_percent: formData.get("daily_interest_percent"),
-    iptu_reimbursable: formData.get("iptu_reimbursable") === "on",
-    annual_iptu_amount: formData.get("annual_iptu_amount"),
+export interface CreatedLease extends Lease {
+  payments_generated?: number
+  payments_error?: string
+}
+
+export interface EndedLease extends Lease {
+  payments_canceled?: number
+  payments_need_review?: number
+  payments_error?: string
+}
+
+/** Mensagens e, quando couber, o campo do formulário para cada erro de regra do backend. */
+const RULE_ERRORS: Record<string, { message: string; field?: string }> = {
+  LEASE_OVERLAP: { message: "Esta unidade já tem contrato ativo no período informado.", field: "unit_id" },
+  INVALID_DATES: { message: "A data final deve ser posterior à data inicial.", field: "end_date" },
+  UNIT_NOT_FOUND: { message: "Unidade não encontrada.", field: "unit_id" },
+  TENANT_NOT_FOUND: { message: "Inquilino não encontrado.", field: "tenant_id" },
+  LEASE_NOT_ACTIVE: { message: "Este contrato não está ativo." },
+  STATUS_CHANGE_NOT_ALLOWED: { message: "O status só muda por encerrar ou renovar." },
+  NOT_FOUND: { message: "Contrato não encontrado." },
+}
+
+function mapLeaseError<T = unknown>(error: unknown, fallback: string): LeaseActionResponse<T> {
+  const { code } = goErrorInfo(error)
+  const rule = code ? RULE_ERRORS[code] : undefined
+  if (rule) {
+    return { error: rule.message, fieldErrors: rule.field ? { [rule.field]: [rule.message] } : undefined }
   }
+  console.error(fallback, error)
+  return { error: fallback }
+}
 
-  const validatedFields = leaseSchema.safeParse(rawData)
-
-  if (!validatedFields.success) {
-    return {
-      error: "Erro de validação. Verifique os campos.",
-      fieldErrors: validatedFields.error.flatten().fieldErrors,
-    }
+export async function createLease(values: LeaseFormValues): Promise<LeaseActionResponse<CreatedLease>> {
+  const validated = leaseSchema.safeParse(values)
+  if (!validated.success) {
+    return { error: "Erro de validação. Verifique os campos.", fieldErrors: validated.error.flatten().fieldErrors }
   }
 
   try {
-    const lease = await goFetch<Lease>("/api/v1/leases", {
+    const lease = await goFetch<CreatedLease>("/api/v1/leases", {
       method: "POST",
-      body: JSON.stringify({
-        unit_id: validatedFields.data.unit_id,
-        tenant_id: validatedFields.data.tenant_id,
-        start_date: validatedFields.data.start_date,
-        end_date: validatedFields.data.end_date || null,
-        rent_amount: validatedFields.data.rent_amount,
-        deposit_amount: validatedFields.data.deposit_amount || null,
-        payment_day: validatedFields.data.payment_day,
-        late_fee_percent: validatedFields.data.late_fee_percent || 0,
-        daily_interest_percent: validatedFields.data.daily_interest_percent || 0,
-        iptu_reimbursable: validatedFields.data.iptu_reimbursable || false,
-        annual_iptu_amount: validatedFields.data.annual_iptu_amount || null,
-      }),
+      body: JSON.stringify(toLeasePayload(validated.data)),
     })
-
-    revalidatePath(`/units/${validatedFields.data.unit_id}`)
+    revalidatePath("/leases")
+    revalidatePath(`/units/${validated.data.unit_id}`)
     revalidatePath("/properties")
-    return { success: "Contrato criado com sucesso!" }
+    return { success: true, data: lease }
   } catch (error) {
-    return {
-      error: "Erro ao criar contrato: " + (error instanceof Error ? error.message : "unknown"),
-    }
+    return mapLeaseError(error, "Erro ao criar contrato.")
   }
 }
 
-export async function endLease(id: string, unitId: string) {
+export async function endLease(id: string, unitId?: string): Promise<LeaseActionResponse<EndedLease>> {
   try {
-    await goFetch<Lease>("/api/v1/leases/" + id + "/end", {
+    const lease = await goFetch<EndedLease>("/api/v1/leases/" + id + "/end", { method: "POST" })
+    revalidatePath("/leases")
+    revalidatePath("/leases/" + id)
+    if (unitId) revalidatePath(`/units/${unitId}`)
+    return { success: true, data: lease }
+  } catch (error) {
+    return mapLeaseError(error, "Erro ao encerrar contrato.")
+  }
+}
+
+export async function renewLease(id: string, values: RenewFormValues): Promise<LeaseActionResponse> {
+  const validated = renewSchema.safeParse(values)
+  if (!validated.success) {
+    return { error: "Erro de validação. Verifique os campos.", fieldErrors: validated.error.flatten().fieldErrors }
+  }
+
+  try {
+    await goFetch<Lease>("/api/v1/leases/" + id + "/renew", {
       method: "POST",
+      body: JSON.stringify(toRenewPayload(validated.data)),
     })
-
-    revalidatePath(`/units/${unitId}`)
+    revalidatePath("/leases")
+    revalidatePath("/leases/" + id)
     return { success: true }
   } catch (error) {
-    return { error: "Erro ao encerrar contrato: " + (error instanceof Error ? error.message : "unknown") }
+    const mapped = mapLeaseError(error, "Erro ao renovar contrato.")
+    // Na renovação o campo afetado é a nova data final, não end_date.
+    if (mapped.fieldErrors?.end_date) mapped.fieldErrors = { new_end_date: mapped.fieldErrors.end_date }
+    if (mapped.fieldErrors?.unit_id) mapped.fieldErrors = { new_end_date: mapped.fieldErrors.unit_id }
+    return mapped
   }
 }
 
-export async function cancelLease(id: string, unitId: string) {
-  try {
-    await goFetch<Lease>("/api/v1/leases/" + id, {
-      method: "PUT",
-      body: JSON.stringify({ status: "CANCELED" }),
-    })
+export async function readjustLease(id: string, values: ReadjustFormValues): Promise<LeaseActionResponse> {
+  const validated = readjustSchema.safeParse(values)
+  if (!validated.success) {
+    return { error: "Erro de validação. Verifique os campos.", fieldErrors: validated.error.flatten().fieldErrors }
+  }
 
-    revalidatePath(`/units/${unitId}`)
+  try {
+    await goFetch("/api/v1/leases/" + id + "/readjust", {
+      method: "POST",
+      body: JSON.stringify(toReadjustPayload(validated.data)),
+    })
+    revalidatePath("/leases")
+    revalidatePath("/leases/" + id)
     return { success: true }
   } catch (error) {
-    return { error: "Erro ao cancelar contrato: " + (error instanceof Error ? error.message : "unknown") }
+    const { code } = goErrorInfo(error)
+    if (code === "INVALID_PERCENTAGE") {
+      const message = "Percentual inválido."
+      return { error: message, fieldErrors: { percentage: [message] } }
+    }
+    return mapLeaseError(error, "Erro ao reajustar contrato.")
   }
 }
 

@@ -34,7 +34,7 @@ export function CreateLeaseDialog({ unitId, tenants, properties }: CreateLeaseDi
             <Plus className="mr-2 h-4 w-4" /> Novo Contrato
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo Contrato de Locação</DialogTitle>
         </DialogHeader>

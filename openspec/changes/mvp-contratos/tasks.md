@@ -21,20 +21,20 @@
 
 ## 3. Frontend: consolidação
 
-- [ ] 3.1 Comparar `/owner/contracts/**` com `/leases/**` e portar o que faltar
-- [ ] 3.2 Remover `/owner/contracts/**` e `contracts-dal.ts` duplicado; adicionar redirect permanente em `next.config.ts`
+- [x] 3.1 Comparar `/owner/contracts/**` com `/leases/**` e portar o que faltar (nada a portar: a lista de `/owner/contracts` lia `units`/`tenants` embutidos que o backend não devolve, então mostrava vazio; a de `/leases` agora resolve nomes pelas listas de imóveis e inquilinos)
+- [x] 3.2 Remover `/owner/contracts/**` e `contracts-dal.ts` duplicado; adicionar redirect permanente em `next.config.ts`
 
 ## 4. Frontend: telas
 
-- [ ] 4.1 Formulário de criação com unidade, inquilino, datas, aluguel, caução, dia de pagamento, multa, juros, `notes` e opção "gerar cobranças"
-- [ ] 4.2 Tratamento de erros `LEASE_OVERLAP`, datas inválidas e recursos inexistentes no formulário
-- [ ] 4.3 Detalhe do contrato com abas (dados, cobranças, reajustes) usando `tabs` do shadcn
-- [ ] 4.4 Ações de encerrar, renovar e reajustar com `alert-dialog`/`dialog` e feedback via `sonner`
-- [ ] 4.5 Estados de carregamento, vazio e erro na lista e no detalhe
+- [x] 4.1 Formulário de criação com unidade, inquilino, datas, aluguel, caução, dia de pagamento, multa, juros, `notes` e opção "gerar cobranças"
+- [x] 4.2 Tratamento de erros `LEASE_OVERLAP`, datas inválidas e recursos inexistentes no formulário
+- [x] 4.3 Detalhe do contrato com abas (dados, cobranças, reajustes) usando `tabs` do shadcn
+- [x] 4.4 Ações de encerrar, renovar e reajustar com `alert-dialog`/`dialog` e feedback via `sonner`
+- [x] 4.5 Estados de carregamento, vazio e erro na lista e no detalhe
 
 ## 5. Verificação
 
-- [ ] 5.1 `make frontend-lint` e build sem erros
+- [x] 5.1 `make frontend-lint` e build sem erros
 - [ ] 5.2 Fluxo manual: criar contrato com cobranças, tentar sobrepor, reajustar, renovar e encerrar
-- [ ] 5.3 Atualizar `CLAUDE.md` raiz se o status do módulo mudar
+- [x] 5.3 Atualizar `CLAUDE.md` raiz se o status do módulo mudar
 - [ ] 5.4 `openspec validate mvp-contratos`

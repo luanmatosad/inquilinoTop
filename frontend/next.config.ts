@@ -7,13 +7,16 @@ const nextConfig: NextConfig = {
     qualities: [75, 90],
     dangerouslyAllowSVG: true,
   },
-  // Árvore de rotas única: /owner/properties|tenants foi consolidada em /properties|tenants.
+  // Árvore de rotas única: /owner/properties|tenants|contracts foi consolidada em /properties|tenants|leases.
   async redirects() {
     return [
       { source: "/owner/properties", destination: "/properties", permanent: true },
       { source: "/owner/properties/:path*", destination: "/properties/:path*", permanent: true },
       { source: "/owner/tenants", destination: "/tenants", permanent: true },
       { source: "/owner/tenants/:path*", destination: "/tenants/:path*", permanent: true },
+      { source: "/owner/contracts", destination: "/leases", permanent: true },
+      { source: "/owner/contracts/new", destination: "/leases", permanent: true },
+      { source: "/owner/contracts/:path*", destination: "/leases/:path*", permanent: true },
     ];
   },
 };
