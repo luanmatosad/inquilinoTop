@@ -71,6 +71,7 @@ Implement tasks from an OpenSpec change.
    - Make the code changes required
    - Keep changes minimal and focused
    - Mark task complete in the tasks file: `- [ ]` → `- [x]`
+   - If a ClickUp List exists for this change (Folder "Changes", `folder_id` `1600260000000405`, Space `90174982017`, workspace `90171083762` — created by `openspec-propose`): find the matching Subtask by name/text and set its status to `"complete"` via `task.update_many`. Skip silently if no matching List/Subtask is found (don't block implementation on this) — sync is one-way (openspec → ClickUp), never read ClickUp back to decide what's done here
    - Continue to next task
 
    **Pause if:**

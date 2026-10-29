@@ -1,6 +1,6 @@
 ## Why
 
-This change aims to implement the frontend interfaces for the support and help system within InquilinoTop, bringing the support experience up to the newly defined design standards ("HeroUI-like" look). Currently, users lack a centralized, modern interface to view FAQs, get help, or open support tickets.
+This change aims to implement the frontend interfaces for the support and help system within InquilinoTop, bringing the support experience up to the newly defined design standards (shadcn/ui look). Currently, users lack a centralized, modern interface to view FAQs, get help, or open support tickets.
 
 ## What Changes
 

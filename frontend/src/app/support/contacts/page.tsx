@@ -36,8 +36,8 @@ const contacts = [
     title: 'Horário de atendimento',
     description: 'Seg. a Sex. das 9h às 18h',
     action: null,
-    color: 'text-on-surface-variant',
-    bgColor: 'bg-surface-variant',
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted',
   },
 ];
 
@@ -45,8 +45,8 @@ export default function ContactsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-on-surface">Contatos</h1>
-        <p className="text-on-surface-variant mt-2">Escolha a melhor forma de nos contactar</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Contatos</h1>
+        <p className="text-muted-foreground mt-2">Escolha a melhor forma de nos contactar</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -55,13 +55,13 @@ export default function ContactsPage() {
           return (
             <div
               key={contact.id}
-              className="bg-surface p-6 rounded-xl border border-outline hover:border-primary hover:shadow-md transition-all duration-200"
+              className="bg-background p-6 rounded-xl border border-input hover:border-primary hover:shadow-md transition-all duration-200"
             >
               <div className={`w-12 h-12 ${contact.bgColor} rounded-lg flex items-center justify-center mb-4`}>
                 <IconComponent className={`w-6 h-6 ${contact.color}`} />
               </div>
-              <h3 className="text-lg font-semibold text-on-surface">{contact.title}</h3>
-              <p className="text-sm text-on-surface-variant mt-1">{contact.description}</p>
+              <h3 className="text-lg font-semibold text-foreground">{contact.title}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{contact.description}</p>
               {contact.action && (
                 <span className="mt-4 text-sm font-medium text-primary">
                   {contact.action}

@@ -26,7 +26,7 @@ Toda entidade pertence a um `owner_id`. Nunca retornar ou modificar dados sem fi
 
 ## Invariantes
 
-- **Soft-delete obrigatório**: deleções sempre via `is_active=false` + `updated_at=NOW()`. Nunca `DELETE FROM`.
+- **Soft-delete obrigatório**: deleções sempre via `is_active=false` + `updated_at=NOW()`. Nunca `DELETE FROM`. Ver [ADR cross-cutting 0001](../../docs/decisions/_cross-cutting/0001-soft-delete-obrigatorio.md).
 - **SINGLE auto-cria Unit**: ao criar Property do tipo `SINGLE`, criar automaticamente uma Unit com label `"Unidade 01"`.
 - **ownerID em toda query**: toda query de leitura e escrita DEVE incluir `owner_id` no filtro — sem exceção.
 - **UUIDs**: todos os IDs são `uuid.UUID` no Go / `uuid` no PostgreSQL.

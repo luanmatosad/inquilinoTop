@@ -43,3 +43,8 @@ Factory: `provider.NewProvider(providerType, config)` — string `"asaas"|"sicoo
 - `Update` com paid_date + status=PAID dispara cálculo de IRRF se RENT + tenant PJ.
 - `errors.Is` (não `strings.Contains`) para roteamento de erros no service.
 - Soft-delete em `DeleteFinancialConfig` (não DELETE real).
+
+## Decisões
+
+- [0001 - Payment imutável (sem Delete)](../../../docs/decisions/payment/0001-payment-imutavel-sem-delete.md)
+- [0002 - Abstração multi-provider (PaymentProvider)](../../../docs/decisions/payment/0002-abstracao-multi-provider.md)

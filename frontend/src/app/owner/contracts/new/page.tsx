@@ -3,7 +3,17 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createLeaseAction, getUnitsForForm, getTenantsForForm } from "./actions"
-import { Button, Card, Input, Select, Label, ListBox, TextField, FieldError } from "@heroui/react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface Unit {
   id: string
@@ -69,97 +79,113 @@ export default function NewContractForm() {
             <h1 className="text-2xl font-bold mb-6">Novo Contrato de Locação</h1>
           </div>
 
-          <Select
-            name="unit_id"
-            placeholder="Selecione a unidade"
-            isRequired
-            isInvalid={!!errors.unit_id}
-          >
-            <Label>Unidade</Label>
-            <Select.Trigger>
-              <Select.Value />
-              <Select.Indicator />
-            </Select.Trigger>
-            <Select.Popover>
-              <ListBox items={units}>
-                {(unit) => (
-                  <ListBox.Item id={unit.id} textValue={unit.label}>
+          <div className="space-y-2">
+            <Label htmlFor="unit_id">Unidade</Label>
+            <Select name="unit_id" required>
+              <SelectTrigger id="unit_id" className="w-full" aria-invalid={!!errors.unit_id}>
+                <SelectValue placeholder="Selecione a unidade" />
+              </SelectTrigger>
+              <SelectContent>
+                {units.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id}>
                     {unit.label}
-                  </ListBox.Item>
-                )}
-              </ListBox>
-            </Select.Popover>
-            <FieldError>{errors.unit_id?.[0]}</FieldError>
-          </Select>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.unit_id?.[0] && (
+              <p className="text-sm text-destructive">{errors.unit_id[0]}</p>
+            )}
+          </div>
 
-          <Select
-            name="tenant_id"
-            placeholder="Selecione o inquilino"
-            isRequired
-            isInvalid={!!errors.tenant_id}
-          >
-            <Label>Inquilino</Label>
-            <Select.Trigger>
-              <Select.Value />
-              <Select.Indicator />
-            </Select.Trigger>
-            <Select.Popover>
-              <ListBox items={tenants}>
-                {(tenant) => (
-                  <ListBox.Item id={tenant.id} textValue={tenant.name}>
+          <div className="space-y-2">
+            <Label htmlFor="tenant_id">Inquilino</Label>
+            <Select name="tenant_id" required>
+              <SelectTrigger id="tenant_id" className="w-full" aria-invalid={!!errors.tenant_id}>
+                <SelectValue placeholder="Selecione o inquilino" />
+              </SelectTrigger>
+              <SelectContent>
+                {tenants.map((tenant) => (
+                  <SelectItem key={tenant.id} value={tenant.id}>
                     {tenant.name}
-                  </ListBox.Item>
-                )}
-              </ListBox>
-            </Select.Popover>
-            <FieldError>{errors.tenant_id?.[0]}</FieldError>
-          </Select>
-
-          <div className="grid grid-cols-2 gap-4">
-            <TextField name="start_date" isRequired isInvalid={!!errors.start_date}>
-              <Label>Data de Início</Label>
-              <Input type="date" />
-              <FieldError>{errors.start_date?.[0]}</FieldError>
-            </TextField>
-            
-            <TextField name="end_date">
-              <Label>Data de Término</Label>
-              <Input type="date" />
-            </TextField>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.tenant_id?.[0] && (
+              <p className="text-sm text-destructive">{errors.tenant_id[0]}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <TextField name="rent_amount" isRequired isInvalid={!!errors.rent_amount}>
-              <Label>Valor do Aluguel (R$)</Label>
-              <Input type="number" step="0.01" placeholder="0,00" />
-              <FieldError>{errors.rent_amount?.[0]}</FieldError>
-            </TextField>
+            <div className="space-y-2">
+              <Label htmlFor="start_date">Data de Início</Label>
+              <Input id="start_date" name="start_date" type="date" required aria-invalid={!!errors.start_date} />
+              {errors.start_date?.[0] && (
+                <p className="text-sm text-destructive">{errors.start_date[0]}</p>
+              )}
+            </div>
 
-            <TextField name="payment_day" isRequired isInvalid={!!errors.payment_day}>
-              <Label>Dia de Vencimento</Label>
-              <Input type="number" min="1" max="31" placeholder="5" />
-              <FieldError>{errors.payment_day?.[0]}</FieldError>
-            </TextField>
+            <div className="space-y-2">
+              <Label htmlFor="end_date">Data de Término</Label>
+              <Input id="end_date" name="end_date" type="date" />
+            </div>
           </div>
 
-          <TextField name="notes">
-            <Label>Observações</Label>
-            <Input placeholder="Observações adicionais..." />
-          </TextField>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="rent_amount">Valor do Aluguel (R$)</Label>
+              <Input
+                id="rent_amount"
+                name="rent_amount"
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                required
+                aria-invalid={!!errors.rent_amount}
+              />
+              {errors.rent_amount?.[0] && (
+                <p className="text-sm text-destructive">{errors.rent_amount[0]}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment_day">Dia de Vencimento</Label>
+              <Input
+                id="payment_day"
+                name="payment_day"
+                type="number"
+                min="1"
+                max="31"
+                placeholder="5"
+                required
+                aria-invalid={!!errors.payment_day}
+              />
+              {errors.payment_day?.[0] && (
+                <p className="text-sm text-destructive">{errors.payment_day[0]}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Observações</Label>
+            <Input id="notes" name="notes" placeholder="Observações adicionais..." />
+          </div>
 
           {errors._form && (
-            <div className="text-danger text-sm">
+            <div className="text-destructive text-sm">
               {errors._form}
             </div>
           )}
 
           <div className="flex gap-4">
-            <Button type="submit" isPending={isSubmitting} className="bg-primary text-primary-foreground">
+            <Button type="submit" disabled={isSubmitting}>
               Criar Contrato
             </Button>
-            <Button 
-              variant="outline" 
-              onPress={() => router.back()}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
             >
               Cancelar
             </Button>

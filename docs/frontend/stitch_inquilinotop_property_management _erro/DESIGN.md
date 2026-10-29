@@ -109,7 +109,7 @@ spacing:
 
 ## Brand & Style
 
-The brand personality is professional yet energetic, bridging the gap between serious real estate management and the vibrant lifestyle of modern tenants. This design system adopts a **Modern & Vibrant** style, heavily inspired by the high-performance aesthetic of HeroUI. 
+The brand personality is professional yet energetic, bridging the gap between serious real estate management and the vibrant lifestyle of modern tenants. This design system adopts a **Modern & Vibrant** style, heavily inspired by the high-performance aesthetic of shadcn/ui. 
 
 The UI prioritizes clarity and speed, utilizing high-contrast surfaces to ensure property data is instantly digestible. The atmosphere is confident and trustworthy, achieved through generous whitespace, bold accent colors, and a card-based architecture that makes complex management tasks feel organized and approachable.
 
@@ -137,7 +137,7 @@ This design system employs a **Fluid Grid** model with fixed maximum widths for 
 
 - **Grid:** A 12-column grid is used for desktop dashboards, collapsing to a 1-column layout for mobile.
 - **Rhythm:** Containers use a 16px (md) or 24px (lg) internal padding to create a spacious, airy feel characteristic of modern UI frameworks.
-- **Card Spacing:** Elements within cards should follow a consistent 16px gap to maintain a clean "HeroUI-like" vertical rhythm.
+- **Card Spacing:** Elements within cards should follow a consistent 16px gap to maintain a clean "shadcn/ui-like" vertical rhythm.
 
 ## Elevation & Depth
 
@@ -167,5 +167,5 @@ The component library focuses on accessibility and touch-friendly targets.
     - *Pending:* Secondary Orange.
     - *Overdue:* High-contrast Red.
 - **Input Fields:** Use a subtle #F4F4F5 background with no border in their default state, transitioning to a primary blue border on focus.
-- **Property List:** Items should be separated by whitespace and cards rather than simple dividers to maintain the "HeroUI" modular look.
+- **Property List:** Items should be separated by whitespace and cards rather than simple dividers to maintain the "shadcn/ui" modular look.
 - **Additional Elements:** Progress bars for lease terms and "Quick Action" floating buttons for adding new tenants or maintenance requests.

@@ -1,8 +1,17 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import { Plus, FileText } from "lucide-react"
+import { Plus } from "lucide-react"
 import { listLeases } from "@/data/owner/contracts-dal"
-import { Button, Card, Badge } from "@heroui/react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 interface LeaseWithDetails {
   id: string
@@ -15,12 +24,12 @@ interface LeaseWithDetails {
   tenants: { id: string; name: string } | null
 }
 
-function getStatusColor(status: string): "success" | "default" | "warning" | "danger" {
+function getStatusVariant(status: string): "default" | "secondary" | "destructive" {
   switch (status) {
-    case 'ACTIVE': return 'success'
-    case 'ENDED': return 'default'
-    case 'CANCELED': return 'danger'
-    default: return 'default'
+    case 'ACTIVE': return 'default'
+    case 'ENDED': return 'secondary'
+    case 'CANCELED': return 'destructive'
+    default: return 'secondary'
   }
 }
 
@@ -44,8 +53,8 @@ async function ContractsList() {
 
   if (!leases || leases.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 border border-outline-variant rounded-xl bg-surface">
-        <p className="text-on-surface-variant mb-4">Nenhum contrato encontrado.</p>
+      <div className="flex flex-col items-center justify-center h-64 border border-border rounded-xl bg-card">
+        <p className="text-muted-foreground mb-4">Nenhum contrato encontrado.</p>
         <Link href="/owner/contracts/new">
           <Button>Criar Primeiro Contrato</Button>
         </Link>
@@ -54,46 +63,38 @@ async function ContractsList() {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-outline-variant">
-            <th className="text-left py-3 px-4 text-on-surface-variant font-medium">Inquilino</th>
-            <th className="text-left py-3 px-4 text-on-surface-variant font-medium">Unidade</th>
-            <th className="text-left py-3 px-4 text-on-surface-variant font-medium">Valor</th>
-            <th className="text-left py-3 px-4 text-on-surface-variant font-medium">Início</th>
-            <th className="text-left py-3 px-4 text-on-surface-variant font-medium">Fim</th>
-            <th className="text-left py-3 px-4 text-on-surface-variant font-medium">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {leases.map((lease) => (
-            <tr key={lease.id} className="border-b border-outline-variant hover:bg-surface-variant/50">
-              <td className="py-3 px-4">
-                <span className="font-medium">{lease.tenants?.name || '-'}</span>
-              </td>
-              <td className="py-3 px-4">
-                <span>{lease.units?.label || '-'}</span>
-              </td>
-              <td className="py-3 px-4">
-                R$ {Number(lease.rent_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </td>
-              <td className="py-3 px-4">
-                {new Date(lease.start_date).toLocaleDateString('pt-BR')}
-              </td>
-              <td className="py-3 px-4">
-                {lease.end_date ? new Date(lease.end_date).toLocaleDateString('pt-BR') : '-'}
-              </td>
-              <td className="py-3 px-4">
-                <Badge color={getStatusColor(lease.status)} variant="soft">
-                  {getStatusLabel(lease.status)}
-                </Badge>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Inquilino</TableHead>
+          <TableHead>Unidade</TableHead>
+          <TableHead>Valor</TableHead>
+          <TableHead>Início</TableHead>
+          <TableHead>Fim</TableHead>
+          <TableHead>Status</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {leases.map((lease) => (
+          <TableRow key={lease.id}>
+            <TableCell className="font-medium">{lease.tenants?.name || '-'}</TableCell>
+            <TableCell>{lease.units?.label || '-'}</TableCell>
+            <TableCell>
+              R$ {Number(lease.rent_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </TableCell>
+            <TableCell>{new Date(lease.start_date).toLocaleDateString('pt-BR')}</TableCell>
+            <TableCell>
+              {lease.end_date ? new Date(lease.end_date).toLocaleDateString('pt-BR') : '-'}
+            </TableCell>
+            <TableCell>
+              <Badge variant={getStatusVariant(lease.status)}>
+                {getStatusLabel(lease.status)}
+              </Badge>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }
 
@@ -102,13 +103,13 @@ export default async function OwnerContractsPage() {
     <div className="container py-8 space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-on-surface">Meus Contratos</h1>
-          <p className="text-base text-on-surface-variant mt-1">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Meus Contratos</h1>
+          <p className="text-base text-muted-foreground mt-1">
             Gerencie seus contratos de locação.
           </p>
         </div>
         <Link href="/owner/contracts/new">
-          <Button className="bg-secondary-container text-on-secondary-container">
+          <Button variant="secondary">
             <Plus className="w-4 h-4" />
             Novo Contrato
           </Button>

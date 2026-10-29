@@ -26,12 +26,8 @@ export interface TenantWithLeases extends Tenant {
 }
 
 export async function listTenants(): Promise<Tenant[]> {
-  try {
-    const data = await goFetch<Tenant[]>('/api/v1/tenants')
-    return data ?? []
-  } catch {
-    return []
-  }
+  const data = await goFetch<Tenant[]>('/api/v1/tenants')
+  return data ?? []
 }
 
 export async function getTenant(id: string): Promise<Tenant | null> {

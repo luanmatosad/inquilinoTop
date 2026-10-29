@@ -1,4 +1,10 @@
-import { Card } from '@heroui/react'
+import Link from 'next/link'
+import type { ComponentProps } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { formatCurrency } from '@/lib/utils'
 
 interface FinancialSummaryProps {
   revenue: {
@@ -9,78 +15,53 @@ interface FinancialSummaryProps {
   }
 }
 
-export function FinancialSummary({ revenue }: FinancialSummaryProps) {
-  const receivedPct = revenue.total > 0 ? (revenue.paid / revenue.total) * 100 : 0
-  const pendingPct = revenue.total > 0 ? (revenue.pending / revenue.total) * 100 : 0
-  const latePct = revenue.total > 0 ? (revenue.overdue / revenue.total) * 100 : 0
+type BadgeVariant = ComponentProps<typeof Badge>['variant']
 
-  const formatCurrency = (value: number) => 
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+export function FinancialSummary({ revenue }: FinancialSummaryProps) {
+  const hasRevenue = revenue.total > 0
+  const receivedPct = hasRevenue ? (revenue.paid / revenue.total) * 100 : 0
+
+  const values: { label: string; value: number; variant: BadgeVariant; valueClassName?: string }[] = [
+    { label: 'Prevista', value: revenue.total, variant: 'outline' },
+    { label: 'Recebida', value: revenue.paid, variant: 'default' },
+    { label: 'Pendente', value: revenue.pending, variant: 'secondary' },
+    { label: 'Atrasada', value: revenue.overdue, variant: 'destructive', valueClassName: 'text-destructive' },
+  ]
 
   return (
-    <Card className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-on-surface">Resumo Financeiro</h2>
-        <button className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
-          Ver relatório detalhado
-        </button>
-      </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Resumo Financeiro</CardTitle>
+        <CardAction>
+          <Button variant="link" size="sm" asChild>
+            <Link href="/financial/dashboard">Ver relatório detalhado</Link>
+          </Button>
+        </CardAction>
+      </CardHeader>
 
-      {/* Progress Bar */}
-      <div className="relative w-full h-4 bg-surface-container rounded-full overflow-hidden flex mb-4">
-        <div 
-          className="bg-primary h-full transition-all duration-500" 
-          style={{ width: `${receivedPct}%` }} 
-          title="Recebida" 
-        />
-        <div 
-          className="bg-secondary-container h-full transition-all duration-500" 
-          style={{ width: `${pendingPct}%` }} 
-          title="Pendente" 
-        />
-        <div 
-          className="bg-error h-full transition-all duration-500" 
-          style={{ width: `${latePct}%` }} 
-          title="Atrasada" 
-        />
-      </div>
+      <CardContent className="space-y-6">
+        {hasRevenue ? (
+          <div className="space-y-2">
+            <Progress value={receivedPct} aria-label="Percentual recebido" />
+            <p className="text-xs text-muted-foreground">{Math.round(receivedPct)}% recebido</p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Nenhum valor previsto neste mês.</p>
+        )}
 
-      {/* Values Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-outline">Prevista</span>
-          <span className="text-xl font-semibold text-on-surface">
-            {formatCurrency(revenue.total)}
-          </span>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {values.map(({ label, value, variant, valueClassName }) => (
+            <div key={label} className="flex flex-col gap-1">
+              <Badge variant={variant} className="w-fit">
+                {label}
+              </Badge>
+              <span className={`text-xl font-semibold text-foreground ${valueClassName ?? ''}`}>
+                {formatCurrency(value)}
+              </span>
+            </div>
+          ))}
         </div>
-        <div className="flex flex-col gap-1 border-l border-surface-container pl-4">
-          <span className="text-xs text-outline flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-primary" />
-            Recebida
-          </span>
-          <span className="text-xl font-semibold text-on-surface">
-            {formatCurrency(revenue.paid)}
-          </span>
-        </div>
-        <div className="flex flex-col gap-1 border-l border-surface-container pl-4">
-          <span className="text-xs text-outline flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-secondary-container" />
-            Pendente
-          </span>
-          <span className="text-xl font-semibold text-on-surface">
-            {formatCurrency(revenue.pending)}
-          </span>
-        </div>
-        <div className="flex flex-col gap-1 border-l border-surface-container pl-4">
-          <span className="text-xs text-error flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-error" />
-            Atrasada
-          </span>
-          <span className="text-xl font-semibold text-error">
-            {formatCurrency(revenue.overdue)}
-          </span>
-        </div>
-      </div>
+      </CardContent>
     </Card>
   )
 }

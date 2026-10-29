@@ -179,9 +179,9 @@ export function LeaseForm({ unitId, tenants, properties = [], onSuccess, onCance
       </div>
 
       <div className="relative flex items-center py-1">
-        <div className="flex-grow border-t border-gray-200" />
-        <span className="mx-3 flex-shrink text-xs text-gray-400 uppercase tracking-wide">Encargos e IPTU</span>
-        <div className="flex-grow border-t border-gray-200" />
+        <div className="flex-grow border-t border-border" />
+        <span className="mx-3 flex-shrink text-xs text-muted-foreground uppercase tracking-wide">Encargos e IPTU</span>
+        <div className="flex-grow border-t border-border" />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -218,7 +218,7 @@ export function LeaseForm({ unitId, tenants, properties = [], onSuccess, onCance
           type="checkbox"
           checked={iptuReimbursable}
           onChange={(e) => setIptuReimbursable(e.target.checked)}
-          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
         />
         <Label htmlFor="iptu_reimbursable" className="cursor-pointer font-normal">
           IPTU reembolsável pelo inquilino

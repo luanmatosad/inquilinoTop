@@ -59,7 +59,8 @@ export async function getRefreshToken() {
 
 async function doFetch<T>(
   path: string,
-  options: RequestInit & { skipAuth?: boolean } = {}
+  options: RequestInit & { skipAuth?: boolean } = {},
+  retried = false
 ): Promise<T> {
   const { skipAuth = false, ...fetchOptions } = options
 
@@ -80,25 +81,33 @@ async function doFetch<T>(
     headers,
   })
 
-  if (res.status === 401 && !skipAuth) {
-    const refreshed = await refreshAccessToken()
-    if (refreshed) {
-      return doFetch<T>(path, options)
+  let data: unknown
+  try {
+    data = await res.json()
+  } catch {
+    data = undefined
+  }
+  const code = (data as Partial<GoError> | undefined)?.error?.code
+
+  // NO_ORG: token is valid but user has no organization; refreshing cannot fix it.
+  if (res.status === 401 && !skipAuth && code !== 'NO_ORG') {
+    if (!retried && (await refreshAccessToken())) {
+      return doFetch<T>(path, options, true)
     }
     await clearTokens()
     throw new Error('UNAUTHORIZED')
   }
 
-  let data: unknown
-  try {
-    data = await res.json()
-  } catch {
+  if (data === undefined) {
     throw new Error('INVALID_JSON_RESPONSE')
   }
 
   if (!res.ok) {
     const err = data as GoError
-    throw new Error(err.error?.message || 'REQUEST_FAILED')
+    throw Object.assign(new Error(err.error?.message || 'REQUEST_FAILED'), {
+      status: res.status,
+      code,
+    })
   }
 
   return (data as { data: T }).data

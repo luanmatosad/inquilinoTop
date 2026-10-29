@@ -67,3 +67,7 @@ Todas as actions em `src/app/<módulo>/actions.ts`:
 - `goFetch` com `skipAuth: true` não adiciona Authorization header — usado em login/register/refresh.
 - Dashboard e financeiro usam Supabase diretamente — não há DAL para Go ainda.
 - Schemas Zod em `schemas.ts` só cobrem property e unit.
+
+## Decisões
+
+- [cross-cutting-0002](../docs/decisions/_cross-cutting/0002-shadcn-ui-unica-biblioteca.md): shadcn/ui é a única biblioteca de UI; `@heroui/*` bloqueado por lint.

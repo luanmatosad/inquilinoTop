@@ -36,7 +36,7 @@ export default async function UnitPage({
 
   let unit: Unit | null = null
   let property: Property | null = null
-  const activeLease: ActiveLease | null = null
+  const activeLease = null as ActiveLease | null
   const payments: Payment[] = []
   const expenses: Expense[] = []
 
@@ -113,7 +113,7 @@ export default async function UnitPage({
           </div>
         ) : (
           <div className="space-y-8">
-            <div className="bg-gray-50 border border-dashed rounded-lg p-8 text-center space-y-4">
+            <div className="bg-muted border border-dashed rounded-lg p-8 text-center space-y-4">
               <div className="text-muted-foreground">
                 <Building2 className="h-12 w-12 mx-auto mb-4 opacity-20" />
                 <p className="text-lg font-medium">Esta unidade está vaga.</p>

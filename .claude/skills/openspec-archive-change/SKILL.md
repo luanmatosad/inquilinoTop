@@ -82,7 +82,12 @@ Archive a completed change in the experimental workflow.
    mv openspec/changes/<name> openspec/changes/archive/YYYY-MM-DD-<name>
    ```
 
-6. **Display summary**
+6. **Reflect the archive in ClickUp** (if a List exists for this change — Folder "Changes", `folder_id` `1600260000000405`, Space `90174982017`, workspace `90171083762`)
+
+   - Mark every remaining incomplete Task/Subtask in that List as `"complete"` via `task.update_many` (an archived change is done, regardless of what `tasks.md` still shows unchecked)
+   - Skip silently if no matching List is found — don't block the archive on this
+
+7. **Display summary**
 
    Show archive completion summary including:
    - Change name

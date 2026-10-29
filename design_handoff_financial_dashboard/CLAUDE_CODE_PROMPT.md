@@ -23,8 +23,8 @@ Convenções do repo a respeitar (já confirmadas no código atual):
     SÓ onde tiver hover/state/effects (CashFlowChart é o único caso aqui).
   - Componentes em frontend/src/components/ui/* são shadcn (Card, Button,
     Badge etc.). Use ESSES, não reimplemente.
-  - HeroUI v3 só permanece onde já estava (login, alguns inputs). Não
-    introduza HeroUI nas telas do módulo financeiro — shadcn é a base.
+  - shadcn/ui é a única biblioteca de componentes (ADR cross-cutting 0002).
+    Não introduza outra biblioteca de UI.
   - Tailwind v4. Tokens vêm de globals.css via @theme inline. Para usar uma
     CSS variable arbitrária no Tailwind, sintaxe é text-[color:var(--token)].
   - Lucide é o único pacote de ícones. Não importe Heroicons ou Material.
@@ -78,7 +78,6 @@ Validação:
 Fora de escopo (NÃO faça agora):
   - Não toque em /financial/receivables, /payables, /transfers,
     /reconciliation, /commissions. Esses vêm em handoffs separados.
-  - Não migre componentes HeroUI existentes em outras telas pra shadcn.
   - Não adicione uma biblioteca de chart (Recharts etc.) — o CashFlowChart
     é em divs propositalmente; trocamos por uma lib quando o módulo todo
     estiver coeso.

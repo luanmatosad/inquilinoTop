@@ -65,8 +65,8 @@ export default function ConciliacaoBancaria() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-on-surface">Conciliação Bancária</h1>
-          <p className="text-on-surface-variant">Importação e sincronização de extrato (OFX/CNAB)</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Conciliação Bancária</h1>
+          <p className="text-muted-foreground">Importação e sincronização de extrato (OFX/CNAB)</p>
         </div>
         <div className="flex items-center gap-3">
           <Button className="flex items-center gap-2">
@@ -78,45 +78,45 @@ export default function ConciliacaoBancaria() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Side: Extrato do Banco */}
         <Card className="flex flex-col h-[700px]">
-          <CardHeader className="border-b border-outline-variant bg-surface-variant/50 pb-4">
+          <CardHeader className="border-b border-border bg-muted/50 pb-4">
             <div className="flex justify-between items-center">
               <CardTitle className="text-lg flex items-center gap-2">
                 <FileDown className="w-5 h-5 text-primary" />
                 Extrato Bancário
               </CardTitle>
-              <span className="text-sm font-medium bg-surface px-2 py-1 rounded-md shadow-sm border border-outline">
+              <span className="text-sm font-medium bg-background px-2 py-1 rounded-md shadow-sm border border-input">
                 Saldo: {formatBRL(12450.00)}
               </span>
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto p-0">
             {loading ? (
-              <div className="p-8 text-center text-on-surface-variant">Carregando extrato...</div>
+              <div className="p-8 text-center text-muted-foreground">Carregando extrato...</div>
             ) : bankRecords.length === 0 ? (
-              <div className="p-8 text-center text-on-surface-variant">Nenhum registro bancário encontrado. Importe um extrato.</div>
+              <div className="p-8 text-center text-muted-foreground">Nenhum registro bancário encontrado. Importe um extrato.</div>
             ) : (
-              <ul className="divide-y divide-outline-variant">
+              <ul className="divide-y divide-border">
                 {bankRecords.map(br => {
                   const isConciliated = conciliatedIds.has(br.id);
                   // Find a potential match in system
                   const match = systemRecords.find(sr => sr.valor === br.amount && !isConciliated);
                   
                   return (
-                    <li key={br.id} className={`p-4 transition-all ${isConciliated ? 'opacity-40 bg-surface-container-lowest' : 'hover:bg-surface-container-low'}`}>
+                    <li key={br.id} className={`p-4 transition-all ${isConciliated ? 'opacity-40 bg-card' : 'hover:bg-muted'}`}>
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <span className="text-xs font-medium text-on-surface-variant">{formatDate(br.date)}</span>
-                          <p className="text-sm font-medium text-on-surface mt-1">{br.description}</p>
+                          <span className="text-xs font-medium text-muted-foreground">{formatDate(br.date)}</span>
+                          <p className="text-sm font-medium text-foreground mt-1">{br.description}</p>
                         </div>
-                        <div className={`text-sm font-bold ${br.amount > 0 ? 'text-success' : 'text-on-surface'}`}>
+                        <div className={`text-sm font-bold ${br.amount > 0 ? 'text-success' : 'text-foreground'}`}>
                           {br.amount > 0 ? '+' : ''}{formatBRL(br.amount)}
                         </div>
                       </div>
 
                       {!isConciliated && (
-                        <div className="mt-3 flex items-center justify-between p-3 bg-surface-container rounded-md border border-outline-variant">
+                        <div className="mt-3 flex items-center justify-between p-3 bg-muted rounded-md border border-border">
                           {match ? (
-                            <div className="flex items-center gap-2 text-sm text-on-surface">
+                            <div className="flex items-center gap-2 text-sm text-foreground">
                               <Link2 className="w-4 h-4 text-success" />
                               <span className="font-medium text-success">Sugestão:</span>
                               <span className="truncate max-w-[200px]">{match.descricao}</span>
@@ -153,31 +153,31 @@ export default function ConciliacaoBancaria() {
 
         {/* Right Side: Sistema */}
         <Card className="flex flex-col h-[700px]">
-          <CardHeader className="border-b border-outline-variant bg-surface-variant/50 pb-4">
+          <CardHeader className="border-b border-border bg-muted/50 pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-primary"></span>
               Registros do Sistema
             </CardTitle>
-            <p className="text-xs text-on-surface-variant mt-1">Títulos pendentes no InquilinoTop</p>
+            <p className="text-xs text-muted-foreground mt-1">Títulos pendentes no InquilinoTop</p>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto p-0">
             {loading ? (
-              <div className="p-8 text-center text-on-surface-variant">Buscando títulos...</div>
+              <div className="p-8 text-center text-muted-foreground">Buscando títulos...</div>
             ) : (
-              <ul className="divide-y divide-outline-variant">
+              <ul className="divide-y divide-border">
                 {systemRecords.map(sr => (
-                  <li key={sr.id} className="p-4 hover:bg-surface-container-low flex justify-between items-center group cursor-pointer transition-colors">
+                  <li key={sr.id} className="p-4 hover:bg-muted flex justify-between items-center group cursor-pointer transition-colors">
                     <div>
                       <div className="flex items-center gap-2">
                         <span className={`text-[10px] px-2 py-0.5 rounded-sm font-semibold uppercase tracking-wider ${sr.tipo === 'Recebimento' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
                           {sr.tipo}
                         </span>
-                        <span className="text-xs font-medium text-on-surface-variant">{formatDate(sr.data)}</span>
+                        <span className="text-xs font-medium text-muted-foreground">{formatDate(sr.data)}</span>
                       </div>
-                      <p className="text-sm font-medium text-on-surface mt-2">{sr.descricao}</p>
+                      <p className="text-sm font-medium text-foreground mt-2">{sr.descricao}</p>
                     </div>
                     <div className="text-right">
-                      <div className={`text-sm font-bold ${sr.valor > 0 ? 'text-success' : 'text-on-surface'}`}>
+                      <div className={`text-sm font-bold ${sr.valor > 0 ? 'text-success' : 'text-foreground'}`}>
                         {formatBRL(Math.abs(sr.valor))}
                       </div>
                       <button className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity mt-1">

@@ -9,6 +9,149 @@
     "host": "localhost:8080",
     "basePath": "/api/v1",
     "paths": {
+        "/auth/2fa/disable": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Desativar 2FA",
+                "parameters": [
+                    {
+                        "description": "Senha",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/identity.twoFactorDisableInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/2fa/login": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login com 2FA",
+                "parameters": [
+                    {
+                        "description": "Temp token e código",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/identity.twoFactorLoginInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/2fa/setup": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Configurar 2FA",
+                "parameters": [
+                    {
+                        "description": "Email",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/identity.twoFactorSetupInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/2fa/verify": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Verificar e ativar 2FA",
+                "parameters": [
+                    {
+                        "description": "Código TOTP",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/identity.twoFactorVerifyInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "consumes": [
@@ -76,6 +219,89 @@
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/notification-preferences": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "identity"
+                ],
+                "summary": "Buscar preferências de notificação",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "identity"
+                ],
+                "summary": "Atualizar preferências de notificação",
+                "parameters": [
+                    {
+                        "description": "Preferências",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/identity.UpsertNotificationPreferencesInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -166,6 +392,73 @@
                 }
             }
         },
+        "/dashboard/metrics": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard"
+                ],
+                "summary": "Métricas agregadas do dashboard da organização",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dashboard.MetricsEnvelope"
+                        }
+                    },
+                    "401": {
+                        "description": "NO_ORG ou token ausente/inválido",
+                        "schema": {
+                            "$ref": "#/definitions/dashboard.ErrorEnvelope"
+                        }
+                    },
+                    "403": {
+                        "description": "papel sem permissão payment:read",
+                        "schema": {
+                            "$ref": "#/definitions/dashboard.ErrorEnvelope"
+                        }
+                    },
+                    "500": {
+                        "description": "METRICS_FAILED",
+                        "schema": {
+                            "$ref": "#/definitions/dashboard.ErrorEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Lista todas as despesas do owner autenticado",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/expenses/{id}": {
             "put": {
                 "security": [
@@ -244,6 +537,81 @@
                 }
             }
         },
+        "/fiscal/annual-report": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Relatório fiscal anual para DIRPF",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Ano (ex: 2026)",
+                        "name": "year",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/indices/{type}/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "leases"
+                ],
+                "summary": "Lista histórico de um índice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tipo do índice (IPCA, IGP-M)",
+                        "name": "type",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/leases": {
             "get": {
                 "security": [
@@ -267,78 +635,9 @@
                         }
                     }
                 }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "leases"
-                ],
-                "summary": "Cria contrato",
-                "parameters": [
-                    {
-                        "description": "Dados do contrato",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/lease.CreateLeaseInput"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
             }
         },
         "/leases/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "leases"
-                ],
-                "summary": "Busca contrato por ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID do contrato",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
             "put": {
                 "security": [
                     {
@@ -382,8 +681,56 @@
                         }
                     }
                 }
-            },
-            "delete": {
+            }
+        },
+        "/leases/{id}/adjust": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "leases"
+                ],
+                "summary": "Aplica reajuste automático usando o índice mais recente",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados para reajuste automático",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/lease.AdjustLeaseInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/leases/{id}/readjustments": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []
@@ -395,7 +742,7 @@
                 "tags": [
                     "leases"
                 ],
-                "summary": "Remove contrato (soft-delete)",
+                "summary": "Lista reajustes de um contrato",
                 "parameters": [
                     {
                         "type": "string",
@@ -494,7 +841,152 @@
                 }
             }
         },
+        "/leases/{leaseId}/payments/generate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Gera payments (RENT + eventual IPTU) da competência",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "leaseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Competência YYYY-MM",
+                        "name": "month",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/me/roles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rbac"
+                ],
+                "summary": "Lista roles do usuário autenticado",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/payments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Lista todos os pagamentos do owner autenticado",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filtro de status (PENDING|PAID|LATE)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/payments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Busca pagamento por ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
             "put": {
                 "security": [
                     {
@@ -532,6 +1024,47 @@
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/{id}/receipt": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Recibo mensal (status=PAID)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -804,6 +1337,82 @@
                 }
             }
         },
+        "/roles": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rbac"
+                ],
+                "summary": "Atribui role a um usuário",
+                "parameters": [
+                    {
+                        "description": "Dados da role",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/rbac.AssignRoleInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rbac"
+                ],
+                "summary": "Remove role de um usuário",
+                "parameters": [
+                    {
+                        "description": "Dados da role",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/rbac.RemoveRoleInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/tenants": {
             "get": {
                 "security": [
@@ -960,6 +1569,102 @@
                     {
                         "type": "string",
                         "description": "ID do inquilino",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Lista tickets do usuário",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Cria ticket de suporte",
+                "parameters": [
+                    {
+                        "description": "Dados do ticket",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/support.CreateTicketInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Busca ticket por ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do ticket",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -1166,23 +1871,188 @@
         }
     },
     "definitions": {
-        "expense.CreateExpenseInput": {
+        "dashboard.ErrorEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "error": {
+                    "$ref": "#/definitions/dashboard.ErrorResponse"
+                }
+            }
+        },
+        "dashboard.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "NO_ORG"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "dashboard.ExpiringLease": {
+            "type": "object",
+            "properties": {
+                "end_date": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "tenant_name": {
+                    "type": "string"
+                },
+                "unit_label": {
+                    "type": "string"
+                }
+            }
+        },
+        "dashboard.Metrics": {
+            "type": "object",
+            "properties": {
+                "expiring_leases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dashboard.ExpiringLease"
+                    }
+                },
+                "monthly_revenue": {
+                    "$ref": "#/definitions/dashboard.MonthlyRevenue"
+                },
+                "occupied_units": {
+                    "type": "integer"
+                },
+                "recent_payments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dashboard.RecentPayment"
+                    }
+                },
+                "total_properties": {
+                    "type": "integer"
+                },
+                "total_tenants": {
+                    "type": "integer"
+                },
+                "total_units": {
+                    "type": "integer"
+                },
+                "vacancy_rate": {
+                    "description": "percent, 0-100",
+                    "type": "number"
+                }
+            }
+        },
+        "dashboard.MetricsEnvelope": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/dashboard.Metrics"
+                },
+                "error": {
+                    "$ref": "#/definitions/dashboard.ErrorResponse"
+                }
+            }
+        },
+        "dashboard.MonthlyRevenue": {
+            "type": "object",
+            "properties": {
+                "overdue": {
+                    "type": "number"
+                },
+                "paid": {
+                    "type": "number"
+                },
+                "pending": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
+                }
+            }
+        },
+        "dashboard.RecentPayment": {
             "type": "object",
             "properties": {
                 "amount": {
                     "type": "number"
                 },
-                "category": {
-                    "type": "string"
-                },
                 "description": {
                     "type": "string"
                 },
                 "due_date": {
+                    "description": "YYYY-MM-DD",
                     "type": "string"
                 },
-                "unit_id": {
+                "id": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tenant_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "expense.CreateExpenseInput": {
+            "type": "object",
+            "required": [
+                "amount",
+                "category",
+                "description",
+                "due_date"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "ELECTRICITY",
+                        "WATER",
+                        "CONDO",
+                        "TAX",
+                        "MAINTENANCE",
+                        "OTHER"
+                    ]
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "due_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "identity.UpsertNotificationPreferencesInput": {
+            "type": "object",
+            "properties": {
+                "notify_lease_expiring": {
+                    "type": "boolean"
+                },
+                "notify_lease_expiring_days": {
+                    "type": "integer",
+                    "maximum": 365,
+                    "minimum": 1
+                },
+                "notify_maintenance_request": {
+                    "type": "boolean"
+                },
+                "notify_new_message": {
+                    "type": "boolean"
+                },
+                "notify_payment_overdue": {
+                    "type": "boolean"
+                },
+                "notify_payment_received": {
+                    "type": "boolean"
                 }
             }
         },
@@ -1205,125 +2075,354 @@
                 }
             }
         },
-        "lease.CreateLeaseInput": {
+        "identity.twoFactorDisableInput": {
             "type": "object",
             "properties": {
-                "deposit_amount": {
-                    "type": "number"
-                },
-                "end_date": {
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "identity.twoFactorLoginInput": {
+            "type": "object",
+            "properties": {
+                "code": {
                     "type": "string"
                 },
-                "rent_amount": {
-                    "type": "number"
-                },
-                "start_date": {
+                "temp_token": {
                     "type": "string"
-                },
-                "tenant_id": {
+                }
+            }
+        },
+        "identity.twoFactorSetupInput": {
+            "type": "object",
+            "properties": {
+                "email": {
                     "type": "string"
-                },
-                "unit_id": {
+                }
+            }
+        },
+        "identity.twoFactorVerifyInput": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                }
+            }
+        },
+        "lease.AdjustLeaseInput": {
+            "type": "object",
+            "required": [
+                "index_type"
+            ],
+            "properties": {
+                "index_type": {
                     "type": "string"
                 }
             }
         },
         "lease.UpdateLeaseInput": {
             "type": "object",
+            "required": [
+                "rent_amount",
+                "status"
+            ],
             "properties": {
+                "annual_iptu_amount": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "daily_interest_percent": {
+                    "type": "number",
+                    "maximum": 10,
+                    "minimum": 0
+                },
                 "deposit_amount": {
-                    "type": "number"
+                    "type": "number",
+                    "minimum": 0
                 },
                 "end_date": {
                     "type": "string"
                 },
+                "iptu_reimbursable": {
+                    "type": "boolean"
+                },
+                "iptu_year": {
+                    "type": "integer",
+                    "maximum": 2100,
+                    "minimum": 2000
+                },
+                "late_fee_percent": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
+                },
+                "payment_day": {
+                    "type": "integer",
+                    "maximum": 31,
+                    "minimum": 1
+                },
                 "rent_amount": {
-                    "type": "number"
+                    "type": "number",
+                    "minimum": 0
                 },
                 "status": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "ACTIVE",
+                        "ENDED",
+                        "CANCELED"
+                    ]
                 }
             }
         },
         "payment.CreatePaymentInput": {
             "type": "object",
+            "required": [
+                "due_date",
+                "gross_amount",
+                "type"
+            ],
             "properties": {
-                "amount": {
-                    "type": "number"
+                "competency": {
+                    "description": "YYYY-MM",
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500
                 },
                 "due_date": {
                     "type": "string"
                 },
-                "lease_id": {
-                    "type": "string"
+                "gross_amount": {
+                    "type": "number",
+                    "minimum": 0
                 },
                 "type": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "RENT",
+                        "DEPOSIT",
+                        "EXPENSE",
+                        "OTHER"
+                    ]
                 }
             }
         },
         "payment.UpdatePaymentInput": {
             "type": "object",
+            "required": [
+                "gross_amount",
+                "status"
+            ],
             "properties": {
-                "amount": {
-                    "type": "number"
+                "gross_amount": {
+                    "type": "number",
+                    "minimum": 0
                 },
                 "paid_date": {
                     "type": "string"
                 },
                 "status": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "PENDING",
+                        "PAID",
+                        "LATE"
+                    ]
                 }
             }
         },
         "property.CreatePropertyInput": {
             "type": "object",
+            "required": [
+                "name",
+                "type"
+            ],
             "properties": {
                 "address_line": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 500
                 },
                 "city": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 200
                 },
                 "state": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 2
                 },
                 "type": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "RESIDENTIAL",
+                        "SINGLE"
+                    ]
                 }
             }
         },
         "property.CreateUnitInput": {
             "type": "object",
+            "required": [
+                "label"
+            ],
             "properties": {
                 "floor": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 50
                 },
                 "label": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                }
+            }
+        },
+        "rbac.AssignRoleInput": {
+            "type": "object",
+            "required": [
+                "role",
+                "user_id"
+            ],
+            "properties": {
+                "branch_id": {
                     "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "role": {
+                    "enum": [
+                        "owner",
+                        "admin",
+                        "manager",
+                        "employee",
+                        "viewer"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/rbac.RoleType"
+                        }
+                    ]
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "rbac.RemoveRoleInput": {
+            "type": "object",
+            "required": [
+                "role",
+                "user_id"
+            ],
+            "properties": {
+                "branch_id": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "role": {
+                    "enum": [
+                        "owner",
+                        "admin",
+                        "manager",
+                        "employee",
+                        "viewer"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/rbac.RoleType"
+                        }
+                    ]
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "rbac.RoleType": {
+            "type": "string",
+            "enum": [
+                "owner",
+                "admin",
+                "manager",
+                "employee",
+                "viewer"
+            ],
+            "x-enum-varnames": [
+                "RoleOwner",
+                "RoleAdmin",
+                "RoleManager",
+                "RoleEmployee",
+                "RoleViewer"
+            ]
+        },
+        "support.CreateTicketInput": {
+            "type": "object",
+            "required": [
+                "assunto",
+                "descricao",
+                "tipo"
+            ],
+            "properties": {
+                "assunto": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "descricao": {
+                    "type": "string",
+                    "maxLength": 5000
+                },
+                "tipo": {
+                    "type": "string",
+                    "enum": [
+                        "BUG",
+                        "FEATURE",
+                        "DOUBT",
+                        "PAYMENT"
+                    ]
                 }
             }
         },
         "tenant.CreateTenantInput": {
             "type": "object",
+            "required": [
+                "name",
+                "person_type"
+            ],
             "properties": {
                 "document": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 20
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "person_type": {
+                    "type": "string",
+                    "enum": [
+                        "PF",
+                        "PJ"
+                    ]
                 },
                 "phone": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 20
                 }
             }
         }

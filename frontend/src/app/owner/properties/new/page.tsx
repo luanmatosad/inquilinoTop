@@ -1,25 +1,24 @@
 "use client"
 
-import { useFormStatus } from "react-dom"
 import { useActionState } from "react"
 import { createPropertyAction } from "./actions"
-import { Button, Card, Input, Select, Label, ListBox, TextField, FieldError } from "@heroui/react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useRouter } from "next/navigation"
 
 const PROPERTY_TYPES = [
   { value: "RESIDENTIAL", label: "Residencial" },
   { value: "SINGLE", label: "Único" },
 ]
-
-function SubmitButton() {
-  const { pending } = useFormStatus()
-  
-  return (
-    <Button type="submit" isPending={pending} className="bg-primary text-primary-foreground">
-      Criar Imóvel
-    </Button>
-  )
-}
 
 export default function NewPropertyForm() {
   const router = useRouter()
@@ -33,65 +32,69 @@ export default function NewPropertyForm() {
             <h1 className="text-2xl font-bold mb-6">Novo Imóvel</h1>
           </div>
 
-          <Select
-            name="type"
-            placeholder="Selecione o tipo do imóvel"
-            isRequired
-          >
-            <Label>Tipo</Label>
-            <Select.Trigger>
-              <Select.Value />
-              <Select.Indicator />
-            </Select.Trigger>
-            <Select.Popover>
-              <ListBox items={PROPERTY_TYPES}>
-                {(type) => (
-                  <ListBox.Item id={type.value} textValue={type.label}>
+          <div className="space-y-2">
+            <Label htmlFor="type">Tipo</Label>
+            <Select name="type" required>
+              <SelectTrigger id="type" className="w-full">
+                <SelectValue placeholder="Selecione o tipo do imóvel" />
+              </SelectTrigger>
+              <SelectContent>
+                {PROPERTY_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
                     {type.label}
-                  </ListBox.Item>
-                )}
-              </ListBox>
-            </Select.Popover>
-          </Select>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <TextField name="name" isRequired isInvalid={!!state?.errors?.name}>
-            <Label>Nome</Label>
-            <Input placeholder="Ex: Apartamento Centro" />
-            <FieldError>{state?.errors?.name?.[0]}</FieldError>
-          </TextField>
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome</Label>
+            <Input id="name" name="name" placeholder="Ex: Apartamento Centro" required aria-invalid={!!state?.errors?.name} />
+            {state?.errors?.name?.[0] && (
+              <p className="text-sm text-destructive">{state.errors.name[0]}</p>
+            )}
+          </div>
 
-          <TextField name="address_line" isInvalid={!!state?.errors?.address_line}>
-            <Label>Endereço</Label>
-            <Input placeholder="Rua, número, complemento" />
-            <FieldError>{state?.errors?.address_line?.[0]}</FieldError>
-          </TextField>
+          <div className="space-y-2">
+            <Label htmlFor="address_line">Endereço</Label>
+            <Input id="address_line" name="address_line" placeholder="Rua, número, complemento" aria-invalid={!!state?.errors?.address_line} />
+            {state?.errors?.address_line?.[0] && (
+              <p className="text-sm text-destructive">{state.errors.address_line[0]}</p>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <TextField name="city" isInvalid={!!state?.errors?.city}>
-              <Label>Cidade</Label>
-              <Input placeholder="Cidade" />
-              <FieldError>{state?.errors?.city?.[0]}</FieldError>
-            </TextField>
-            <TextField name="state" isInvalid={!!state?.errors?.state}>
-              <Label>Estado</Label>
-              <Input placeholder="UF" maxLength={2} />
-              <FieldError>{state?.errors?.state?.[0]}</FieldError>
-            </TextField>
+            <div className="space-y-2">
+              <Label htmlFor="city">Cidade</Label>
+              <Input id="city" name="city" placeholder="Cidade" aria-invalid={!!state?.errors?.city} />
+              {state?.errors?.city?.[0] && (
+                <p className="text-sm text-destructive">{state.errors.city[0]}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="state">Estado</Label>
+              <Input id="state" name="state" placeholder="UF" maxLength={2} aria-invalid={!!state?.errors?.state} />
+              {state?.errors?.state?.[0] && (
+                <p className="text-sm text-destructive">{state.errors.state[0]}</p>
+              )}
+            </div>
           </div>
 
           {state?.errors?._form && (
-            <div className="text-danger text-sm">
+            <div className="text-destructive text-sm">
               {state.errors._form}
             </div>
           )}
 
           <div className="flex gap-4">
-            <Button type="submit" isPending={isPending} className="bg-primary text-primary-foreground">
+            <Button type="submit" disabled={isPending}>
               Criar Imóvel
             </Button>
-            <Button 
-              variant="outline" 
-              onPress={() => router.back()}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
             >
               Cancelar
             </Button>

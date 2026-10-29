@@ -84,6 +84,15 @@ When ready to implement, run /opsx:apply
    openspec status --change "<name>"
    ```
 
+6. **Create the ClickUp List for this change** (requires ClickUp MCP connected)
+
+   Workspace `90171083762`, Space `90174982017`, Folder "Changes" (`folder_id` `1600260000000405`) — created once, reused for every change. If any of these don't resolve anymore (folder renamed/deleted), ask the user before recreating.
+
+   - Create a List named exactly `<name>` (kebab-case, same as the change) in that folder via `clickup_create_list_in_folder`
+   - Read `tasks.md`, create one Task per `## N. <title>` group and one Subtask per `- [ ]`/`- [x]` line under it, via `task.create_many` (batch — split into chunks of ~5 if a single large call errors)
+   - `status_label`: `"complete"` for `- [x]` items, `"to do"` for `- [ ]` items (the List's default statuses are `to do` / `in progress` / `complete`)
+   - This direction is one-way (openspec → ClickUp) — never read ClickUp status back to decide what's done in `tasks.md`
+
 **Output**
 
 After completing all artifacts, summarize:
@@ -101,6 +110,7 @@ After completing all artifacts, summarize:
 - **IMPORTANT**: `context` and `rules` are constraints for YOU, not content for the file
   - Do NOT copy `<context>`, `<rules>`, `<project_context>` blocks into the artifact
   - These guide what you write, but should never appear in the output
+- **ADR check**: if `design.md`'s "Decisions" section contains an architectural decision with lasting impact (new external dependency, data model change, security/performance trade-off, or anything that would be hard to reconstruct the "why" of after the change is archived) — flag it in your summary and suggest creating an entry in `docs/decisions/<domínio>/` (see `docs/decisions/README.md` for the process and template). Offer, don't auto-create.
 
 **Guardrails**
 - Create ALL artifacts needed for implementation (as defined by schema's `apply.requires`)

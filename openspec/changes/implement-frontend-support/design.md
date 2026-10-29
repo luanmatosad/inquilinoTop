@@ -2,7 +2,7 @@
 
 The InquilinoTop platform needs a Support Central ("Central de Suporte") module where users can access FAQs, search knowledge base articles, open support tickets, and find alternative contact methods. This aligns with the value proposition of providing excellent tenant and property management services.
 
-The frontend uses Next.js with React Server Components, Tailwind CSS, lucide-react for icons, and HeroUI components. This module will reside under the `/support` route namespace. Since backend APIs for support tickets aren't implemented, the frontend will be built with mocked data.
+The frontend uses Next.js with React Server Components, Tailwind CSS, lucide-react for icons, and shadcn/ui components. This module will reside under the `/support` route namespace. Since backend APIs for support tickets aren't implemented, the frontend will be built with mocked data.
 
 ## Goals / Non-Goals
 

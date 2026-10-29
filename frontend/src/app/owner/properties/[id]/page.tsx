@@ -3,9 +3,9 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowLeft, Pencil, Building, MapPin, Trash } from "lucide-react"
 import { getProperty, listProperties, type PropertyWithUnits } from "@/data/owner/properties-dal"
-import { Button } from "@heroui/react"
-import { Card } from "@heroui/react"
-import { Badge } from "@heroui/react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
 type Property = PropertyWithUnits;
 
@@ -34,10 +34,10 @@ async function PropertyDetails({ id }: { id: string }) {
           <h1 className="text-3xl font-bold flex items-center gap-2">
             {property.name}
             {!property.is_active && (
-              <Badge color="danger" variant="soft">Desativado</Badge>
+              <Badge variant="destructive">Desativado</Badge>
             )}
           </h1>
-          <div className="mt-2 text-on-surface-variant flex items-center gap-2">
+          <div className="mt-2 text-muted-foreground flex items-center gap-2">
             <MapPin className="h-4 w-4" />
             <span>
               {property.address_line 
@@ -45,7 +45,7 @@ async function PropertyDetails({ id }: { id: string }) {
                 : "Endereço não informado"}
             </span>
           </div>
-          <div className="mt-1 text-on-surface-variant flex items-center gap-2">
+          <div className="mt-1 text-muted-foreground flex items-center gap-2">
             <Building className="h-4 w-4" />
             <span>
               Tipo: {property.type === "RESIDENTIAL" ? "Residencial" : "Único"}
@@ -66,16 +66,16 @@ async function PropertyDetails({ id }: { id: string }) {
       <Card className="p-6">
         <h2 className="text-lg font-semibold mb-4">Unidades ({units.length})</h2>
         {units.length === 0 ? (
-          <p className="text-on-surface-variant">Nenhuma unidade cadastrada.</p>
+          <p className="text-muted-foreground">Nenhuma unidade cadastrada.</p>
         ) : (
           <div className="space-y-2">
             {units.map((unit) => (
-              <div key={unit.id} className="flex items-center justify-between p-3 bg-surface-variant rounded-lg">
+              <div key={unit.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                 <div>
                   <span className="font-medium">{unit.label}</span>
-                  {unit.floor && <span className="text-on-surface-variant ml-2">- {unit.floor}</span>}
+                  {unit.floor && <span className="text-muted-foreground ml-2">- {unit.floor}</span>}
                 </div>
-                <Badge color={unit.is_active ? "success" : "default"} variant="soft">
+                <Badge variant={unit.is_active ? "default" : "secondary"}>
                   {unit.is_active ? "Ativo" : "Inativo"}
                 </Badge>
               </div>
@@ -97,7 +97,7 @@ export default async function OwnerPropertyPage({
   return (
     <div className="container py-8 space-y-8">
       <div>
-        <Link href="/owner/properties" className="text-on-surface-variant hover:text-on-surface flex items-center gap-2">
+        <Link href="/owner/properties" className="text-muted-foreground hover:text-foreground flex items-center gap-2">
           <ArrowLeft className="h-4 w-4" /> Voltar para lista
         </Link>
       </div>
