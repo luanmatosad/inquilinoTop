@@ -1,6 +1,6 @@
 ## 1. Isolar e verificar a remoção
 
-- [ ] 1.1 Revisar `git status`/`git diff` e commitar só os arquivos da remoção de `@heroui/*` (`package.json`, `package-lock.json`, `next.config.ts`, arquivos de `src/` da troca), deixando o resto fora
+- [x] 1.1 Remoção de `@heroui/*` commitada junto com o trabalho de shadcn do frontend (`f985902`); isolar em commit próprio não era viável
 - [x] 1.2 Confirmar `grep -rIi heroui frontend/src frontend/package*.json frontend/next.config.ts` sem resultados e `frontend/node_modules/@heroui` ausente
 
 ## 2. Resíduos em openspec, docs e regras
