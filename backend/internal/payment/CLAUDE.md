@@ -1,6 +1,6 @@
 # payment — Pagamentos
 
-Vinculado a Lease. Sem Delete (pagamentos são imutáveis). Suporta cobrança via providers externos.
+Vinculado a Lease. Sem Delete (pagamentos são imutáveis); única exceção: `DeactivateFuturePending` (ADR 0003). Suporta cobrança via providers externos.
 
 ## Modelo
 
@@ -39,6 +39,9 @@ Factory: `provider.NewProvider(providerType, config)` — string `"asaas"|"sicoo
 ## Gotchas
 
 - `leaseID` vem do path; não vai no body de `CreatePaymentInput`.
+- `payments.is_active` (migration 000038): só `lease.End` desativa, via `LeaseHooks.CancelFuturePending` (pendentes futuras sem `charge_id`). Leituras filtram `is_active=true`.
+- `LeaseHooks` (`lease_hooks.go`) implementa `lease.PaymentHooks` sem `lease` importar `payment`.
+- `GenerateMonth` usa o `payment_day` do contrato para o vencimento (ajustado ao último dia do mês); sem `payment_day`, usa o dia de `start_date`.
 - `GenerateMonth` é idempotente por constraint `(lease_id, competency, type)` (migration 000014).
 - `Update` com paid_date + status=PAID dispara cálculo de IRRF se RENT + tenant PJ.
 - `errors.Is` (não `strings.Contains`) para roteamento de erros no service.
@@ -48,3 +51,4 @@ Factory: `provider.NewProvider(providerType, config)` — string `"asaas"|"sicoo
 
 - [0001 - Payment imutável (sem Delete)](../../../docs/decisions/payment/0001-payment-imutavel-sem-delete.md)
 - [0002 - Abstração multi-provider (PaymentProvider)](../../../docs/decisions/payment/0002-abstracao-multi-provider.md)
+- [0003 - Cancelamento de futuras pendentes ao encerrar contrato](../../../docs/decisions/payment/0003-cancelamento-de-futuras-pendentes-ao-encerrar-contrato.md)

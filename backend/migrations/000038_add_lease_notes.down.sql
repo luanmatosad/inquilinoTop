@@ -1,1 +1,0 @@
-ALTER TABLE leases DROP COLUMN IF EXISTS notes;

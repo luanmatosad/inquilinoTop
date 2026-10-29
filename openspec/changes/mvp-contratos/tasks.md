@@ -8,16 +8,16 @@
 
 ## 2. Backend: regras (TDD)
 
-- [ ] 2.1 Escrever testes de service: datas incoerentes, unidade/inquilino de outra organização ou inativos, sobreposição, período sequencial, `end_date` nulo
-- [ ] 2.2 Implementar validações e checagem de sobreposição (`LEASE_OVERLAP`) com `UnitReader`/`TenantReader`
-- [ ] 2.3 Adicionar `notes` ao model, inputs, repository e handler
-- [ ] 2.4 Teste de integração da constraint com duas criações simultâneas
-- [ ] 2.5 Testes e implementação de `generate_payments` na criação (prazo fechado, aberto com 12 meses, idempotência)
-- [ ] 2.6 Testes e implementação de encerramento: desativa pendentes futuras sem `charge_id`, preserva pagas e vencidas, sinaliza as com cobrança emitida
-- [ ] 2.7 Testes de renovação (data anterior, sobreposição) e reajuste (limites do percentual, histórico)
-- [ ] 2.8 Registrar a exceção à imutabilidade de `payment` num ADR em `docs/decisions/payment/` e indexar no README
-- [ ] 2.9 Atualizar handler, mapeamento de erros, Swagger e `internal/lease/CLAUDE.md`
-- [ ] 2.10 `make test-backend` e `make test-backend-integration` sem falhas
+- [x] 2.1 Escrever testes de service: datas incoerentes, unidade/inquilino de outra organização ou inativos, sobreposição, período sequencial, `end_date` nulo
+- [x] 2.2 Implementar validações e checagem de sobreposição (`LEASE_OVERLAP`) com `UnitReader`/`TenantReader`
+- [x] 2.3 Adicionar `notes` ao model, inputs, repository e handler
+- [x] 2.4 Teste de integração da constraint com duas criações simultâneas
+- [x] 2.5 Testes e implementação de `generate_payments` na criação (prazo fechado, aberto com 12 meses, idempotência)
+- [x] 2.6 Testes e implementação de encerramento: desativa pendentes futuras sem `charge_id`, preserva pagas e vencidas, sinaliza as com cobrança emitida
+- [x] 2.7 Testes de renovação (data anterior, sobreposição) e reajuste (limites do percentual, histórico)
+- [x] 2.8 Registrar a exceção à imutabilidade de `payment` num ADR em `docs/decisions/payment/` e indexar no README (ADR payment-0003; exigiu a coluna `payments.is_active`, adicionada à migration 000038, e filtros nas leituras de payment, dashboard e fiscal)
+- [x] 2.9 Atualizar handler, mapeamento de erros, Swagger e `internal/lease/CLAUDE.md`
+- [ ] 2.10 `make test-backend` e `make test-backend-integration` sem falhas (`lease`, `payment` (exceto 1), `dashboard`, `tenant`, `property` passam; restam falhas preexistentes: `audit`, `expense`, `support` e `TestFinancialRepository_DeleteFinancialConfig_SoftDelete`, em que a query usa `financial_config.organization_id`, coluna que nenhuma migration cria — possível bug real em produção)
 
 ## 3. Frontend: consolidação
 

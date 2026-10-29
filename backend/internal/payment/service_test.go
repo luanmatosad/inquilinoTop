@@ -158,6 +158,10 @@ func (m *mockPaymentRepo) GetByChargeID(_ context.Context, chargeID string) (*pa
 	return nil, errors.New("not found")
 }
 
+func (m *mockPaymentRepo) DeactivateFuturePending(_ context.Context, _, _ uuid.UUID, _ time.Time) (payment.DeactivateResult, error) {
+	return payment.DeactivateResult{}, nil
+}
+
 func (m *mockPaymentRepo) ListByOwner(_ context.Context, ownerID uuid.UUID, statusFilter string) ([]payment.Payment, error) {
 	var list []payment.Payment
 	for _, p := range m.payments {
@@ -800,4 +804,39 @@ func TestService_Enrich_LeaseNãoEncontrado(t *testing.T) {
 
 	enriched := svc.Enrich(context.Background(), p)
 	assert.Equal(t, "PENDING", enriched.Status)
+}
+
+func TestService_GenerateMonth_UsaPaymentDayDoContrato(t *testing.T) {
+	svc := newTestService()
+	leaseID, ownerID := uuid.New(), uuid.New()
+	setupLeaseBasic(svc, leaseID, ownerID, 2000, time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), false, 0)
+	svc.leaseReader.leases[leaseID].PaymentDay = 5
+
+	ps, err := svc.GenerateMonth(context.Background(), ownerID, leaseID, ownerID, "2026-04")
+	require.NoError(t, err)
+	assert.Equal(t, 5, ps[0].DueDate.Day())
+}
+
+func TestService_GenerateMonth_PaymentDay31AjustaParaFimDoMês(t *testing.T) {
+	svc := newTestService()
+	leaseID, ownerID := uuid.New(), uuid.New()
+	setupLeaseBasic(svc, leaseID, ownerID, 2000, time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), false, 0)
+	svc.leaseReader.leases[leaseID].PaymentDay = 31
+
+	ps, err := svc.GenerateMonth(context.Background(), ownerID, leaseID, ownerID, "2026-02")
+	require.NoError(t, err)
+	assert.Equal(t, 28, ps[0].DueDate.Day())
+}
+
+func TestLeaseHooks_GenerateRentMonth(t *testing.T) {
+	svc := newTestService()
+	leaseID, ownerID := uuid.New(), uuid.New()
+	setupLeaseBasic(svc, leaseID, ownerID, 2000, time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), false, 0)
+	hooks := payment.NewLeaseHooks(svc.Service)
+
+	require.NoError(t, hooks.GenerateRentMonth(context.Background(), ownerID, leaseID, ownerID, "2026-04"))
+	require.NoError(t, hooks.GenerateRentMonth(context.Background(), ownerID, leaseID, ownerID, "2026-04"), "idempotente")
+	list, err := svc.ListByLease(context.Background(), leaseID, ownerID)
+	require.NoError(t, err)
+	assert.Len(t, list, 1)
 }

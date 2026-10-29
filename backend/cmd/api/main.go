@@ -103,7 +103,7 @@ func main() {
 	leaseRepo := lease.NewRepository(database)
 	leaseReadjRepo := lease.NewReadjustmentRepository(database)
 	indexRepo := lease.NewIndexRepository(database)
-	leaseSvc := lease.NewService(leaseRepo, leaseReadjRepo, indexRepo)
+	leaseSvc := lease.NewService(leaseRepo, leaseReadjRepo, indexRepo).WithRefs(propertyRepo, tenantRepo)
 	leaseHandler := lease.NewHandler(leaseSvc)
 
 	identityRepoForPayment := identity.NewRepository(database)
@@ -115,6 +115,7 @@ func main() {
 	paymentRepo := payment.NewRepository(database)
 	paymentSvc := payment.NewService(paymentRepo, leaseRepo, tenantRepo, unitReader, ownerReader, irrTable)
 	paymentHandler := payment.NewHandler(paymentSvc)
+	leaseSvc.WithPayments(payment.NewLeaseHooks(paymentSvc))
 
 	dashboardRepo := dashboard.NewRepository(database)
 	appLoc, err := time.LoadLocation(envOr("APP_TIMEZONE", "America/Sao_Paulo"))

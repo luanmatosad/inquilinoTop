@@ -154,7 +154,7 @@ func (s *Service) getProvider(fc *FinancialConfig) (provider.PaymentProvider, er
 	if fc == nil {
 		return nil, errors.New("financial config is missing")
 	}
-	
+
 	// Convert map[string]any to map[string]string for provider config
 	stringConfig := make(map[string]string)
 	for k, v := range fc.Config {
@@ -164,8 +164,18 @@ func (s *Service) getProvider(fc *FinancialConfig) (provider.PaymentProvider, er
 			stringConfig[k] = fmt.Sprintf("%v", v)
 		}
 	}
-	
+
 	return provider.NewProvider(fc.Provider, stringConfig)
+}
+
+// CancelFuturePending retira as cobranças pendentes futuras de um contrato encerrado.
+// Cobranças já emitidas no provedor (charge_id) são mantidas e contadas em NeedsReview.
+func (s *Service) CancelFuturePending(ctx context.Context, leaseID, orgID uuid.UUID, after time.Time) (DeactivateResult, error) {
+	res, err := s.repo.DeactivateFuturePending(ctx, leaseID, orgID, after)
+	if err != nil {
+		return res, fmt.Errorf("payment.svc: cancelar futuras pendentes: %w", err)
+	}
+	return res, nil
 }
 
 func (s *Service) GenerateMonth(ctx context.Context, userID, leaseID, orgID uuid.UUID, month string) ([]Payment, error) {
@@ -193,7 +203,11 @@ func (s *Service) GenerateMonth(ctx context.Context, userID, leaseID, orgID uuid
 		}
 	}
 
-	dueDate := dueDateForMonth(l.StartDate, monthStart)
+	dueDay := l.PaymentDay
+	if dueDay < 1 {
+		dueDay = l.StartDate.Day()
+	}
+	dueDate := dueDateForMonth(dueDay, monthStart)
 
 	results := make([]Payment, 0, 2)
 
@@ -231,10 +245,11 @@ func (s *Service) GenerateMonth(ctx context.Context, userID, leaseID, orgID uuid
 	return results, nil
 }
 
-func dueDateForMonth(leaseStart time.Time, monthStart time.Time) time.Time {
+// dueDateForMonth devolve o vencimento no dia dueDay do mês, ajustado ao último dia quando o mês é menor.
+func dueDateForMonth(dueDay int, monthStart time.Time) time.Time {
 	y, m, _ := monthStart.Date()
 	lastDayOfMonth := time.Date(y, m+1, 0, 0, 0, 0, 0, time.UTC).Day()
-	day := leaseStart.Day()
+	day := dueDay
 	if day > lastDayOfMonth {
 		day = lastDayOfMonth
 	}
@@ -297,9 +312,9 @@ func round2(x float64) float64 {
 
 var (
 	errNoFinancialConfig = fmt.Errorf("no financial config found")
-	errNoChargeCreated  = fmt.Errorf("no charge created")
-	errPaymentNotPaid   = fmt.Errorf("payment not paid")
-	errInvalidMethod   = fmt.Errorf("invalid method")
+	errNoChargeCreated   = fmt.Errorf("no charge created")
+	errPaymentNotPaid    = fmt.Errorf("payment not paid")
+	errInvalidMethod     = fmt.Errorf("invalid method")
 )
 
 func (s *Service) CreateCharge(ctx context.Context, paymentID, orgID uuid.UUID, method string) (*provider.ChargeResponse, error) {
@@ -345,11 +360,11 @@ func (s *Service) CreateCharge(ctx context.Context, paymentID, orgID uuid.UUID, 
 	}
 
 	req := provider.ChargeRequest{
-		Amount:       payment.GrossAmount,
+		Amount:      payment.GrossAmount,
 		Currency:    "BRL",
 		DueDate:     &payment.DueDate,
-		Customer:   customer,
-		Reference:  paymentID.String(),
+		Customer:    customer,
+		Reference:   paymentID.String(),
 		Description: fmt.Sprintf("Pagamento %s", payment.Type),
 	}
 
@@ -370,9 +385,9 @@ func (s *Service) CreateCharge(ctx context.Context, paymentID, orgID uuid.UUID, 
 	err = s.repo.UpdateChargeInfo(ctx, paymentID, orgID, UpdateChargeInfoInput{
 		ChargeID:     resp.ChargeID,
 		ChargeMethod: method,
-		QRCode:      resp.QRCode,
-		Link:        resp.QRLink,
-		BarCode:     resp.BarCode,
+		QRCode:       resp.QRCode,
+		Link:         resp.QRLink,
+		BarCode:      resp.BarCode,
 	})
 
 	if err != nil {
@@ -430,10 +445,10 @@ func (s *Service) CreatePayout(ctx context.Context, paymentID, orgID uuid.UUID, 
 	}
 
 	req := provider.PayoutRequest{
-		Amount:     *payment.NetAmount,
-		Currency:   "BRL",
+		Amount:      *payment.NetAmount,
+		Currency:    "BRL",
 		Destination: dest,
-		Reference: paymentID.String(),
+		Reference:   paymentID.String(),
 	}
 
 	resp, err := prov.CreatePayout(ctx, req)
@@ -475,7 +490,7 @@ func (s *Service) ProcessWebhook(ctx context.Context, providerName string, event
 
 	now := time.Now()
 	_, err = s.repo.Update(ctx, payment.ID, payment.OrganizationID, UpdatePaymentInput{
-		Status:    "PAID",
+		Status:   "PAID",
 		PaidDate: &now,
 	})
 	if err != nil {

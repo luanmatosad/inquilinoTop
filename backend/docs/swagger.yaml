@@ -167,6 +167,210 @@ definitions:
     required:
     - index_type
     type: object
+  lease.CreateLeaseInput:
+    properties:
+      annual_iptu_amount:
+        minimum: 0
+        type: number
+      daily_interest_percent:
+        maximum: 10
+        minimum: 0
+        type: number
+      deposit_amount:
+        minimum: 0
+        type: number
+      end_date:
+        type: string
+      generate_payments:
+        description: GeneratePayments gera as cobranças de aluguel do período (no
+          máximo MaxInitialPayments meses).
+        type: boolean
+      iptu_reimbursable:
+        type: boolean
+      iptu_year:
+        maximum: 2100
+        minimum: 2000
+        type: integer
+      late_fee_percent:
+        maximum: 100
+        minimum: 0
+        type: number
+      notes:
+        maxLength: 2000
+        type: string
+      payment_day:
+        maximum: 31
+        minimum: 1
+        type: integer
+      rent_amount:
+        minimum: 0
+        type: number
+      start_date:
+        type: string
+      tenant_id:
+        type: string
+      unit_id:
+        type: string
+    required:
+    - payment_day
+    - rent_amount
+    - start_date
+    - tenant_id
+    - unit_id
+    type: object
+  lease.CreateOutput:
+    properties:
+      annual_iptu_amount:
+        type: number
+      created_at:
+        type: string
+      daily_interest_percent:
+        type: number
+      deposit_amount:
+        type: number
+      end_date:
+        type: string
+      id:
+        type: string
+      iptu_reimbursable:
+        type: boolean
+      iptu_year:
+        type: integer
+      is_active:
+        type: boolean
+      late_fee_percent:
+        type: number
+      notes:
+        type: string
+      organization_id:
+        type: string
+      owner_id:
+        type: string
+      payment_day:
+        type: integer
+      payments_error:
+        type: string
+      payments_generated:
+        type: integer
+      rent_amount:
+        type: number
+      start_date:
+        type: string
+      status:
+        type: string
+      tenant_id:
+        type: string
+      unit_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  lease.EndOutput:
+    properties:
+      annual_iptu_amount:
+        type: number
+      created_at:
+        type: string
+      daily_interest_percent:
+        type: number
+      deposit_amount:
+        type: number
+      end_date:
+        type: string
+      id:
+        type: string
+      iptu_reimbursable:
+        type: boolean
+      iptu_year:
+        type: integer
+      is_active:
+        type: boolean
+      late_fee_percent:
+        type: number
+      notes:
+        type: string
+      organization_id:
+        type: string
+      owner_id:
+        type: string
+      payment_day:
+        type: integer
+      payments_canceled:
+        type: integer
+      payments_error:
+        type: string
+      payments_need_review:
+        type: integer
+      rent_amount:
+        type: number
+      start_date:
+        type: string
+      status:
+        type: string
+      tenant_id:
+        type: string
+      unit_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  lease.Lease:
+    properties:
+      annual_iptu_amount:
+        type: number
+      created_at:
+        type: string
+      daily_interest_percent:
+        type: number
+      deposit_amount:
+        type: number
+      end_date:
+        type: string
+      id:
+        type: string
+      iptu_reimbursable:
+        type: boolean
+      iptu_year:
+        type: integer
+      is_active:
+        type: boolean
+      late_fee_percent:
+        type: number
+      notes:
+        type: string
+      organization_id:
+        type: string
+      owner_id:
+        type: string
+      payment_day:
+        type: integer
+      rent_amount:
+        type: number
+      start_date:
+        type: string
+      status:
+        type: string
+      tenant_id:
+        type: string
+      unit_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  lease.RenewLeaseInput:
+    properties:
+      new_end_date:
+        type: string
+      payment_day:
+        maximum: 31
+        minimum: 1
+        type: integer
+      rent_amount:
+        minimum: 0
+        type: number
+    required:
+    - new_end_date
+    type: object
   lease.UpdateLeaseInput:
     properties:
       annual_iptu_amount:
@@ -191,6 +395,9 @@ definitions:
         maximum: 100
         minimum: 0
         type: number
+      notes:
+        maxLength: 2000
+        type: string
       payment_day:
         maximum: 31
         minimum: 1
@@ -199,6 +406,8 @@ definitions:
         minimum: 0
         type: number
       status:
+        description: 'Status é opcional e, se enviado, precisa ser igual ao atual:
+          use encerrar/renovar para mudá-lo.'
         enum:
         - ACTIVE
         - ENDED
@@ -206,7 +415,6 @@ definitions:
         type: string
     required:
     - rent_amount
-    - status
     type: object
   payment.CreatePaymentInput:
     properties:
@@ -824,6 +1032,45 @@ paths:
       summary: Lista contratos
       tags:
       - leases
+    post:
+      consumes:
+      - application/json
+      description: Valida datas, unidade/inquilino da organização e sobreposição;
+        com generate_payments gera até 12 cobranças.
+      parameters:
+      - description: Dados do contrato
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/lease.CreateLeaseInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/lease.CreateOutput'
+        "404":
+          description: UNIT_NOT_FOUND | TENANT_NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: LEASE_OVERLAP
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: INVALID_DATES
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria contrato
+      tags:
+      - leases
   /leases/{id}:
     put:
       consumes:
@@ -845,6 +1092,16 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: LEASE_OVERLAP | STATUS_CHANGE_NOT_ALLOWED
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: INVALID_DATES
           schema:
             additionalProperties: true
             type: object
@@ -882,6 +1139,38 @@ paths:
       summary: Aplica reajuste automático usando o índice mais recente
       tags:
       - leases
+  /leases/{id}/end:
+    post:
+      description: Encerra um contrato ACTIVE e retira as cobranças futuras pendentes
+        sem cobrança emitida.
+      parameters:
+      - description: ID do contrato
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/lease.EndOutput'
+        "404":
+          description: NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: LEASE_NOT_ACTIVE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Encerra contrato
+      tags:
+      - leases
   /leases/{id}/readjustments:
     get:
       parameters:
@@ -901,6 +1190,49 @@ paths:
       security:
       - BearerAuth: []
       summary: Lista reajustes de um contrato
+      tags:
+      - leases
+  /leases/{id}/renew:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do contrato
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nova data final
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/lease.RenewLeaseInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/lease.Lease'
+        "404":
+          description: NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: LEASE_NOT_ACTIVE | LEASE_OVERLAP
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: INVALID_DATES
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Renova contrato
       tags:
       - leases
   /leases/{leaseId}/payments:

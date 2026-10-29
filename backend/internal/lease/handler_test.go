@@ -49,11 +49,27 @@ func newMockLeaseRepo() *mockLeaseRepo {
 func (m *mockLeaseRepo) Create(_ context.Context, orgID, ownerID uuid.UUID, in lease.CreateLeaseInput) (*lease.Lease, error) {
 	l := &lease.Lease{
 		ID: uuid.New(), OrganizationID: orgID, OwnerID: ownerID, UnitID: in.UnitID,
-		TenantID: in.TenantID, StartDate: in.StartDate,
+		TenantID: in.TenantID, StartDate: in.StartDate, EndDate: in.EndDate, Notes: in.Notes,
 		RentAmount: in.RentAmount, PaymentDay: in.PaymentDay, Status: "ACTIVE", IsActive: true,
 	}
 	m.leases[l.ID] = l
 	return l, nil
+}
+
+// HasOverlap reproduz a regra do banco: contratos ACTIVE da unidade com período intersectando [start, end].
+func (m *mockLeaseRepo) HasOverlap(_ context.Context, unitID, orgID uuid.UUID, start time.Time, end *time.Time, exceptID uuid.UUID) (bool, error) {
+	for _, l := range m.leases {
+		if l.ID == exceptID || l.UnitID != unitID || l.OrganizationID != orgID || l.Status != "ACTIVE" || !l.IsActive {
+			continue
+		}
+		// [l.Start, l.End] ∩ [start, end] != ∅, com fim nulo = aberto
+		endsBeforeStart := l.EndDate != nil && l.EndDate.Before(start)
+		startsAfterEnd := end != nil && l.StartDate.After(*end)
+		if !endsBeforeStart && !startsAfterEnd {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (m *mockLeaseRepo) GetByID(_ context.Context, id, orgID uuid.UUID) (*lease.Lease, error) {

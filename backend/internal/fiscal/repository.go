@@ -52,7 +52,7 @@ func (r *pgAggregateRepository) ListPaidPaymentsForYear(ctx context.Context, org
 		`SELECT id, lease_id, competency, gross_amount, late_fee_amount, interest_amount, irrf_amount,
 		        COALESCE(net_amount, gross_amount + late_fee_amount + interest_amount - irrf_amount), type
 		 FROM payments
-		 WHERE organization_id=$1 AND owner_id=$2 AND status='PAID' AND competency IS NOT NULL
+		 WHERE organization_id=$1 AND owner_id=$2 AND is_active AND status='PAID' AND competency IS NOT NULL
 		   AND substring(competency FROM 1 FOR 4)=$3`,
 		orgID, ownerID, fmt.Sprintf("%04d", year),
 	)

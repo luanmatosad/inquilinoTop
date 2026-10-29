@@ -54,6 +54,7 @@ rev AS (
     FROM payments p
     JOIN leases l ON l.id = p.lease_id AND l.organization_id = $1 AND l.is_active
     WHERE p.organization_id = $1
+      AND p.is_active
       AND p.due_date >= $3::date
       AND p.due_date <  $4::date
 )
@@ -69,7 +70,7 @@ FROM payments p
 JOIN leases l  ON l.id = p.lease_id AND l.is_active
 JOIN units u   ON u.id = l.unit_id AND u.is_active
 JOIN tenants t ON t.id = l.tenant_id AND t.is_active
-WHERE p.organization_id = $1
+WHERE p.organization_id = $1 AND p.is_active
 ORDER BY p.due_date DESC, p.created_at DESC
 LIMIT $2`
 

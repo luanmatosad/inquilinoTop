@@ -17,7 +17,7 @@ func TestService_Create_Válido(t *testing.T) {
 	orgID := uuid.New()
 	ownerID := uuid.New()
 
-	l, err := svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	l, err := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		UnitID:     uuid.New(),
 		TenantID:   uuid.New(),
 		StartDate:  time.Now(),
@@ -34,7 +34,7 @@ func TestService_Create_UnitIDNil(t *testing.T) {
 	svc := lease.NewService(mock, newMockReadjustmentRepo(), &mockIndexRepo{})
 	orgID := uuid.New()
 	ownerID := uuid.New()
-	_, err := svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	_, err := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		TenantID:   uuid.New(),
 		StartDate:  time.Now(),
 		RentAmount: 1000,
@@ -47,7 +47,7 @@ func TestService_Create_TenantIDNil(t *testing.T) {
 	svc := lease.NewService(mock, newMockReadjustmentRepo(), &mockIndexRepo{})
 	orgID := uuid.New()
 	ownerID := uuid.New()
-	_, err := svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	_, err := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		UnitID:     uuid.New(),
 		StartDate:  time.Now(),
 		RentAmount: 1000,
@@ -60,7 +60,7 @@ func TestService_Create_RentAmountZero(t *testing.T) {
 	svc := lease.NewService(mock, newMockReadjustmentRepo(), &mockIndexRepo{})
 	orgID := uuid.New()
 	ownerID := uuid.New()
-	_, err := svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	_, err := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		UnitID:    uuid.New(),
 		TenantID:  uuid.New(),
 		StartDate: time.Now(),
@@ -74,7 +74,7 @@ func TestService_Create_PaymentDayInválido(t *testing.T) {
 	svc := lease.NewService(mock, newMockReadjustmentRepo(), &mockIndexRepo{})
 	orgID := uuid.New()
 	ownerID := uuid.New()
-	_, err := svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	_, err := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		UnitID:     uuid.New(),
 		TenantID:   uuid.New(),
 		StartDate:  time.Now(),
@@ -90,7 +90,7 @@ func TestService_Create_PaymentDayInválido(t *testing.T) {
        svc := lease.NewService(mock, newMockReadjustmentRepo(), &mockIndexRepo{})
        orgID := uuid.New()
        ownerID := uuid.New()
-       l, err := svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+       l, err := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
            UnitID:     uuid.New(),
            TenantID:   uuid.New(),
            StartDate:  time.Now(),
@@ -107,7 +107,7 @@ func TestService_Get_Encontrado(t *testing.T) {
 	orgID := uuid.New()
 	ownerID := uuid.New()
 
-	l, _ := svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	l, _ := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		UnitID: uuid.New(), TenantID: uuid.New(), StartDate: time.Now(), RentAmount: 1000, PaymentDay: 5,
 	})
 	found, err := svc.Get(context.Background(), l.ID, orgID)
@@ -127,10 +127,10 @@ func TestService_List(t *testing.T) {
 	orgID := uuid.New()
 	ownerID := uuid.New()
 
-	svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		UnitID: uuid.New(), TenantID: uuid.New(), StartDate: time.Now(), RentAmount: 1000,
 	})
-	svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		UnitID: uuid.New(), TenantID: uuid.New(), StartDate: time.Now(), RentAmount: 2000,
 	})
 
@@ -145,7 +145,7 @@ func TestService_Update_StatusInválido(t *testing.T) {
 	orgID := uuid.New()
 	ownerID := uuid.New()
 
-	l, _ := svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	l, _ := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		UnitID: uuid.New(), TenantID: uuid.New(), StartDate: time.Now(), RentAmount: 1000,
 	})
 	_, err := svc.Update(context.Background(), l.ID, orgID, lease.UpdateLeaseInput{
@@ -160,7 +160,7 @@ func TestService_Update_Válido(t *testing.T) {
 	orgID := uuid.New()
 	ownerID := uuid.New()
 
-	l, _ := svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	l, _ := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		UnitID: uuid.New(), TenantID: uuid.New(), StartDate: time.Now(), RentAmount: 1000,
 	})
 	updated, err := svc.Update(context.Background(), l.ID, orgID, lease.UpdateLeaseInput{
@@ -176,7 +176,7 @@ func TestService_Delete(t *testing.T) {
 	orgID := uuid.New()
 	ownerID := uuid.New()
 
-	l, _ := svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	l, _ := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		UnitID: uuid.New(), TenantID: uuid.New(), StartDate: time.Now(), RentAmount: 1000,
 	})
 	err := svc.Delete(context.Background(), l.ID, orgID)
@@ -192,10 +192,10 @@ func TestService_End(t *testing.T) {
 	orgID := uuid.New()
 	ownerID := uuid.New()
 
-	l, _ := svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	l, _ := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		UnitID: uuid.New(), TenantID: uuid.New(), StartDate: time.Now(), RentAmount: 1000,
 	})
-	ended, err := svc.End(context.Background(), l.ID, orgID)
+	ended, err := endLease(svc, l.ID, orgID)
 	require.NoError(t, err)
 	assert.Equal(t, "ENDED", ended.Status)
 }
@@ -206,7 +206,7 @@ func TestService_Renew_Válido(t *testing.T) {
 	orgID := uuid.New()
 	ownerID := uuid.New()
 
-	l, _ := svc.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	l, _ := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{
 		UnitID: uuid.New(), TenantID: uuid.New(), StartDate: time.Now(), RentAmount: 1000,
 	})
 	newEnd := time.Now().Add(365 * 24 * time.Hour)

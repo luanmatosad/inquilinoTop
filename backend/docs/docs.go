@@ -641,6 +641,64 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Valida datas, unidade/inquilino da organização e sobreposição; com generate_payments gera até 12 cobranças.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "leases"
+                ],
+                "summary": "Cria contrato",
+                "parameters": [
+                    {
+                        "description": "Dados do contrato",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/lease.CreateLeaseInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/lease.CreateOutput"
+                        }
+                    },
+                    "404": {
+                        "description": "UNIT_NOT_FOUND | TENANT_NOT_FOUND",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "LEASE_OVERLAP",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "INVALID_DATES",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
             }
         },
         "/leases/{id}": {
@@ -681,6 +739,20 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "LEASE_OVERLAP | STATUS_CHANGE_NOT_ALLOWED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "INVALID_DATES",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -735,6 +807,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/leases/{id}/end": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Encerra um contrato ACTIVE e retira as cobranças futuras pendentes sem cobrança emitida.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "leases"
+                ],
+                "summary": "Encerra contrato",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/lease.EndOutput"
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "LEASE_NOT_ACTIVE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/leases/{id}/readjustments": {
             "get": {
                 "security": [
@@ -761,6 +881,72 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/leases/{id}/renew": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "leases"
+                ],
+                "summary": "Renova contrato",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Nova data final",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/lease.RenewLeaseInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/lease.Lease"
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "LEASE_NOT_ACTIVE | LEASE_OVERLAP",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "INVALID_DATES",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2176,11 +2362,307 @@ const docTemplate = `{
                 }
             }
         },
+        "lease.CreateLeaseInput": {
+            "type": "object",
+            "required": [
+                "payment_day",
+                "rent_amount",
+                "start_date",
+                "tenant_id",
+                "unit_id"
+            ],
+            "properties": {
+                "annual_iptu_amount": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "daily_interest_percent": {
+                    "type": "number",
+                    "maximum": 10,
+                    "minimum": 0
+                },
+                "deposit_amount": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "generate_payments": {
+                    "description": "GeneratePayments gera as cobranças de aluguel do período (no máximo MaxInitialPayments meses).",
+                    "type": "boolean"
+                },
+                "iptu_reimbursable": {
+                    "type": "boolean"
+                },
+                "iptu_year": {
+                    "type": "integer",
+                    "maximum": 2100,
+                    "minimum": 2000
+                },
+                "late_fee_percent": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "payment_day": {
+                    "type": "integer",
+                    "maximum": 31,
+                    "minimum": 1
+                },
+                "rent_amount": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "lease.CreateOutput": {
+            "type": "object",
+            "properties": {
+                "annual_iptu_amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "daily_interest_percent": {
+                    "type": "number"
+                },
+                "deposit_amount": {
+                    "type": "number"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "iptu_reimbursable": {
+                    "type": "boolean"
+                },
+                "iptu_year": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "late_fee_percent": {
+                    "type": "number"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "payment_day": {
+                    "type": "integer"
+                },
+                "payments_error": {
+                    "type": "string"
+                },
+                "payments_generated": {
+                    "type": "integer"
+                },
+                "rent_amount": {
+                    "type": "number"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "lease.EndOutput": {
+            "type": "object",
+            "properties": {
+                "annual_iptu_amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "daily_interest_percent": {
+                    "type": "number"
+                },
+                "deposit_amount": {
+                    "type": "number"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "iptu_reimbursable": {
+                    "type": "boolean"
+                },
+                "iptu_year": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "late_fee_percent": {
+                    "type": "number"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "payment_day": {
+                    "type": "integer"
+                },
+                "payments_canceled": {
+                    "type": "integer"
+                },
+                "payments_error": {
+                    "type": "string"
+                },
+                "payments_need_review": {
+                    "type": "integer"
+                },
+                "rent_amount": {
+                    "type": "number"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "lease.Lease": {
+            "type": "object",
+            "properties": {
+                "annual_iptu_amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "daily_interest_percent": {
+                    "type": "number"
+                },
+                "deposit_amount": {
+                    "type": "number"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "iptu_reimbursable": {
+                    "type": "boolean"
+                },
+                "iptu_year": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "late_fee_percent": {
+                    "type": "number"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "payment_day": {
+                    "type": "integer"
+                },
+                "rent_amount": {
+                    "type": "number"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "lease.RenewLeaseInput": {
+            "type": "object",
+            "required": [
+                "new_end_date"
+            ],
+            "properties": {
+                "new_end_date": {
+                    "type": "string"
+                },
+                "payment_day": {
+                    "type": "integer",
+                    "maximum": 31,
+                    "minimum": 1
+                },
+                "rent_amount": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
         "lease.UpdateLeaseInput": {
             "type": "object",
             "required": [
-                "rent_amount",
-                "status"
+                "rent_amount"
             ],
             "properties": {
                 "annual_iptu_amount": {
@@ -2212,6 +2694,10 @@ const docTemplate = `{
                     "maximum": 100,
                     "minimum": 0
                 },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
                 "payment_day": {
                     "type": "integer",
                     "maximum": 31,
@@ -2222,6 +2708,7 @@ const docTemplate = `{
                     "minimum": 0
                 },
                 "status": {
+                    "description": "Status é opcional e, se enviado, precisa ser igual ao atual: use encerrar/renovar para mudá-lo.",
                     "type": "string",
                     "enum": [
                         "ACTIVE",

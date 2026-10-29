@@ -15,6 +15,7 @@ Template para novas decisões: [`_template.md`](./_template.md).
 | property-0001 | SINGLE auto-cria Unit | Accepted | property | [0001-single-auto-cria-unit.md](./property/0001-single-auto-cria-unit.md) |
 | payment-0001 | Payment imutável (sem Delete) | Accepted | payment | [0001-payment-imutavel-sem-delete.md](./payment/0001-payment-imutavel-sem-delete.md) |
 | payment-0002 | Abstração multi-provider (PaymentProvider) | Accepted | payment | [0002-abstracao-multi-provider.md](./payment/0002-abstracao-multi-provider.md) |
+| payment-0003 | Cancelamento de cobranças futuras pendentes ao encerrar contrato | Accepted | payment | [0003-cancelamento-de-futuras-pendentes-ao-encerrar-contrato.md](./payment/0003-cancelamento-de-futuras-pendentes-ao-encerrar-contrato.md) |
 | audit-0001 | Logs de auditoria imutáveis, sem soft-delete | Accepted | audit | [0001-logs-imutaveis-sem-soft-delete.md](./audit/0001-logs-imutaveis-sem-soft-delete.md) |
 | notification-0001 | Separação ListPending / ListByOwner | Accepted | notification | [0001-separacao-listpending-listbyowner.md](./notification/0001-separacao-listpending-listbyowner.md) |
 | cross-cutting-0001 | Soft-delete obrigatório em toda entidade | Accepted | _cross-cutting | [0001-soft-delete-obrigatorio.md](./_cross-cutting/0001-soft-delete-obrigatorio.md) |

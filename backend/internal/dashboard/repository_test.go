@@ -299,7 +299,9 @@ func TestRepository_GetMetrics_ArredondaDinheiro(t *testing.T) {
 	assert.Equal(t, 0.3, got.MonthlyRevenue.Total)
 }
 
-func TestRepository_GetMetrics_UnidadeComDoisContratosAtivos(t *testing.T) {
+// Dois contratos ACTIVE na mesma unidade são impossíveis desde a migration 000039
+// (constraint leases_no_overlap_per_unit); o cenário agora é um ativo mais um encerrado.
+func TestRepository_GetMetrics_UnidadeComContratoAtivoEEncerrado(t *testing.T) {
 	d := testDB(t)
 	repo := dashboard.NewRepository(d)
 	s := seedOrg(t, d)
@@ -308,7 +310,7 @@ func TestRepository_GetMetrics_UnidadeComDoisContratosAtivos(t *testing.T) {
 	s.unit(t, d, prop, "U2", true)
 	t1, t2 := s.tenant(t, d, "A"), s.tenant(t, d, "B")
 	s.leaseFull(t, d, u1, t1, "ACTIVE", nil, true)
-	s.leaseFull(t, d, u1, t2, "ACTIVE", nil, true)
+	s.leaseFull(t, d, u1, t2, "ENDED", nil, true)
 
 	got, err := repo.GetMetrics(context.Background(), s.orgID, time.Now())
 

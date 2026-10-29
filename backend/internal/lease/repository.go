@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/db"
 )
@@ -15,7 +16,7 @@ import (
 type pgRepository struct{ db *db.DB }
 
 const leaseCols = `id, organization_id, unit_id, tenant_id, start_date, end_date, rent_amount, deposit_amount, payment_day,
-	status, is_active, late_fee_percent, daily_interest_percent, iptu_reimbursable, annual_iptu_amount, iptu_year, created_at, updated_at`
+	status, is_active, late_fee_percent, daily_interest_percent, iptu_reimbursable, annual_iptu_amount, iptu_year, notes, created_at, updated_at`
 
 func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
@@ -25,15 +26,18 @@ func (r *pgRepository) Create(ctx context.Context, orgID uuid.UUID, ownerID uuid
 	var l Lease
 	err := r.db.Pool.QueryRow(ctx,
 		`INSERT INTO leases (organization_id, owner_id, unit_id, tenant_id, start_date, end_date, rent_amount, deposit_amount, payment_day,
-			late_fee_percent, daily_interest_percent, iptu_reimbursable, annual_iptu_amount, iptu_year)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+			late_fee_percent, daily_interest_percent, iptu_reimbursable, annual_iptu_amount, iptu_year, notes)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 		 RETURNING `+leaseCols,
 		orgID, ownerID, in.UnitID, in.TenantID, in.StartDate, in.EndDate, in.RentAmount, in.DepositAmount, in.PaymentDay,
-		in.LateFeePercent, in.DailyInterestPercent, in.IPTUReimbursable, in.AnnualIPTUAmount, in.IPTUYear,
+		in.LateFeePercent, in.DailyInterestPercent, in.IPTUReimbursable, in.AnnualIPTUAmount, in.IPTUYear, in.Notes,
 	).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear,
+		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
 		&l.CreatedAt, &l.UpdatedAt)
 	if err != nil {
+		if isOverlapViolation(err) {
+			return nil, ErrLeaseOverlap
+		}
 		return nil, fmt.Errorf("lease.repo: create: %w", err)
 	}
 	return &l, nil
@@ -45,7 +49,7 @@ func (r *pgRepository) GetByID(ctx context.Context, id, orgID uuid.UUID) (*Lease
 		`SELECT `+leaseCols+` FROM leases WHERE id=$1 AND organization_id=$2 AND is_active=true`,
 		id, orgID,
 	).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear,
+		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
 		&l.CreatedAt, &l.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -69,7 +73,7 @@ func (r *pgRepository) List(ctx context.Context, orgID uuid.UUID) ([]Lease, erro
 	for rows.Next() {
 		var l Lease
 		if err := rows.Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-			&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear,
+			&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
 			&l.CreatedAt, &l.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("lease.repo: list scan: %w", err)
 		}
@@ -86,16 +90,22 @@ func (r *pgRepository) Update(ctx context.Context, id, orgID uuid.UUID, in Updat
 	var l Lease
 	err := r.db.Pool.QueryRow(ctx,
 		`UPDATE leases SET end_date=$1, rent_amount=$2, deposit_amount=$3, status=$4, payment_day=COALESCE($5, payment_day),
-			late_fee_percent=$6, daily_interest_percent=$7, iptu_reimbursable=$8, annual_iptu_amount=$9, iptu_year=$10, updated_at=NOW()
-		 WHERE id=$11 AND organization_id=$12 AND is_active=true
+			late_fee_percent=$6, daily_interest_percent=$7, iptu_reimbursable=$8, annual_iptu_amount=$9, iptu_year=$10, notes=$11, updated_at=NOW()
+		 WHERE id=$12 AND organization_id=$13 AND is_active=true
 		 RETURNING `+leaseCols,
 		in.EndDate, in.RentAmount, in.DepositAmount, in.Status, paymentDay,
-		in.LateFeePercent, in.DailyInterestPercent, in.IPTUReimbursable, in.AnnualIPTUAmount, in.IPTUYear,
+		in.LateFeePercent, in.DailyInterestPercent, in.IPTUReimbursable, in.AnnualIPTUAmount, in.IPTUYear, in.Notes,
 		id, orgID,
 	).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear,
+		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
 		&l.CreatedAt, &l.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
+		if isOverlapViolation(err) {
+			return nil, ErrLeaseOverlap
+		}
 		return nil, fmt.Errorf("lease.repo: update: %w", err)
 	}
 	return &l, nil
@@ -119,14 +129,17 @@ func (r *pgRepository) End(ctx context.Context, id, orgID uuid.UUID) (*Lease, er
 	now := time.Now()
 	var l Lease
 	err := r.db.Pool.QueryRow(ctx,
-		`UPDATE leases SET status='ENDED', end_date=$1, updated_at=NOW()
-		 WHERE id=$2 AND organization_id=$3 AND is_active=true
+		`UPDATE leases SET status='ENDED', end_date=LEAST(COALESCE(end_date, $1::date), $1::date), updated_at=NOW()
+		 WHERE id=$2 AND organization_id=$3 AND is_active=true AND status='ACTIVE'
 		 RETURNING `+leaseCols,
 		now, id, orgID,
 	).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear,
+		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
 		&l.CreatedAt, &l.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrLeaseNotActive
+		}
 		return nil, fmt.Errorf("lease.repo: end: %w", err)
 	}
 	return &l, nil
@@ -143,7 +156,7 @@ func (r *pgRepository) Renew(ctx context.Context, id, orgID uuid.UUID, in RenewL
 			 RETURNING `+leaseCols,
 			in.NewEndDate, in.RentAmount, paymentDay, id, orgID,
 		).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-			&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear,
+			&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
 			&l.CreatedAt, &l.UpdatedAt)
 	} else {
 		err = r.db.Pool.QueryRow(ctx,
@@ -152,10 +165,16 @@ func (r *pgRepository) Renew(ctx context.Context, id, orgID uuid.UUID, in RenewL
 			 RETURNING `+leaseCols,
 			in.NewEndDate, paymentDay, id, orgID,
 		).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-			&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear,
+			&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
 			&l.CreatedAt, &l.UpdatedAt)
 	}
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
+		if isOverlapViolation(err) {
+			return nil, ErrLeaseOverlap
+		}
 		return nil, fmt.Errorf("lease.repo: renew: %w", err)
 	}
 	return &l, nil
@@ -169,7 +188,7 @@ func (r *pgRepository) UpdateRentAmount(ctx context.Context, id, orgID uuid.UUID
 		 RETURNING `+leaseCols,
 		amount, id, orgID,
 	).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear,
+		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
 		&l.CreatedAt, &l.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("lease.repo: update rent: %w", err)
@@ -222,4 +241,25 @@ func (r *pgReadjustmentRepository) ListByLease(ctx context.Context, leaseID, org
 		return nil, fmt.Errorf("lease.readj.repo: list rows: %w", err)
 	}
 	return list, nil
+}
+
+// isOverlapViolation informa se err é a violação da EXCLUDE leases_no_overlap_per_unit (23P01).
+func isOverlapViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23P01" && pgErr.ConstraintName == "leases_no_overlap_per_unit"
+}
+
+func (r *pgRepository) HasOverlap(ctx context.Context, unitID, orgID uuid.UUID, start time.Time, end *time.Time, exceptID uuid.UUID) (bool, error) {
+	var overlap bool
+	err := r.db.Pool.QueryRow(ctx,
+		`SELECT EXISTS (
+		   SELECT 1 FROM leases
+		   WHERE unit_id=$1 AND organization_id=$2 AND status='ACTIVE' AND is_active=true AND id <> $3
+		     AND daterange(start_date, end_date, '[]') && daterange($4::date, $5::date, '[]'))`,
+		unitID, orgID, exceptID, start, end,
+	).Scan(&overlap)
+	if err != nil {
+		return false, fmt.Errorf("lease.repo: has overlap: %w", err)
+	}
+	return overlap, nil
 }
