@@ -1,17 +1,130 @@
 basePath: /api/v1
 definitions:
-  expense.CreateExpenseInput:
+  dashboard.ErrorEnvelope:
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/dashboard.ErrorResponse'
+    type: object
+  dashboard.ErrorResponse:
+    properties:
+      code:
+        example: NO_ORG
+        type: string
+      message:
+        type: string
+    type: object
+  dashboard.ExpiringLease:
+    properties:
+      end_date:
+        description: YYYY-MM-DD
+        type: string
+      id:
+        type: string
+      tenant_name:
+        type: string
+      unit_label:
+        type: string
+    type: object
+  dashboard.Metrics:
+    properties:
+      expiring_leases:
+        items:
+          $ref: '#/definitions/dashboard.ExpiringLease'
+        type: array
+      monthly_revenue:
+        $ref: '#/definitions/dashboard.MonthlyRevenue'
+      occupied_units:
+        type: integer
+      recent_payments:
+        items:
+          $ref: '#/definitions/dashboard.RecentPayment'
+        type: array
+      total_properties:
+        type: integer
+      total_tenants:
+        type: integer
+      total_units:
+        type: integer
+      vacancy_rate:
+        description: percent, 0-100
+        type: number
+    type: object
+  dashboard.MetricsEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/dashboard.Metrics'
+      error:
+        $ref: '#/definitions/dashboard.ErrorResponse'
+    type: object
+  dashboard.MonthlyRevenue:
+    properties:
+      overdue:
+        type: number
+      paid:
+        type: number
+      pending:
+        type: number
+      total:
+        type: number
+    type: object
+  dashboard.RecentPayment:
     properties:
       amount:
         type: number
-      category:
-        type: string
       description:
         type: string
       due_date:
+        description: YYYY-MM-DD
         type: string
-      unit_id:
+      id:
         type: string
+      status:
+        type: string
+      tenant_name:
+        type: string
+    type: object
+  expense.CreateExpenseInput:
+    properties:
+      amount:
+        minimum: 0
+        type: number
+      category:
+        enum:
+        - ELECTRICITY
+        - WATER
+        - CONDO
+        - TAX
+        - MAINTENANCE
+        - OTHER
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      due_date:
+        type: string
+    required:
+    - amount
+    - category
+    - description
+    - due_date
+    type: object
+  identity.UpsertNotificationPreferencesInput:
+    properties:
+      notify_lease_expiring:
+        type: boolean
+      notify_lease_expiring_days:
+        maximum: 365
+        minimum: 1
+        type: integer
+      notify_maintenance_request:
+        type: boolean
+      notify_new_message:
+        type: boolean
+      notify_payment_overdue:
+        type: boolean
+      notify_payment_received:
+        type: boolean
     type: object
   identity.credentialsInput:
     properties:
@@ -25,84 +138,253 @@ definitions:
       refresh_token:
         type: string
     type: object
-  lease.CreateLeaseInput:
+  identity.twoFactorDisableInput:
     properties:
-      deposit_amount:
-        type: number
-      end_date:
+      password:
         type: string
-      rent_amount:
-        type: number
-      start_date:
+    type: object
+  identity.twoFactorLoginInput:
+    properties:
+      code:
         type: string
-      tenant_id:
+      temp_token:
         type: string
-      unit_id:
+    type: object
+  identity.twoFactorSetupInput:
+    properties:
+      email:
         type: string
+    type: object
+  identity.twoFactorVerifyInput:
+    properties:
+      code:
+        type: string
+    type: object
+  lease.AdjustLeaseInput:
+    properties:
+      index_type:
+        type: string
+    required:
+    - index_type
     type: object
   lease.UpdateLeaseInput:
     properties:
+      annual_iptu_amount:
+        minimum: 0
+        type: number
+      daily_interest_percent:
+        maximum: 10
+        minimum: 0
+        type: number
       deposit_amount:
+        minimum: 0
         type: number
       end_date:
         type: string
+      iptu_reimbursable:
+        type: boolean
+      iptu_year:
+        maximum: 2100
+        minimum: 2000
+        type: integer
+      late_fee_percent:
+        maximum: 100
+        minimum: 0
+        type: number
+      payment_day:
+        maximum: 31
+        minimum: 1
+        type: integer
       rent_amount:
+        minimum: 0
         type: number
       status:
+        enum:
+        - ACTIVE
+        - ENDED
+        - CANCELED
         type: string
+    required:
+    - rent_amount
+    - status
     type: object
   payment.CreatePaymentInput:
     properties:
-      amount:
-        type: number
+      competency:
+        description: YYYY-MM
+        type: string
+      description:
+        maxLength: 500
+        type: string
       due_date:
         type: string
-      lease_id:
-        type: string
+      gross_amount:
+        minimum: 0
+        type: number
       type:
+        enum:
+        - RENT
+        - DEPOSIT
+        - EXPENSE
+        - OTHER
         type: string
+    required:
+    - due_date
+    - gross_amount
+    - type
     type: object
   payment.UpdatePaymentInput:
     properties:
-      amount:
+      gross_amount:
+        minimum: 0
         type: number
       paid_date:
         type: string
       status:
+        enum:
+        - PENDING
+        - PAID
+        - LATE
         type: string
+    required:
+    - gross_amount
+    - status
     type: object
   property.CreatePropertyInput:
     properties:
       address_line:
+        maxLength: 500
         type: string
       city:
+        maxLength: 100
         type: string
       name:
+        maxLength: 200
         type: string
       state:
+        maxLength: 2
         type: string
       type:
+        enum:
+        - RESIDENTIAL
+        - SINGLE
         type: string
+    required:
+    - name
+    - type
     type: object
   property.CreateUnitInput:
     properties:
       floor:
+        maxLength: 50
         type: string
       label:
+        maxLength: 100
         type: string
       notes:
+        maxLength: 2000
         type: string
+    required:
+    - label
+    type: object
+  rbac.AssignRoleInput:
+    properties:
+      branch_id:
+        type: string
+      organization_id:
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/rbac.RoleType'
+        enum:
+        - owner
+        - admin
+        - manager
+        - employee
+        - viewer
+      user_id:
+        type: string
+    required:
+    - role
+    - user_id
+    type: object
+  rbac.RemoveRoleInput:
+    properties:
+      branch_id:
+        type: string
+      organization_id:
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/rbac.RoleType'
+        enum:
+        - owner
+        - admin
+        - manager
+        - employee
+        - viewer
+      user_id:
+        type: string
+    required:
+    - role
+    - user_id
+    type: object
+  rbac.RoleType:
+    enum:
+    - owner
+    - admin
+    - manager
+    - employee
+    - viewer
+    type: string
+    x-enum-varnames:
+    - RoleOwner
+    - RoleAdmin
+    - RoleManager
+    - RoleEmployee
+    - RoleViewer
+  support.CreateTicketInput:
+    properties:
+      assunto:
+        maxLength: 200
+        type: string
+      descricao:
+        maxLength: 5000
+        type: string
+      tipo:
+        enum:
+        - BUG
+        - FEATURE
+        - DOUBT
+        - PAYMENT
+        type: string
+    required:
+    - assunto
+    - descricao
+    - tipo
     type: object
   tenant.CreateTenantInput:
     properties:
       document:
+        maxLength: 20
         type: string
       email:
+        maxLength: 255
         type: string
       name:
+        maxLength: 200
+        type: string
+      person_type:
+        enum:
+        - PF
+        - PJ
         type: string
       phone:
+        maxLength: 20
         type: string
+    required:
+    - name
+    - person_type
     type: object
 host: localhost:8080
 info:
@@ -111,6 +393,99 @@ info:
   title: InquilinoTop API
   version: "1.0"
 paths:
+  /auth/2fa/disable:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Senha
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/identity.twoFactorDisableInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Desativar 2FA
+      tags:
+      - auth
+  /auth/2fa/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Temp token e código
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/identity.twoFactorLoginInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login com 2FA
+      tags:
+      - auth
+  /auth/2fa/setup:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/identity.twoFactorSetupInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Configurar 2FA
+      tags:
+      - auth
+  /auth/2fa/verify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Código TOTP
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/identity.twoFactorVerifyInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Verificar e ativar 2FA
+      tags:
+      - auth
   /auth/login:
     post:
       consumes:
@@ -160,6 +535,59 @@ paths:
       summary: Logout
       tags:
       - auth
+  /auth/notification-preferences:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Buscar preferências de notificação
+      tags:
+      - identity
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Preferências
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/identity.UpsertNotificationPreferencesInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Atualizar preferências de notificação
+      tags:
+      - identity
   /auth/refresh:
     post:
       consumes:
@@ -214,6 +642,47 @@ paths:
       summary: Registrar novo usuário
       tags:
       - auth
+  /dashboard/metrics:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dashboard.MetricsEnvelope'
+        "401":
+          description: NO_ORG ou token ausente/inválido
+          schema:
+            $ref: '#/definitions/dashboard.ErrorEnvelope'
+        "403":
+          description: papel sem permissão payment:read
+          schema:
+            $ref: '#/definitions/dashboard.ErrorEnvelope'
+        "500":
+          description: METRICS_FAILED
+          schema:
+            $ref: '#/definitions/dashboard.ErrorEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Métricas agregadas do dashboard da organização
+      tags:
+      - dashboard
+  /expenses:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista todas as despesas do owner autenticado
+      tags:
+      - expenses
   /expenses/{id}:
     delete:
       parameters:
@@ -263,6 +732,53 @@ paths:
       summary: Atualiza despesa
       tags:
       - expenses
+  /fiscal/annual-report:
+    get:
+      parameters:
+      - description: 'Ano (ex: 2026)'
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Relatório fiscal anual para DIRPF
+      tags:
+      - fiscal
+  /indices/{type}/history:
+    get:
+      parameters:
+      - description: Tipo do índice (IPCA, IGP-M)
+        in: path
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista histórico de um índice
+      tags:
+      - leases
   /leases:
     get:
       produces:
@@ -278,70 +794,7 @@ paths:
       summary: Lista contratos
       tags:
       - leases
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Dados do contrato
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/lease.CreateLeaseInput'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Cria contrato
-      tags:
-      - leases
   /leases/{id}:
-    delete:
-      parameters:
-      - description: ID do contrato
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Remove contrato (soft-delete)
-      tags:
-      - leases
-    get:
-      parameters:
-      - description: ID do contrato
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Busca contrato por ID
-      tags:
-      - leases
     put:
       consumes:
       - application/json
@@ -368,6 +821,56 @@ paths:
       security:
       - BearerAuth: []
       summary: Atualiza contrato
+      tags:
+      - leases
+  /leases/{id}/adjust:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do contrato
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados para reajuste automático
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/lease.AdjustLeaseInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Aplica reajuste automático usando o índice mais recente
+      tags:
+      - leases
+  /leases/{id}/readjustments:
+    get:
+      parameters:
+      - description: ID do contrato
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista reajustes de um contrato
       tags:
       - leases
   /leases/{leaseId}/payments:
@@ -419,7 +922,98 @@ paths:
       summary: Registra pagamento
       tags:
       - payments
+  /leases/{leaseId}/payments/generate:
+    post:
+      parameters:
+      - description: ID do contrato
+        in: path
+        name: leaseId
+        required: true
+        type: string
+      - description: Competência YYYY-MM
+        in: query
+        name: month
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Gera payments (RENT + eventual IPTU) da competência
+      tags:
+      - payments
+  /me/roles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista roles do usuário autenticado
+      tags:
+      - rbac
+  /payments:
+    get:
+      parameters:
+      - description: Filtro de status (PENDING|PAID|LATE)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista todos os pagamentos do owner autenticado
+      tags:
+      - payments
   /payments/{id}:
+    get:
+      parameters:
+      - description: ID do pagamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Busca pagamento por ID
+      tags:
+      - payments
     put:
       consumes:
       - application/json
@@ -446,6 +1040,32 @@ paths:
       security:
       - BearerAuth: []
       summary: 'Atualiza pagamento (ex: marcar como pago)'
+      tags:
+      - payments
+  /payments/{id}/receipt:
+    get:
+      parameters:
+      - description: ID do pagamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Recibo mensal (status=PAID)
       tags:
       - payments
   /properties:
@@ -614,6 +1234,53 @@ paths:
       summary: Cria unidade em um imóvel
       tags:
       - units
+  /roles:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados da role
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.RemoveRoleInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove role de um usuário
+      tags:
+      - rbac
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados da role
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/rbac.AssignRoleInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Atribui role a um usuário
+      tags:
+      - rbac
   /tenants:
     get:
       produces:
@@ -721,6 +1388,65 @@ paths:
       summary: Atualiza inquilino
       tags:
       - tenants
+  /tickets:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista tickets do usuário
+      tags:
+      - support
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do ticket
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/support.CreateTicketInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria ticket de suporte
+      tags:
+      - support
+  /tickets/{id}:
+    get:
+      parameters:
+      - description: ID do ticket
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Busca ticket por ID
+      tags:
+      - support
   /units/{id}:
     delete:
       parameters:

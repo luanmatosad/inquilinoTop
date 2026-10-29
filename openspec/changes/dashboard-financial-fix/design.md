@@ -115,3 +115,12 @@ POST /api/v1/financial/bank-records/import  (multipart CSV)
 2. Commissions precisam de campo `broker_id` em lease — está no roadmap? Se sim, incluir na migration desta change.
 3. Bank reconciliation: formato de CSV esperado? Definir schema com bank_code, date, description, amount, type (credit/debit).
 4. Transfer status workflow: PENDING → PROCESSED → TRANSFERRED. Qual ação muda cada status?
+
+## Decisões de implementação — Dashboard (code review)
+
+- **RBAC**: `GET /dashboard/metrics` exige `payment:read` (owner/admin/manager/employee). O papel `viewer` recebe 403 de propósito: a resposta contém dados financeiros. Rever se o produto quiser dashboard para viewer (então: `org:read` + omitir `monthly_revenue`/`recent_payments`).
+- **Fuso**: "hoje", mês corrente e janela de 30 dias usam o fuso da aplicação (`APP_TIMEZONE`, default `America/Sao_Paulo`), nunca UTC nem `CURRENT_DATE` do banco. O service injeta `time.Now().In(loc)`; o repository calcula as datas em Go.
+- **Soft-delete**: contagens exigem `is_active` em properties/units/tenants/leases. `recent_payments` e `expiring_leases` exigem `is_active` em lease, unit e tenant. A receita mensal exige lease `is_active` (pagamentos de lease soft-deletado ficam de fora); tenant/unit soft-deletados com lease ainda ativo não são filtrados na receita.
+- **Arredondamento**: dinheiro com `ROUND(...,2)` no SQL; `vacancy_rate` com 2 casas (1 vaga em 3 = 33.33).
+- **Índices** (migration 000035): `payments(organization_id, due_date DESC)` e `leases(organization_id, end_date) WHERE is_active AND status='ACTIVE'`.
+- **Overdue**: `LATE` ou `PENDING` com vencimento anterior a hoje, dentro do mês corrente. Atrasos de meses anteriores não entram (gap de produto em aberto).

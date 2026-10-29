@@ -25,6 +25,7 @@ docs/                    # gerado por swag init — não editar manualmente
 | `PORT` | Porta HTTP (default: `8080`) |
 | `TEST_DATABASE_URL` | DB para testes de integração (default: localhost:5433) |
 | `CORS_ALLOWED_ORIGINS` | Lista separada por vírgula de origens CORS (default: vazio) |
+| `APP_TIMEZONE` | Fuso para "hoje"/mês corrente nas métricas (default: `America/Sao_Paulo`) |
 | `PAYMENT_PROVIDER` | Provider de pagamento: `asaas`, `sicoob`, `bradesco`, `itau`, `mock` |
 
 ## Rotas Públicas

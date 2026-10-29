@@ -1,28 +1,28 @@
 ## 1. Dashboard Domain (Backend)
 
-- [ ] 1.1 Create `backend/internal/dashboard/model.go` with DashboardMetrics struct
-- [ ] 1.2 Create `backend/internal/dashboard/repository.go` with single aggregated query using CTEs
-- [ ] 1.3 Create `backend/internal/dashboard/service.go` calling repository
-- [ ] 1.4 Create `backend/internal/dashboard/handler.go` with `GET /api/v1/dashboard/metrics`
-- [ ] 1.5 Register dashboard handler in `main.go`
+- [x] 1.1 Create `backend/internal/dashboard/model.go` with DashboardMetrics struct
+- [x] 1.2 Create `backend/internal/dashboard/repository.go` with single aggregated query using CTEs
+- [x] 1.3 Create `backend/internal/dashboard/service.go` calling repository
+- [x] 1.4 Create `backend/internal/dashboard/handler.go` with `GET /api/v1/dashboard/metrics`
+- [x] 1.5 Register dashboard handler in `main.go`
 
 ## 2. Dashboard Metrics Query
 
-- [ ] 2.1 Write SQL aggregation query for total properties and units
-- [ ] 2.2 Write SQL aggregation for occupied units (units with active lease)
-- [ ] 2.3 Write SQL aggregation for vacancy rate calculation
-- [ ] 2.4 Write SQL aggregation for monthly revenue by status (PAID/PENDING/OVERDUE)
-- [ ] 2.5 Write SQL query for recent payments (last 10, ordered by due_date DESC)
-- [ ] 2.6 Write SQL query for expiring leases (end_date within 30 days, ACTIVE status)
-- [ ] 2.7 Filter all queries by `organization_id` from context
+- [x] 2.1 Write SQL aggregation query for total properties and units
+- [x] 2.2 Write SQL aggregation for occupied units (units with active lease)
+- [x] 2.3 Write SQL aggregation for vacancy rate calculation
+- [x] 2.4 Write SQL aggregation for monthly revenue by status (PAID/PENDING/OVERDUE)
+- [x] 2.5 Write SQL query for recent payments (last 10, ordered by due_date DESC)
+- [x] 2.6 Write SQL query for expiring leases (end_date within 30 days, ACTIVE status)
+- [x] 2.7 Filter all queries by `organization_id` from context
 
 ## 3. Dashboard Frontend
 
-- [ ] 3.1 Update `frontend/src/data/dashboard/dal.ts` to call `GET /api/v1/dashboard/metrics`
-- [ ] 3.2 Remove N+1 requests (properties, units, tenants separate calls)
-- [ ] 3.3 Update dashboard page components to use aggregated metrics
-- [ ] 3.4 Handle loading and error states properly
-- [ ] 3.5 Add type for API response matching `DashboardMetrics` interface
+- [x] 3.1 Update `frontend/src/data/dashboard/dal.ts` to call `GET /api/v1/dashboard/metrics`
+- [x] 3.2 Remove N+1 requests (properties, units, tenants separate calls)
+- [x] 3.3 Update dashboard page components to use aggregated metrics
+- [x] 3.4 Handle loading and error states properly
+- [x] 3.5 Add type for API response matching `DashboardMetrics` interface
 
 ## 4. Financial Domain (Backend)
 
@@ -74,7 +74,7 @@
 
 ## 10. Testing
 
-- [ ] 10.1 Write unit tests for dashboard aggregation query
+- [x] 10.1 Write unit tests for dashboard aggregation query
 - [ ] 10.2 Write unit tests for transfer calculation with admin fee
 - [ ] 10.3 Write unit tests for CSV parsing
 - [ ] 10.4 Verify all existing tests pass

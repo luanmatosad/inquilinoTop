@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	_ "time/tzdata" // LoadLocation funciona em imagens sem tzdata do SO
 
 	"github.com/getsentry/sentry-go"
 	"github.com/go-chi/chi/v5"
@@ -21,6 +22,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/inquilinotop/api/internal/audit"
+	"github.com/inquilinotop/api/internal/dashboard"
 	"github.com/inquilinotop/api/internal/document"
 	"github.com/inquilinotop/api/internal/expense"
 	_ "github.com/inquilinotop/api/docs"
@@ -113,6 +115,15 @@ func main() {
 	paymentRepo := payment.NewRepository(database)
 	paymentSvc := payment.NewService(paymentRepo, leaseRepo, tenantRepo, unitReader, ownerReader, irrTable)
 	paymentHandler := payment.NewHandler(paymentSvc)
+
+	dashboardRepo := dashboard.NewRepository(database)
+	appLoc, err := time.LoadLocation(envOr("APP_TIMEZONE", "America/Sao_Paulo"))
+	if err != nil {
+		slog.Error("invalid APP_TIMEZONE", "error", err)
+		os.Exit(1)
+	}
+	dashboardSvc := dashboard.NewService(dashboardRepo, appLoc)
+	dashboardHandler := dashboard.NewHandler(dashboardSvc)
 
 	expenseRepo := expense.NewRepository(database)
 	expenseSvc := expense.NewService(expenseRepo)
@@ -212,6 +223,7 @@ r := chi.NewRouter()
 	leaseHandler.Register(r, authMW, leaseReadMw, leaseWriteMw)
 	paymentHandler.Register(r, authMW, paymentReadMw, paymentWriteMw)
 	expenseHandler.Register(r, authMW, expenseReadMw, expenseWriteMw)
+	dashboardHandler.Register(r, authMW, paymentReadMw)
 	fiscalHandler.Register(r, authMW, orgReadMw)
 	supportHandler.Register(r, authMW, orgReadMw, orgReadMw)
 	auditHandler.Register(r, authMW)
