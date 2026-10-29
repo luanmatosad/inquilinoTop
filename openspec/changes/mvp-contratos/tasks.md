@@ -1,10 +1,10 @@
 ## 1. Banco de dados
 
-- [ ] 1.1 Confirmar `btree_gist` disponível no Postgres de dev, teste e produção; definir fallback com lock se não estiver
-- [ ] 1.2 Listar contratos ativos sobrepostos já existentes e resolver antes de migrar
-- [ ] 1.3 Escrever `000038_add_lease_notes` up/down
-- [ ] 1.4 Escrever `000039_lease_no_overlap` up/down (extensão + `EXCLUDE` por unidade e período)
-- [ ] 1.5 Aplicar e reverter no Postgres de testes (`:5433`)
+- [x] 1.1 Confirmar `btree_gist` disponível no Postgres de dev, teste e produção; definir fallback com lock se não estiver (dev e teste: `postgres:16-alpine` traz `btree_gist` 1.7; **produção ainda precisa ser conferida** com `SELECT * FROM pg_available_extensions WHERE name='btree_gist'` antes do deploy; o fallback com lock está descrito no comentário da migration 039)
+- [x] 1.2 Listar contratos ativos sobrepostos já existentes e resolver antes de migrar (dev: nenhum; a migration 039 aborta listando sobreposições)
+- [x] 1.3 Escrever `000038_add_lease_notes` up/down
+- [x] 1.4 Escrever `000039_lease_no_overlap` up/down (extensão + `EXCLUDE` por unidade e período)
+- [x] 1.5 Aplicar e reverter no Postgres de testes (`:5433`)
 
 ## 2. Backend: regras (TDD)
 
