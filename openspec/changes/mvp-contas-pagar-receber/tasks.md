@@ -21,7 +21,7 @@
 - [x] 3.3 Implementar `GET /api/v1/payments/summary` (rota registrada antes de `/payments/{id}`) com testes
 - [x] 3.4 Conferir baixa de cobrança paga (409) e recibo de cobrança não paga (409); corrigir se divergir
 - [x] 3.5 Atualizar Swagger (`swag init`) e `internal/payment/CLAUDE.md`
-- [ ] 3.6 `make test-backend` e `make test-backend-integration` sem falhas (`expense`, `payment` (exceto 1 teste), `lease`, `dashboard`, `tenant`, `property` passam; restam falhas preexistentes em `audit`, `support` e `TestFinancialRepository_DeleteFinancialConfig_SoftDelete`)
+- [x] 3.6 `make test-backend` e `make test-backend-integration` sem falhas (suíte inteira verde após `fix/financial-config-org`: migration 000041 (financial_config sem organization_id), INSERT de support_tickets com 9 colunas e 8 placeholders, e fixtures de audit/support/expense/payment)
 
 ## 4. Frontend: dados
 

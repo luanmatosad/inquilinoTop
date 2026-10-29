@@ -82,7 +82,7 @@ Reusar o middleware de permissão existente do `rbac`. Criar e concluir laudo ge
 
 ## Migration Plan
 
-1. Migrations `000041_create_inspections` e `000042_create_inspection_items`, com `down` reversível.
+1. Migrations `000042_create_inspections` e `000043_create_inspection_items`, com `down` reversível.
 2. Backend e testes; documento aceita `inspection_item`.
 3. Frontend por trás de rota nova, sem alterar telas existentes.
 4. Rollback: reverter migrations (tabelas novas, sem dados legados) e remover rotas.

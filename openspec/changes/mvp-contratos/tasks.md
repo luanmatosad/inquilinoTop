@@ -17,7 +17,7 @@
 - [x] 2.7 Testes de renovação (data anterior, sobreposição) e reajuste (limites do percentual, histórico)
 - [x] 2.8 Registrar a exceção à imutabilidade de `payment` num ADR em `docs/decisions/payment/` e indexar no README (ADR payment-0003; exigiu a coluna `payments.is_active`, adicionada à migration 000038, e filtros nas leituras de payment, dashboard e fiscal)
 - [x] 2.9 Atualizar handler, mapeamento de erros, Swagger e `internal/lease/CLAUDE.md`
-- [ ] 2.10 `make test-backend` e `make test-backend-integration` sem falhas (`lease`, `payment` (exceto 1), `dashboard`, `tenant`, `property` passam; restam falhas preexistentes: `audit`, `expense`, `support` e `TestFinancialRepository_DeleteFinancialConfig_SoftDelete`, em que a query usa `financial_config.organization_id`, coluna que nenhuma migration cria — possível bug real em produção)
+- [x] 2.10 `make test-backend` e `make test-backend-integration` sem falhas (suíte inteira verde após `fix/financial-config-org`: migration 000041 (financial_config sem organization_id), INSERT de support_tickets com 9 colunas e 8 placeholders, e fixtures de audit/support/expense/payment)
 
 ## 3. Frontend: consolidação
 

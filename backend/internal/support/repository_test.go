@@ -22,27 +22,27 @@ func testDB(t *testing.T) *db.DB {
 	require.NoError(t, err)
 	require.NoError(t, db.RunMigrations(url, "../../migrations"))
 	t.Cleanup(func() {
-		d.Pool.Exec(context.Background(), "TRUNCATE users RESTART IDENTITY CASCADE")
+		d.Pool.Exec(context.Background(), "TRUNCATE users, organizations RESTART IDENTITY CASCADE")
 		d.Close()
 	})
 	return d
 }
 
-func seedUser(t *testing.T, database *db.DB) uuid.UUID {
+// seedUser cria a organização e o usuário que pertence a ela.
+func seedUser(t *testing.T, database *db.DB) (userID, orgID uuid.UUID) {
 	t.Helper()
-	var userID uuid.UUID
-	err := database.Pool.QueryRow(context.Background(),
-		`INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id`,
-		"support-test@test.com", "hash",
-	).Scan(&userID)
-	require.NoError(t, err)
-	return userID
+	require.NoError(t, database.Pool.QueryRow(context.Background(),
+		`INSERT INTO organizations (name) VALUES ($1) RETURNING id`, "Support Org").Scan(&orgID))
+	require.NoError(t, database.Pool.QueryRow(context.Background(),
+		`INSERT INTO users (email, password_hash, organization_id) VALUES ($1, $2, $3) RETURNING id`,
+		"support-test@test.com", "hash", orgID,
+	).Scan(&userID))
+	return userID, orgID
 }
 
 func TestSupportRepository_Create(t *testing.T) {
 	database := testDB(t)
-	userID := seedUser(t, database)
-	orgID := userID // For testing, use userID as orgID
+	userID, orgID := seedUser(t, database)
 	repo := support.NewRepository(database)
 
 	ticket, err := repo.Create(context.Background(), orgID, userID, support.CreateTicketInput{
@@ -59,8 +59,7 @@ func TestSupportRepository_Create(t *testing.T) {
 
 func TestSupportRepository_GetByID_Encontrado(t *testing.T) {
 	database := testDB(t)
-	userID := seedUser(t, database)
-	orgID := userID // For testing, use userID as orgID
+	userID, orgID := seedUser(t, database)
 	repo := support.NewRepository(database)
 
 	created, _ := repo.Create(context.Background(), orgID, userID, support.CreateTicketInput{
@@ -73,8 +72,7 @@ func TestSupportRepository_GetByID_Encontrado(t *testing.T) {
 
 func TestSupportRepository_GetByID_OutroUsuário(t *testing.T) {
 	database := testDB(t)
-	userID := seedUser(t, database)
-	orgID := userID // For testing, use userID as orgID
+	userID, orgID := seedUser(t, database)
 	repo := support.NewRepository(database)
 
 	created, _ := repo.Create(context.Background(), orgID, userID, support.CreateTicketInput{
@@ -86,8 +84,7 @@ func TestSupportRepository_GetByID_OutroUsuário(t *testing.T) {
 
 func TestSupportRepository_ListByUser(t *testing.T) {
 	database := testDB(t)
-	userID := seedUser(t, database)
-	orgID := userID // For testing, use userID as orgID
+	userID, orgID := seedUser(t, database)
 	repo := support.NewRepository(database)
 
 	repo.Create(context.Background(), orgID, userID, support.CreateTicketInput{
@@ -104,8 +101,7 @@ func TestSupportRepository_ListByUser(t *testing.T) {
 
 func TestSupportRepository_ListByUser_OutroUsuárioNãoVê(t *testing.T) {
 	database := testDB(t)
-	userID := seedUser(t, database)
-	orgID := userID // For testing, use userID as orgID
+	userID, orgID := seedUser(t, database)
 	repo := support.NewRepository(database)
 
 	repo.Create(context.Background(), orgID, userID, support.CreateTicketInput{

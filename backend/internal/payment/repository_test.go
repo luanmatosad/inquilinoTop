@@ -24,7 +24,7 @@ func testDB(t *testing.T) *db.DB {
 	require.NoError(t, err)
 	require.NoError(t, db.RunMigrations(url, "../../migrations"))
 	t.Cleanup(func() {
-		d.Pool.Exec(context.Background(), "TRUNCATE organization_members, leases, tenants, units, properties, organizations, users RESTART IDENTITY CASCADE")
+		d.Pool.Exec(context.Background(), "TRUNCATE organization_members, financial_config, leases, tenants, units, properties, organizations, users RESTART IDENTITY CASCADE")
 		d.Close()
 	})
 	return d
@@ -323,4 +323,55 @@ func TestPaymentRepository_List_Filtros(t *testing.T) {
 	empty, err := repo.List(ctx, uuid.New(), payment.PaymentFilter{}, today)
 	require.NoError(t, err)
 	assert.Empty(t, empty, "isolamento por organização")
+}
+
+func newOrg(t *testing.T, database *db.DB) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	require.NoError(t, database.Pool.QueryRow(context.Background(),
+		`INSERT INTO organizations (name) VALUES ($1) RETURNING id`, "Org "+uuid.New().String()[:8]).Scan(&id))
+	return id
+}
+
+func TestFinancialRepository_Upsert_UmaConfigAtivaPorOrganização(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	repo := payment.NewRepository(database)
+	orgA, orgB := newOrg(t, database), newOrg(t, database)
+
+	first, err := repo.UpsertFinancialConfig(ctx, orgA, payment.UpsertFinancialConfigInput{Provider: "MOCK", Config: map[string]any{"token": "1"}})
+	require.NoError(t, err)
+	assert.Equal(t, orgA, first.OrganizationID)
+
+	second, err := repo.UpsertFinancialConfig(ctx, orgA, payment.UpsertFinancialConfigInput{Provider: "ASAAS", Config: map[string]any{"token": "2"}})
+	require.NoError(t, err)
+	assert.Equal(t, first.ID, second.ID, "segundo upsert atualiza a mesma linha")
+	assert.Equal(t, "ASAAS", second.Provider)
+
+	other, err := repo.UpsertFinancialConfig(ctx, orgB, payment.UpsertFinancialConfigInput{Provider: "MOCK", Config: map[string]any{}})
+	require.NoError(t, err)
+	assert.NotEqual(t, first.ID, other.ID)
+
+	got, err := repo.GetActiveFinancialConfig(ctx, orgA)
+	require.NoError(t, err)
+	assert.Equal(t, first.ID, got.ID)
+	assert.Equal(t, "ASAAS", got.Provider)
+
+	_, err = repo.GetFinancialConfig(ctx, orgB)
+	assert.NoError(t, err)
+}
+
+func TestFinancialRepository_Isolamento(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	repo := payment.NewRepository(database)
+	orgA := newOrg(t, database)
+	cfg, err := repo.CreateFinancialConfig(ctx, orgA, payment.CreateFinancialConfigInput{Provider: "MOCK", Config: map[string]any{}})
+	require.NoError(t, err)
+
+	err = repo.DeleteFinancialConfig(ctx, cfg.ID, uuid.New())
+	assert.Error(t, err, "outra organização não desativa a configuração")
+	got, err := repo.GetActiveFinancialConfig(ctx, orgA)
+	require.NoError(t, err)
+	assert.Equal(t, cfg.ID, got.ID)
 }
