@@ -1,8 +1,12 @@
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  images: {
+    qualities: [75, 90],
+    dangerouslyAllowSVG: true,
+  },
 };
 
 const sentryConfig = {

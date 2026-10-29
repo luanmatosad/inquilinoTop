@@ -67,12 +67,12 @@ export default function NewTicketPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-on-surface mb-2">Tipo</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Tipo</label>
               <select
                 value={formData.tipo}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
                 required
-                className="w-full px-4 py-3 bg-surface border border-outline rounded-lg text-on-surface focus:ring-2 focus:ring-primary outline-none"
+                className="w-full px-4 py-3 bg-background border border-input rounded-lg text-foreground focus:ring-2 focus:ring-primary outline-none"
               >
                 <option value="">Selecione o tipo...</option>
                 {ticketTypes.map((type) => (
@@ -83,27 +83,27 @@ export default function NewTicketPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-on-surface mb-2">Assunto</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Assunto</label>
               <input
                 type="text"
                 value={formData.asunto}
                 onChange={(e) => setFormData({ ...formData, asunto: e.target.value })}
                 placeholder="Descreva brevemente o problema..."
                 required
-                className="w-full px-4 py-3 bg-surface border border-outline rounded-lg text-on-surface focus:ring-2 focus:ring-primary outline-none"
+                className="w-full px-4 py-3 bg-background border border-input rounded-lg text-foreground focus:ring-2 focus:ring-primary outline-none"
               />
               {errors.asunto && <p className="text-sm text-error mt-1">{errors.asunto}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-on-surface mb-2">Descrição</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Descrição</label>
               <textarea
                 value={formData.descricao}
                 onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                 placeholder="Detalhe máximo sua situação..."
                 rows={6}
                 required
-                className="w-full px-4 py-3 bg-surface border border-outline rounded-lg text-on-surface focus:ring-2 focus:ring-primary outline-none resize-none"
+                className="w-full px-4 py-3 bg-background border border-input rounded-lg text-foreground focus:ring-2 focus:ring-primary outline-none resize-none"
               />
               {errors.descricao && <p className="text-sm text-error mt-1">{errors.descricao}</p>}
             </div>

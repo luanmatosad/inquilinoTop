@@ -20,7 +20,7 @@ const roleColors: Record<string, string> = {
   admin: 'bg-blue-100 text-blue-800',
   manager: 'bg-green-100 text-green-800',
   employee: 'bg-amber-100 text-amber-800',
-  viewer: 'bg-gray-100 text-gray-800',
+  viewer: 'bg-muted text-muted-foreground',
 }
 
 const roleLabels: Record<string, string> = {
@@ -72,8 +72,8 @@ export function TeamClient({ organization, members, invites }: TeamClientProps) 
     <div className="max-w-4xl mx-auto py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-on-surface">Equipe</h1>
-          <p className="text-on-surface-variant mt-2">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Equipe</h1>
+          <p className="text-muted-foreground mt-2">
             Gerencie os membros da organização: <strong>{organization.name}</strong>
           </p>
         </div>
@@ -118,13 +118,13 @@ export function TeamClient({ organization, members, invites }: TeamClientProps) 
       </div>
 
       <div className="space-y-8">
-        <div className="bg-surface border border-outline-variant rounded-xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-outline-variant">
+        <div className="bg-background border border-border rounded-xl shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-border">
             <h2 className="text-lg font-semibold">Membros Ativos</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-surface-variant text-on-surface-variant">
+              <thead className="bg-muted text-muted-foreground">
                 <tr>
                   <th className="px-6 py-3 font-medium">Email / Usuário</th>
                   <th className="px-6 py-3 font-medium">Perfil</th>
@@ -132,9 +132,9 @@ export function TeamClient({ organization, members, invites }: TeamClientProps) 
                   <th className="px-6 py-3 font-medium text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant">
+              <tbody className="divide-y divide-border">
                 {members.map(member => (
-                  <tr key={member.id} className="hover:bg-surface-variant/50">
+                  <tr key={member.id} className="hover:bg-muted/50">
                     <td className="px-6 py-4">{member.user_email || 'Usuário ' + member.user_id.substring(0,8)}</td>
                     <td className="px-6 py-4">
                       <Select 
@@ -158,7 +158,7 @@ export function TeamClient({ organization, members, invites }: TeamClientProps) 
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-6 py-4 text-on-surface-variant">
+                    <td className="px-6 py-4 text-muted-foreground">
                       {new Date(member.created_at).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -172,7 +172,7 @@ export function TeamClient({ organization, members, invites }: TeamClientProps) 
                 ))}
                 {members.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-on-surface-variant">
+                    <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
                       Nenhum membro encontrado.
                     </td>
                   </tr>
@@ -183,13 +183,13 @@ export function TeamClient({ organization, members, invites }: TeamClientProps) 
         </div>
 
         {invites.length > 0 && (
-          <div className="bg-surface border border-outline-variant rounded-xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-outline-variant">
+          <div className="bg-background border border-border rounded-xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-border">
               <h2 className="text-lg font-semibold">Convites Pendentes</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="bg-surface-variant text-on-surface-variant">
+                <thead className="bg-muted text-muted-foreground">
                   <tr>
                     <th className="px-6 py-3 font-medium">Email</th>
                     <th className="px-6 py-3 font-medium">Perfil</th>
@@ -197,16 +197,16 @@ export function TeamClient({ organization, members, invites }: TeamClientProps) 
                     <th className="px-6 py-3 font-medium text-right">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-outline-variant">
+                <tbody className="divide-y divide-border">
                   {invites.map(invite => (
-                    <tr key={invite.id} className="hover:bg-surface-variant/50">
+                    <tr key={invite.id} className="hover:bg-muted/50">
                       <td className="px-6 py-4">{invite.email}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleColors[invite.role] || roleColors.viewer}`}>
                           {roleLabels[invite.role] || invite.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-on-surface-variant">
+                      <td className="px-6 py-4 text-muted-foreground">
                         {new Date(invite.expires_at).toLocaleDateString('pt-BR')}
                       </td>
                       <td className="px-6 py-4 text-right">

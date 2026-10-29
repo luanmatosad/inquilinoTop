@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Urbanist, Geist_Mono } from "next/font/google";
 import Header from "@/components/Header";
+import { AppShell } from "@/components/AppShell";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const urbanist = Urbanist({
+  variable: "--font-urbanist",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 const geistMono = Geist_Mono({
@@ -27,14 +29,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" data-theme="light">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
+        className={`${urbanist.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
-        <Header />
-        <main className="flex-1 md:ml-64 pt-16">
-          <div className="p-4 md:p-8">
-            {children}
-          </div>
-        </main>
+        <AppShell header={<Header />}>{children}</AppShell>
         <Toaster />
       </body>
     </html>

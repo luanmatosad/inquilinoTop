@@ -14,17 +14,17 @@ export default function SupportCentral() {
   return (
     <div className="space-y-6">
       <div className="text-center py-8">
-        <h1 className="text-3xl font-bold tracking-tight text-on-surface">Central de Suporte</h1>
-        <p className="text-on-surface-variant mt-2">Como podemos ajudar você hoje?</p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Central de Suporte</h1>
+        <p className="text-muted-foreground mt-2">Como podemos ajudar você hoje?</p>
       </div>
 
       <div className="max-w-xl mx-auto">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant w-5 h-5" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
           <input
             type="text"
             placeholder="Buscar artigos..."
-            className="w-full pl-12 pr-4 py-4 bg-surface border border-outline rounded-xl text-on-surface focus:ring-2 focus:ring-primary outline-none transition-all text-lg"
+            className="w-full pl-12 pr-4 py-4 bg-background border border-input rounded-xl text-foreground focus:ring-2 focus:ring-primary outline-none transition-all text-lg"
           />
         </div>
       </div>
@@ -36,32 +36,32 @@ export default function SupportCentral() {
             <Link
               key={category.id}
               href="#"
-              className="group bg-surface p-6 rounded-xl border border-outline hover:border-primary hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+              className="group bg-background p-6 rounded-xl border border-input hover:border-primary hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer"
             >
               <IconComponent className="w-8 h-8 text-primary mb-4 group-hover:scale-110 transition-transform" />
-              <h3 className="text-lg font-semibold text-on-surface">{category.label}</h3>
-              <p className="text-sm text-on-surface-variant mt-1">{category.description}</p>
+              <h3 className="text-lg font-semibold text-foreground">{category.label}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{category.description}</p>
             </Link>
           );
         })}
       </div>
 
-      <div className="bg-surface p-6 rounded-xl border border-outline">
-        <h2 className="text-lg font-semibold text-on-surface mb-4">Meus Chamados</h2>
+      <div className="bg-background p-6 rounded-xl border border-input">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Meus Chamados</h2>
         <div className="space-y-3">
           <Link
             href="/support/tickets"
-            className="flex items-center justify-between p-3 rounded-lg hover:bg-surface-container transition-colors group w-full text-left"
+            className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors group w-full text-left"
           >
-            <span className="text-on-surface group-hover:text-primary transition-colors">Ver meus chamados</span>
-            <Ticket className="w-4 h-4 text-on-surface-variant" />
+            <span className="text-foreground group-hover:text-primary transition-colors">Ver meus chamados</span>
+            <Ticket className="w-4 h-4 text-muted-foreground" />
           </Link>
           <Link
             href="/support/new-ticket"
-            className="flex items-center justify-between p-3 rounded-lg hover:bg-surface-container transition-colors group w-full text-left"
+            className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors group w-full text-left"
           >
-            <span className="text-on-surface group-hover:text-primary transition-colors">Abrir novo chamado</span>
-            <MessageCircle className="w-4 h-4 text-on-surface-variant" />
+            <span className="text-foreground group-hover:text-primary transition-colors">Abrir novo chamado</span>
+            <MessageCircle className="w-4 h-4 text-muted-foreground" />
           </Link>
         </div>
       </div>

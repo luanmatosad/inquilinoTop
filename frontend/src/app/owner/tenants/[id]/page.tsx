@@ -3,9 +3,8 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowLeft, Mail, Phone, FileText } from "lucide-react"
 import { getTenantWithLeases } from "@/data/owner/tenants-dal"
-import { Button } from "@heroui/react"
-import { Card } from "@heroui/react"
-import { Badge } from "@heroui/react"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
 interface Lease {
   id: string
@@ -50,12 +49,12 @@ async function TenantDetails({ id }: { id: string }) {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             {tenant.name}
-            <Badge color={tenant.is_active ? "success" : "default"} variant="soft">
+            <Badge variant={tenant.is_active ? "default" : "secondary"}>
               {tenant.is_active ? "Ativo" : "Inativo"}
             </Badge>
           </h1>
           
-          <div className="mt-4 space-y-2 text-on-surface-variant">
+          <div className="mt-4 space-y-2 text-muted-foreground">
             {tenant.email && (
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
@@ -81,14 +80,14 @@ async function TenantDetails({ id }: { id: string }) {
       <Card className="p-6">
         <h2 className="text-lg font-semibold mb-4">Contratos ({tenant.leases?.length || 0})</h2>
         {(!tenant.leases || tenant.leases.length === 0) ? (
-          <p className="text-on-surface-variant">Nenhum contrato vinculado.</p>
+          <p className="text-muted-foreground">Nenhum contrato vinculado.</p>
         ) : (
           <div className="space-y-3">
             {tenant.leases.map((lease) => (
-              <div key={lease.id} className="flex items-center justify-between p-4 bg-surface-variant rounded-lg">
+              <div key={lease.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
                 <div>
                   <span className="font-medium">Contrato {lease.id.slice(0, 8)}</span>
-                  <div className="text-sm text-on-surface-variant">
+                  <div className="text-sm text-muted-foreground">
                     Início: {new Date(lease.start_date).toLocaleDateString('pt-BR')}
                     {lease.end_date && ` - Fim: ${new Date(lease.end_date).toLocaleDateString('pt-BR')}`}
                   </div>
@@ -96,11 +95,11 @@ async function TenantDetails({ id }: { id: string }) {
                     Valor: R$ {Number(lease.rent_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
-                <Badge color={
-                  lease.status === 'ACTIVE' ? "success" : 
-                  lease.status === 'ENDED' ? "default" : "danger"
-                } variant="soft">
-                  {lease.status === 'ACTIVE' ? 'Ativo' : 
+                <Badge variant={
+                  lease.status === 'ACTIVE' ? "default" :
+                  lease.status === 'ENDED' ? "secondary" : "destructive"
+                }>
+                  {lease.status === 'ACTIVE' ? 'Ativo' :
                    lease.status === 'ENDED' ? 'Encerrado' : 'Cancelado'}
                 </Badge>
               </div>
@@ -122,7 +121,7 @@ export default async function OwnerTenantPage({
   return (
     <div className="container py-8 space-y-8">
       <div>
-        <Link href="/owner/tenants" className="text-on-surface-variant hover:text-on-surface flex items-center gap-2">
+        <Link href="/owner/tenants" className="text-muted-foreground hover:text-foreground flex items-center gap-2">
           <ArrowLeft className="h-4 w-4" /> Voltar para lista
         </Link>
       </div>

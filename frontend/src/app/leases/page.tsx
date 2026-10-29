@@ -35,7 +35,7 @@ interface PropertyWithUnits {
 const STATUS_LABELS: Record<string, { label: string; class: string }> = {
   ACTIVE: { label: "Ativo", class: "bg-primary/10 text-primary" },
   PENDING: { label: "Pendente", class: "bg-secondary/10 text-secondary" },
-  ENDED: { label: "Encerrado", class: "bg-zinc-100 text-zinc-500" },
+  ENDED: { label: "Encerrado", class: "bg-muted text-muted-foreground" },
 }
 
 function formatCurrency(value: number): string {
@@ -81,8 +81,8 @@ async function LeasesList({ search, status, tenants, properties }: { search?: st
 
   if (!filtered.length) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 border border-zinc-200 rounded-xl bg-white">
-        <p className="text-zinc-500 mb-4">Nenhum contrato encontrado.</p>
+      <div className="flex flex-col items-center justify-center h-64 border border-border rounded-xl bg-card">
+        <p className="text-muted-foreground mb-4">Nenhum contrato encontrado.</p>
         <CreateLeaseDialog tenants={tenants} properties={properties} />
       </div>
     )
@@ -91,31 +91,31 @@ async function LeasesList({ search, status, tenants, properties }: { search?: st
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3 mb-2"><Building2 className="w-5 h-5 text-primary"/><span className="text-sm text-zinc-600">Total</span></div><div className="text-2xl font-bold">{total}</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3 mb-2"><CheckCircle className="w-5 h-5 text-green-600"/><span className="text-sm text-zinc-600">Ativos</span></div><div className="text-2xl font-bold">{active}</div></CardContent></Card>
-        <Card className="border-l-4 border-l-secondary"><CardContent className="p-4"><div className="flex items-center gap-3 mb-2"><Clock className="w-5 h-5 text-orange-600"/><span className="text-sm text-zinc-600">Pendentes</span></div><div className="text-2xl font-bold">{pending}</div></CardContent></Card>
-        <Card className="border-l-4 border-l-error"><CardContent className="p-4"><div className="flex items-center gap-3 mb-2"><AlertCircle className="w-5 h-5 text-red-600"/><span className="text-sm text-zinc-600">Vencendo</span></div><div className="text-2xl font-bold">{expiringSoon}</div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-3 mb-2"><Building2 className="w-5 h-5 text-primary"/><span className="text-sm text-muted-foreground">Total</span></div><div className="text-2xl font-bold">{total}</div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-3 mb-2"><CheckCircle className="w-5 h-5 text-green-600"/><span className="text-sm text-muted-foreground">Ativos</span></div><div className="text-2xl font-bold">{active}</div></CardContent></Card>
+        <Card className="border-l-4 border-l-secondary"><CardContent className="p-4"><div className="flex items-center gap-3 mb-2"><Clock className="w-5 h-5 text-orange-600"/><span className="text-sm text-muted-foreground">Pendentes</span></div><div className="text-2xl font-bold">{pending}</div></CardContent></Card>
+        <Card className="border-l-4 border-l-error"><CardContent className="p-4"><div className="flex items-center gap-3 mb-2"><AlertCircle className="w-5 h-5 text-red-600"/><span className="text-sm text-muted-foreground">Vencendo</span></div><div className="text-2xl font-bold">{expiringSoon}</div></CardContent></Card>
       </div>
 
       <Card className="overflow-hidden">
         <table className="w-full">
-          <thead className="bg-zinc-50 border-b">
+          <thead className="bg-muted border-b">
             <tr>
-              <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase">Início</th>
-              <th className="px-4 py-3 text-xs font-semibold text-zinc-400 uppercase">Fim</th>
-              <th className="px-4 py-3 text-xs font-semibold text-zinc-400 text-right">Valor</th>
-              <th className="px-4 py-3 text-xs font-semibold text-zinc-400 text-center">Status</th>
-              <th className="px-4 py-3 text-xs font-semibold text-zinc-400 text-center">Ações</th>
+              <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Início</th>
+              <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Fim</th>
+              <th className="px-4 py-3 text-xs font-semibold text-muted-foreground text-right">Valor</th>
+              <th className="px-4 py-3 text-xs font-semibold text-muted-foreground text-center">Status</th>
+              <th className="px-4 py-3 text-xs font-semibold text-muted-foreground text-center">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {filtered.map((lease) => (
-              <tr key={lease.id} className="hover:bg-zinc-50">
+              <tr key={lease.id} className="hover:bg-muted">
                 <td className="px-4 py-3 font-mono text-sm">{formatDate(lease.start_date)}</td>
                 <td className="px-4 py-3 font-mono text-sm">{lease.end_date ? formatDate(lease.end_date) : "—"}</td>
                 <td className="px-4 py-3 text-sm font-bold text-primary text-right">{formatCurrency(lease.rent_amount)}</td>
                 <td className="px-4 py-3 text-center">
-                  <Badge className={STATUS_LABELS[lease.status]?.class || "bg-zinc-100"}>{STATUS_LABELS[lease.status]?.label || lease.status}</Badge>
+                  <Badge className={STATUS_LABELS[lease.status]?.class || "bg-muted"}>{STATUS_LABELS[lease.status]?.label || lease.status}</Badge>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <Button variant="ghost" size="icon" className="w-8 h-8"><Eye className="w-4 h-4"/></Button>
@@ -147,7 +147,7 @@ export default async function LeasesPage({ searchParams }: { searchParams: Promi
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Contratos</h1>
-          <p className="text-zinc-500">Gerencie contratos de locação</p>
+          <p className="text-muted-foreground">Gerencie contratos de locação</p>
         </div>
         <CreateLeaseDialog tenants={tenants} properties={properties} />
       </div>
@@ -155,10 +155,10 @@ export default async function LeasesPage({ searchParams }: { searchParams: Promi
       <Card className="p-4">
         <form action="/leases" method="GET" className="flex gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4"/>
-            <input name="q" placeholder="Buscar..." defaultValue={q} className="w-full h-10 pl-10 pr-4 rounded-xl border border-zinc-200"/>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4"/>
+            <input name="q" placeholder="Buscar..." defaultValue={q} className="w-full h-10 pl-10 pr-4 rounded-xl border border-border"/>
           </div>
-          <select name="status" defaultValue={status || "ALL"} className="h-10 px-4 rounded-xl border border-zinc-200">
+          <select name="status" defaultValue={status || "ALL"} className="h-10 px-4 rounded-xl border border-border">
             <option value="ALL">Todos</option>
             <option value="ACTIVE">Ativo</option>
             <option value="PENDING">Pendente</option>

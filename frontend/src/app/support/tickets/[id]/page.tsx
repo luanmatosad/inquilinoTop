@@ -23,7 +23,7 @@ const statusColors: Record<string, string> = {
   open: "bg-warning/10 text-warning",
   in_progress: "bg-primary/10 text-primary",
   resolved: "bg-success/10 text-success",
-  closed: "bg-on-surface-variant/10 text-on-surface-variant",
+  closed: "bg-muted-foreground/10 text-muted-foreground",
 }
 
 const tipoLabels: Record<string, string> = {
@@ -46,7 +46,7 @@ export default async function TicketDetailPage({
   } catch (error) {
     return (
       <div className="max-w-2xl mx-auto text-center py-12">
-        <p className="text-on-surface-variant">Ticket não encontrado.</p>
+        <p className="text-muted-foreground">Ticket não encontrado.</p>
         <Link href="/support/tickets" className="mt-4 text-primary hover:underline block">
           Voltar para lista
         </Link>
@@ -58,17 +58,17 @@ export default async function TicketDetailPage({
     <div className="max-w-2xl mx-auto space-y-6">
       <Link
         href="/support/tickets"
-        className="inline-flex items-center gap-2 text-on-surface-variant hover:text-on-surface transition-colors"
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Voltar</span>
       </Link>
 
-      <div className="bg-surface p-6 rounded-xl border border-outline">
+      <div className="bg-background p-6 rounded-xl border border-input">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Tag className="w-5 h-5 text-on-surface-variant" />
-            <span className="text-on-surface-variant">
+            <Tag className="w-5 h-5 text-muted-foreground" />
+            <span className="text-muted-foreground">
               {tipoLabels[ticket.tipo] || ticket.tipo}
             </span>
           </div>
@@ -81,15 +81,15 @@ export default async function TicketDetailPage({
           </span>
         </div>
 
-        <h1 className="text-xl font-semibold text-on-surface mb-4">
+        <h1 className="text-xl font-semibold text-foreground mb-4">
           {ticket.assunto}
         </h1>
 
         <div className="prose prose-invert max-w-none">
-          <p className="text-on-surface-variant whitespace-pre-wrap">{ticket.descricao}</p>
+          <p className="text-muted-foreground whitespace-pre-wrap">{ticket.descricao}</p>
         </div>
 
-        <div className="flex items-center gap-4 mt-6 pt-4 border-t border-outline text-sm text-on-surface-variant">
+        <div className="flex items-center gap-4 mt-6 pt-4 border-t border-input text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4" />
             <span>Criado em {new Date(ticket.created_at).toLocaleString("pt-BR")}</span>

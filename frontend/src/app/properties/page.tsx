@@ -2,7 +2,10 @@ import { Suspense } from "react"
 import Link from "next/link"
 import { Plus, Search, MapPin, Building2 } from "lucide-react"
 import { goFetch } from "@/lib/go/client"
-import { Button, Input, Card, Badge } from "@heroui/react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
 interface PropertyWithUnits {
   id: string
@@ -24,8 +27,8 @@ const PROPERTY_TYPE_LABELS: Record<string, string> = {
 
 const PROPERTY_TYPE_BADGE_CLASS: Record<string, string> = {
   RESIDENTIAL: 'bg-primary/10 text-primary',
-  COMMERCIAL: 'bg-tertiary-container text-on-tertiary-container',
-  SINGLE: 'bg-secondary-container text-on-secondary-container',
+  COMMERCIAL: 'bg-accent text-accent-foreground',
+  SINGLE: 'bg-secondary text-secondary-foreground',
 }
 
 function getPropertyTypeLabel(type: string): string {
@@ -33,7 +36,7 @@ function getPropertyTypeLabel(type: string): string {
 }
 
 function getPropertyTypeBadgeClass(type: string): string {
-  return PROPERTY_TYPE_BADGE_CLASS[type] || 'bg-surface text-on-surface'
+  return PROPERTY_TYPE_BADGE_CLASS[type] || 'bg-muted text-foreground'
 }
 
 async function PropertiesList({ search }: { search?: string }) {
@@ -53,8 +56,8 @@ async function PropertiesList({ search }: { search?: string }) {
 
   if (!properties || properties.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 border border-outline-variant rounded-xl bg-surface">
-        <p className="text-on-surface-variant mb-4">Nenhum imóvel encontrado.</p>
+      <div className="flex flex-col items-center justify-center h-64 border border-border rounded-xl bg-card">
+        <p className="text-muted-foreground mb-4">Nenhum imóvel encontrado.</p>
         <Link href="/properties/new">
           <Button>Criar Primeiro Imóvel</Button>
         </Link>
@@ -67,34 +70,30 @@ async function PropertiesList({ search }: { search?: string }) {
       {properties.map((property) => (
         <Link key={property.id} href={`/properties/${property.id}`} className="block h-full">
           <Card className="h-full overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-            <Card.Content className="p-5">
+            <CardContent className="p-5">
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-lg font-semibold text-on-surface line-clamp-1">
+                <h3 className="text-lg font-semibold text-foreground line-clamp-1">
                   {property.name}
                 </h3>
-                <Badge 
-                  className={getPropertyTypeBadgeClass(property.type)}
-                  variant="soft" 
-                  size="sm"
-                >
+                <Badge className={getPropertyTypeBadgeClass(property.type)}>
                   {getPropertyTypeLabel(property.type)}
                 </Badge>
               </div>
               
-              <div className="flex items-start gap-1 text-outline mb-4">
+              <div className="flex items-start gap-1 text-muted-foreground mb-4">
                 <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
                 <span className="text-sm line-clamp-1">
                   {property.address_line || "Sem endereço"}
                 </span>
               </div>
 
-              <div className="flex items-center gap-1 text-on-surface-variant text-sm pt-4 border-t border-surface-variant">
+              <div className="flex items-center gap-1 text-muted-foreground text-sm pt-4 border-t border-border">
                 <Building2 className="w-4 h-4" />
                 <span className="font-medium">
                   {property.units?.length || 0} unidade(s)
                 </span>
               </div>
-            </Card.Content>
+            </CardContent>
           </Card>
         </Link>
       ))}
@@ -114,13 +113,13 @@ export default async function PropertiesPage({
     <div className="container py-8 space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-on-surface">Meus Imóveis</h1>
-          <p className="text-base text-on-surface-variant mt-1">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Meus Imóveis</h1>
+          <p className="text-base text-muted-foreground mt-1">
             Gerencie seu portfólio de propriedades.
           </p>
         </div>
         <Link href="/properties/new">
-          <Button className="bg-secondary-container text-on-secondary-container">
+          <Button variant="secondary">
             <Plus className="w-4 h-4" />
             Novo Imóvel
           </Button>
@@ -130,7 +129,7 @@ export default async function PropertiesPage({
       <Card className="p-4">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <form action="/properties" method="GET" className="relative">
               <Input
                 name="q"
@@ -141,10 +140,10 @@ export default async function PropertiesPage({
             </form>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="border-outline-variant">
+            <Button variant="outline">
               <span className="hidden sm:inline">Filtros</span>
             </Button>
-            <Button variant="outline" className="border-outline-variant">
+            <Button variant="outline">
               <span className="hidden sm:inline">Ordenar</span>
             </Button>
           </div>
