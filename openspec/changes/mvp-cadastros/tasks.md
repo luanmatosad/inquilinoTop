@@ -26,7 +26,7 @@
 - [x] 4.4 Testes de integração do repositório
 - [x] 4.5 Atualizar handler, Swagger e `internal/tenant/CLAUDE.md`
 - [x] 4.6 Conferir impacto em `importexport` (documentos importados validados e deduplicados) e ajustar
-- [ ] 4.7 `make test-backend` e `make test-backend-integration` sem falhas
+- [ ] 4.7 `make test-backend` e `make test-backend-integration` sem falhas (pacotes property, tenant, importexport e pkg passam; `audit`, `expense`, `payment` e `support` já falhavam antes por fixtures defasadas após a migration 000034: seeds sem `organization_id`, `owner_id` recebendo o id da organização e handlers de expense sem contexto de auth. Corrigir `expense` e `payment` em `mvp-contas-pagar-receber`, que reescreve esses testes)
 
 ## 5. Frontend: consolidação de rotas
 
