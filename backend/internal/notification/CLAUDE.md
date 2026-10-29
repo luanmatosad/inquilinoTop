@@ -27,3 +27,7 @@ Envia e gerencia notificações por email/SMS/push. Depende de `EmailSender` int
 - Segurança: `ListByOwner` filtra por `owner_id` — vulnerabilidade de cross-owner leak foi corrigida (fix commit `c45e1d08`).
 - `ListPending` é para processamento interno (sem ownerID) — nunca expor diretamente na API pública.
 - `EmailSender` é interface — injetada no service para facilitar mock em testes.
+
+## Decisões
+
+- [0001 - Separação ListPending / ListByOwner](../../../docs/decisions/notification/0001-separacao-listpending-listbyowner.md)

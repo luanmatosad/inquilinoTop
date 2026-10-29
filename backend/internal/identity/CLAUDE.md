@@ -36,3 +36,8 @@ Gerencia registro, login, refresh, logout e 2FA (TOTP). Único módulo sem `auth
 
 - `io.ReadFull` obrigatório em `rand.Read` — não usar `rand.Read` direto (detecta leitura parcial).
 - `2fa/verify` usa `temp_token` — não Bearer token.
+
+## Decisões
+
+- [0001 - JWT RS256 em vez de HS256](../../../docs/decisions/identity/0001-jwt-rs256.md)
+- [0002 - Refresh token hash SHA-256 + fluxo 2FA com temp_token](../../../docs/decisions/identity/0002-refresh-token-hash-2fa-temp-token.md)

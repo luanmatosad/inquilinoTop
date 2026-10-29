@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# InquilinoTop
+## InquilinoTop
 
 Monorepo: gestão de imóveis para locação. Backend Go (`backend/`) substituindo progressivamente Supabase. Frontend Next.js 16 App Router (`frontend/`). Novas features SEMPRE no Go primeiro.
 

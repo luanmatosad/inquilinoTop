@@ -1,7 +1,7 @@
 /* ============================================================
    InquilinoTop — Colors & Type
    Tokens lifted from frontend/src/app/globals.css in the
-   luanmatosad/inquilinoTop codebase (HeroUI v3 + shadcn/ui
+   luanmatosad/inquilinoTop codebase (shadcn/ui
    on Tailwind v4). The system follows a Material 3–style
    "surface / container / on-*" vocabulary on top of a
    blue+orange duotone brand palette.
@@ -82,7 +82,7 @@
   /* Brand-adjacent channels (used in app already) */
   --color-whatsapp:    #25d366;
 
-  /* ---------- HeroUI / shadcn semantic aliases ---------- */
+  /* ---------- shadcn semantic aliases ---------- */
   --background:           var(--color-neutral-50);
   --foreground:           var(--color-neutral-900);
   --card:                 var(--color-neutral-0);

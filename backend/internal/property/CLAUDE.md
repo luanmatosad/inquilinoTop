@@ -36,3 +36,7 @@ Um módulo trata Property + Unit juntos. Repository interface tem 10 métodos (5
 - `GetUnit`, `UpdateUnit`, `DeleteUnit` AGORA recebem `ownerID` e fazem o JOIN com `properties` para validar owner (IDOR corrigido em commit `6269ffa`).
 - `CreatePropertyInput` é reutilizado em Update (sem campo `type` — type não muda após criação).
 - `handler.createUnit` passa `ownerID` ao service, verificação via JOIN em property.
+
+## Decisões
+
+- [0001 - SINGLE auto-cria Unit](../../../docs/decisions/property/0001-single-auto-cria-unit.md)

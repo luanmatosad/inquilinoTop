@@ -3,11 +3,11 @@ paths:
   - "frontend/**/*.{ts,tsx}"
 ---
 
-# Frontend — Next.js 15 + Migração Supabase → Go
+# Frontend — Next.js 16 + Migração Supabase → Go
 
 ## Arquitetura Atual
 
-**Next.js 15 App Router** com Supabase como backend provisório. O Go backend é o destino — não criar nova lógica Supabase em domínios já implementados no Go.
+**Next.js 16 App Router** com Supabase como backend provisório. O Go backend é o destino — não criar nova lógica Supabase em domínios já implementados no Go.
 
 ## Regra de Migração
 

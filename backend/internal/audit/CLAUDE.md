@@ -24,3 +24,7 @@ EventTypes: `LOGIN`, `LOGOUT`, `FAILED_LOGIN`, `CREATE`, `UPDATE`, `DELETE`, `PE
 - Sem soft-delete — logs são imutáveis.
 - `List` filtra por `owner_id` + query params opcionais (`from`, `to`, `event_type`).
 - `details` é `interface{}` no Go / `jsonb` no Postgres — aceita qualquer estrutura.
+
+## Decisões
+
+- [0001 - Logs de auditoria imutáveis, sem soft-delete](../../../docs/decisions/audit/0001-logs-imutaveis-sem-soft-delete.md)
