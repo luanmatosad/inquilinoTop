@@ -87,7 +87,7 @@ func TestE2E_CicloFiscalCompleto(t *testing.T) {
 		UnitID: unitID, TenantID: tn.ID,
 		StartDate: time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC),
 		RentAmount: 2500,
-		LateFeePercent: 0.10, DailyInterestPercent: 0.001,
+		LateFeePercent: 10, DailyInterestPercent: 0.1,
 		IPTUReimbursable: true, AnnualIPTUAmount: &iptu, IPTUYear: &year,
 	})
 	require.NoError(t, err)

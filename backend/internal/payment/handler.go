@@ -352,13 +352,14 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 // @Failure 409 {object} map[string]interface{}
 // @Router /payments/{id}/receipt [get]
 func (h *Handler) Receipt(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	userID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	rec, err := h.svc.BuildReceipt(r.Context(), id, ownerID)
+	rec, err := h.svc.BuildReceipt(r.Context(), id, orgID, userID)
 	if err != nil {
 		if h.svc.IsNotPaid(err) {
 			httputil.Err(w, http.StatusConflict, "PAYMENT_NOT_PAID", "payment não está PAID")
@@ -385,7 +386,7 @@ func (h *Handler) handleCreateCharge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 
 	var req CreateChargeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -398,7 +399,7 @@ func (h *Handler) handleCreateCharge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.svc.CreateCharge(r.Context(), id, ownerID, req.Method)
+	resp, err := h.svc.CreateCharge(r.Context(), id, orgID, req.Method)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "CREATE_CHARGE_FAILED", err.Error())
 		return
@@ -414,9 +415,9 @@ func (h *Handler) handleGetChargeStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 
-	status, err := h.svc.GetChargeStatus(r.Context(), id, ownerID)
+	status, err := h.svc.GetChargeStatus(r.Context(), id, orgID)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "GET_STATUS_FAILED", err.Error())
 		return
@@ -442,7 +443,7 @@ func (h *Handler) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 
 	var req CreatePayoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -458,7 +459,7 @@ func (h *Handler) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 		Document:   req.Destination.Document,
 	}
 
-	resp, err := h.svc.CreatePayout(r.Context(), id, ownerID, dest)
+	resp, err := h.svc.CreatePayout(r.Context(), id, orgID, dest)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "CREATE_PAYOUT_FAILED", err.Error())
 		return

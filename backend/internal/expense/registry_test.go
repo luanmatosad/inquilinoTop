@@ -18,10 +18,16 @@ import (
 
 var fixedNow = time.Date(2026, 6, 15, 14, 0, 0, 0, time.UTC)
 
-type fakeAuditor struct{ events []string }
+type fakeAuditor struct {
+	events []string
+	owners []uuid.UUID
+	users  []uuid.UUID
+}
 
-func (f *fakeAuditor) LogUpdate(_ context.Context, _ uuid.UUID, entityType string, _ uuid.UUID, _ uuid.UUID, _ string) {
+func (f *fakeAuditor) LogUpdate(_ context.Context, owner uuid.UUID, entityType string, _ uuid.UUID, user uuid.UUID, _ string) {
 	f.events = append(f.events, entityType)
+	f.owners = append(f.owners, owner)
+	f.users = append(f.users, user)
 }
 
 type regEnv struct {
@@ -349,4 +355,16 @@ func TestHandler_Summary(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), `"to_pay":{"count":1,"total":100}`)
 	assert.Contains(t, rr.Body.String(), `"overdue":{"count":1,"total":30}`)
 	assert.Contains(t, rr.Body.String(), `"paid":{"count":0,"total":0}`)
+}
+
+func TestService_Audit_UsaOUsuárioComoOwner(t *testing.T) {
+	e := newRegEnv()
+	x := e.add(t, 150, d(2026, 7, 20))
+	user := uuid.New()
+	_, err := e.svc.Pay(context.Background(), x.ID, e.org, user, expense.PayExpenseInput{PaidDate: d(2026, 6, 15)})
+	require.NoError(t, err)
+
+	require.Len(t, e.auditor.owners, 1)
+	assert.Equal(t, user, e.auditor.owners[0], "owner_id da auditoria é FK para users: precisa ser o usuário, não a organização")
+	assert.Equal(t, user, e.auditor.users[0])
 }

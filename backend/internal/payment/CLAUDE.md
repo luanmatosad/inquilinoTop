@@ -50,6 +50,8 @@ Factory: `provider.NewProvider(providerType, config)` — string `"asaas"|"sicoo
 - `GenerateMonth` é idempotente por constraint `(lease_id, competency, type)` (migration 000014).
 - `Update` com paid_date + status=PAID dispara cálculo de IRRF se RENT + tenant PJ.
 - `errors.Is` (não `strings.Contains`) para roteamento de erros no service.
+- Handlers de recibo, cobrança, status, repasse e configuração financeira escopam por `OrganizationIDFromCtx`. `OwnerIDFromCtx` é o usuário: só serve para `owner_id`/auditoria e para o locador do recibo (`BuildReceipt(id, orgID, userID)`).
+- `late_fee_percent`/`daily_interest_percent` do contrato são percentuais (2 = 2%): multa = bruto × percent / 100.
 - `financial_config` é escopada por `organization_id` (migration 000041; `owner_id` virou legado opcional). Uma configuração ativa por organização, garantida por índice único parcial que o upsert usa no `ON CONFLICT`.
 - Soft-delete em `DeleteFinancialConfig` (não DELETE real).
 

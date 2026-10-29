@@ -351,3 +351,49 @@ func TestHandler_List_Filtros(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments?lease_id=nao-uuid").Code)
 	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments/summary?to=x").Code)
 }
+
+// distinctAuthMW injeta usuário e organização com ids diferentes, como o JWT real faz.
+func distinctAuthMW(userID, orgID uuid.UUID) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := auth.WithOwnerIDOrgIDRole(r.Context(), userID, orgID, "admin")
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+func TestHandler_Receipt_UsaOrganizaçãoNãoOUsuário(t *testing.T) {
+	ts := newTestService()
+	userID, orgID, leaseID := uuid.New(), uuid.New(), uuid.New()
+	setupLease(ts, leaseID, orgID, 5, 0.1)
+	tenantID := ts.leaseReader.leases[leaseID].TenantID
+	ts.tenantReader.tenants[tenantID] = &tenant.Tenant{ID: tenantID, OrganizationID: orgID, PersonType: "PF"}
+	ts.ownerReader.owners[userID] = &payment.OwnerSummary{ID: userID, Name: "Locador"}
+	ts.unitReader.units[ts.leaseReader.leases[leaseID].UnitID] = &payment.UnitSummary{ID: ts.leaseReader.leases[leaseID].UnitID}
+	p, _ := ts.mockRepo.Create(context.Background(), userID, orgID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
+	})
+	ts.mockRepo.MarkPaid(context.Background(), p.ID, orgID, time.Now(), 0, 0, 0, 2000)
+
+	r := chi.NewRouter()
+	payment.NewHandler(ts.Service).Register(r, distinctAuthMW(userID, orgID), noopWriteMw, noopWriteMw)
+	rr := getPath(r, "/payments/"+p.ID.String()+"/receipt")
+
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), "Locador")
+}
+
+func TestHandler_UpdateConfig_GravaNaOrganização(t *testing.T) {
+	ts := newTestService()
+	userID, orgID := uuid.New(), uuid.New()
+	r := chi.NewRouter()
+	payment.NewHandler(ts.Service).Register(r, distinctAuthMW(userID, orgID), noopWriteMw, noopWriteMw)
+
+	req := httptest.NewRequest(http.MethodPut, "/payments/config", strings.NewReader(`{"provider":"MOCK","config":{"k":"v"}}`))
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), orgID.String(), "a configuração pertence à organização, não ao usuário")
+	assert.NotContains(t, rr.Body.String(), userID.String())
+}

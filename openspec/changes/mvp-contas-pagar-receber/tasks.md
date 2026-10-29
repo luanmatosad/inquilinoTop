@@ -42,5 +42,5 @@
 ## 6. Verificação
 
 - [x] 6.1 `make frontend-lint` e build sem erros
-- [ ] 6.2 Fluxo manual: contrato com cobranças, baixar uma em atraso, lançar despesa, baixar e estornar, conferir totais
+- [x] 6.2 Fluxo manual: contrato com cobranças, baixar uma em atraso, lançar despesa, baixar e estornar, conferir totais (feito no navegador em 2026-10-29: baixa de recebível atrasada com recibo, despesa lançada, baixada com valor diferente, estornada e baixa em lote; achou recibo/cobrança/config com id de usuário no lugar da organização e auditoria da baixa com FK inválida)
 - [x] 6.3 `openspec validate mvp-contas-pagar-receber`

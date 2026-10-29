@@ -6,6 +6,7 @@ import { goErrorInfo } from '@/lib/go/errors'
 import { Card } from '@/components/ui/card'
 import { PrintButton } from '@/components/financial/PrintButton'
 import { fmtDate, money } from '@/components/financial/shared'
+import { maskCpfCnpj } from '@/lib/masks'
 
 interface Party {
   name: string
@@ -62,8 +63,8 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
         </header>
 
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-          <div><dt className="text-muted-foreground">Locador</dt><dd className="font-medium">{receipt.owner.name}{receipt.owner.document ? ` · ${receipt.owner.document}` : ''}</dd></div>
-          <div><dt className="text-muted-foreground">Locatário</dt><dd className="font-medium">{receipt.tenant.name}{receipt.tenant.document ? ` · ${receipt.tenant.document}` : ''}</dd></div>
+          <div><dt className="text-muted-foreground">Locador</dt><dd className="font-medium">{receipt.owner.name}{receipt.owner.document ? ` · ${maskCpfCnpj(receipt.owner.document)}` : ''}</dd></div>
+          <div><dt className="text-muted-foreground">Locatário</dt><dd className="font-medium">{receipt.tenant.name}{receipt.tenant.document ? ` · ${maskCpfCnpj(receipt.tenant.document)}` : ''}</dd></div>
           <div className="sm:col-span-2"><dt className="text-muted-foreground">Imóvel</dt><dd className="font-medium">{[receipt.unit.label, receipt.unit.property_address].filter(Boolean).join(' · ') || '—'}</dd></div>
           <div><dt className="text-muted-foreground">Pago em</dt><dd className="font-medium">{fmtDate(receipt.paid_date)}</dd></div>
         </dl>

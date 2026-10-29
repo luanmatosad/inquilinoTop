@@ -343,8 +343,8 @@ func setupLeaseBasic(svc *testService, leaseID, ownerID uuid.UUID, rentAmount fl
 		StartDate:            startDate,
 		RentAmount:           rentAmount,
 		Status:               "ACTIVE",
-		LateFeePercent:       0.10,
-		DailyInterestPercent: 0.001,
+		LateFeePercent:       10,
+		DailyInterestPercent: 0.1,
 		IPTUReimbursable:     iptuReimbursable,
 	}
 	if annualIPTU > 0 {
@@ -470,7 +470,7 @@ func TestService_Update_StatusInválido(t *testing.T) {
 func TestService_Update_MarcarPago(t *testing.T) {
 	svc := newTestService()
 	ownerID, leaseID := uuid.New(), uuid.New()
-	setupLease(svc, leaseID, ownerID, 0.05, 0.001)
+	setupLease(svc, leaseID, ownerID, 5, 0.1)
 
 	p, _ := svc.mockRepo.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
@@ -495,7 +495,7 @@ func TestService_Enrich_NãoAtrasado(t *testing.T) {
 	svc := newTestService()
 	leaseID := uuid.New()
 	ownerID := uuid.New()
-	setupLease(svc, leaseID, ownerID, 0.10, 0.000333)
+	setupLease(svc, leaseID, ownerID, 10, 0.0333)
 
 	p := payment.Payment{
 		LeaseID: leaseID, OrganizationID: ownerID,
@@ -510,7 +510,7 @@ func TestService_Enrich_NãoAtrasado(t *testing.T) {
 func TestService_Enrich_Atrasado(t *testing.T) {
 	svc := newTestService()
 	leaseID, ownerID := uuid.New(), uuid.New()
-	setupLease(svc, leaseID, ownerID, 0.10, 0.001)
+	setupLease(svc, leaseID, ownerID, 10, 0.1)
 
 	p := payment.Payment{
 		LeaseID: leaseID, OrganizationID: ownerID,
@@ -610,7 +610,7 @@ func ptr[T any](v T) *T {
 func TestService_BuildReceipt_Pago(t *testing.T) {
 	svc := newTestService()
 	ownerID, leaseID := uuid.New(), uuid.New()
-	setupLease(svc, leaseID, ownerID, 0.05, 0.001)
+	setupLease(svc, leaseID, ownerID, 5, 0.1)
 
 	// Add tenant since the mock uses it for the receipt
 	tenantID := svc.leaseReader.leases[leaseID].TenantID
@@ -625,7 +625,7 @@ func TestService_BuildReceipt_Pago(t *testing.T) {
 	})
 	svc.mockRepo.MarkPaid(context.Background(), p.ID, ownerID, paidDate, 0, 0, 0, 2000)
 
-	rec, err := svc.BuildReceipt(context.Background(), p.ID, ownerID)
+	rec, err := svc.BuildReceipt(context.Background(), p.ID, ownerID, ownerID)
 	require.NoError(t, err)
 	assert.Equal(t, 2000.0, rec.Amounts.Gross)
 }
@@ -638,7 +638,7 @@ func TestService_BuildReceipt_NãoPago(t *testing.T) {
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
 
-	_, err := svc.BuildReceipt(context.Background(), p.ID, ownerID)
+	_, err := svc.BuildReceipt(context.Background(), p.ID, ownerID, ownerID)
 	require.Error(t, err)
 }
 
@@ -646,7 +646,7 @@ func TestService_BuildReceipt_NãoEncontrado(t *testing.T) {
 	svc := newTestService()
 	ownerID := uuid.New()
 
-	_, err := svc.BuildReceipt(context.Background(), uuid.New(), ownerID)
+	_, err := svc.BuildReceipt(context.Background(), uuid.New(), ownerID, ownerID)
 	require.Error(t, err)
 }
 
@@ -683,7 +683,7 @@ func TestService_Update_StatusInválidoNaCriação(t *testing.T) {
 func TestService_MarkPaid_PagoAnteriormente(t *testing.T) {
 	svc := newTestService()
 	ownerID, leaseID := uuid.New(), uuid.New()
-	setupLease(svc, leaseID, ownerID, 0.1, 0.001)
+	setupLease(svc, leaseID, ownerID, 10, 0.1)
 
 	tenantID := uuid.New()
 	tn := &tenant.Tenant{
@@ -878,8 +878,8 @@ func listSvc(now time.Time) (*testService, uuid.UUID, uuid.UUID) {
 	svc.Service.WithClock(func() time.Time { return now })
 	leaseID, orgID := uuid.New(), uuid.New()
 	setupLeaseBasic(svc, leaseID, orgID, 1000, time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC), false, 0)
-	svc.leaseReader.leases[leaseID].LateFeePercent = 0.02
-	svc.leaseReader.leases[leaseID].DailyInterestPercent = 0.001
+	svc.leaseReader.leases[leaseID].LateFeePercent = 2
+	svc.leaseReader.leases[leaseID].DailyInterestPercent = 0.1
 	return svc, leaseID, orgID
 }
 
@@ -976,4 +976,16 @@ func TestService_Summary_Vazio(t *testing.T) {
 	sum, err := svc.Summary(context.Background(), orgID, payment.PaymentFilter{})
 	require.NoError(t, err)
 	assert.Equal(t, payment.Summary{}, sum)
+}
+
+func TestService_Enrich_PercentuaisSãoEmPorcento(t *testing.T) {
+	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	svc, leaseID, orgID := listSvc(now)
+	l := svc.leaseReader.leases[leaseID]
+	l.LateFeePercent, l.DailyInterestPercent = 2, 0.033 // 2% de multa e 0,033% ao dia, como a tela envia
+	p := addPayment(svc, leaseID, orgID, time.Date(2026, 5, 16, 0, 0, 0, 0, time.UTC), 1500, "PENDING") // 30 dias
+
+	got := svc.Enrich(context.Background(), *p)
+	assert.InDelta(t, 30.0, got.LateFeeAmount, 0.001, "2% de 1500")
+	assert.InDelta(t, 14.85, got.InterestAmount, 0.001, "0,033%% x 30 dias de 1500")
 }

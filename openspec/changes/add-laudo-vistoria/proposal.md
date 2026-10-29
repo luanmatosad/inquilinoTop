@@ -23,7 +23,7 @@ Proprietários não têm como registrar o estado do imóvel na entrada e na saí
 
 ## Impact
 
-- **Backend**: novo `backend/internal/inspection/` (`model.go`, `repository.go`, `service.go`, `handler.go` + testes), migrations `000042`/`000043`, registro em `cmd/api/main.go`, ajuste de validação em `internal/document`, anotações Swagger.
+- **Backend**: novo `backend/internal/inspection/` (`model.go`, `repository.go`, `service.go`, `handler.go` + testes), migrations `000043`/`000044`, registro em `cmd/api/main.go`, ajuste de validação em `internal/document`, anotações Swagger.
 - **API**: `/api/v1/inspections` (CRUD, `complete`, `compare`), itens aninhados.
 - **Frontend**: novas rotas sob `src/app/owner/` (ou `inspections/`), componentes em `src/components/inspections/`, cliente Go API, schemas Zod em `src/lib/schemas.ts`. Componentes shadcn adicionais conforme necessário (`tabs`, `accordion`, `sheet`).
 - **Docs/rules**: atualizar `.claude/rules/domain-model.md` (hierarquia ganha Inspection; filtro por `organization_id`, ver ADR rbac-0002).

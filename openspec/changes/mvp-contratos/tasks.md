@@ -35,6 +35,6 @@
 ## 5. Verificação
 
 - [x] 5.1 `make frontend-lint` e build sem erros
-- [ ] 5.2 Fluxo manual: criar contrato com cobranças, tentar sobrepor, reajustar, renovar e encerrar
+- [x] 5.2 Fluxo manual: criar contrato com cobranças, tentar sobrepor, reajustar, renovar e encerrar (feito no navegador em 2026-10-29: criar com 6 cobranças, sobreposição barrada, reajustar, renovar e encerrar; achou lease_readjustments sem organization_id (migration 000042) e o cálculo de multa/juros aplicado como fração em vez de percentual)
 - [x] 5.3 Atualizar `CLAUDE.md` raiz se o status do módulo mudar
 - [x] 5.4 `openspec validate mvp-contratos`

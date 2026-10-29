@@ -97,5 +97,5 @@ type Repository interface {
 
 // Auditor registra baixa e estorno; *audit.Service satisfaz esta interface.
 type Auditor interface {
-	LogUpdate(ctx context.Context, ownerID uuid.UUID, entityType string, entityID uuid.UUID, userID uuid.UUID, ipAddress string)
+	LogUpdate(ctx context.Context, userAsOwner uuid.UUID, entityType string, entityID uuid.UUID, userID uuid.UUID, ipAddress string)
 }

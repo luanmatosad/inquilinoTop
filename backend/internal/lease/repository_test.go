@@ -25,7 +25,7 @@ func testDB(t *testing.T) *db.DB {
 	require.NoError(t, err)
 	require.NoError(t, db.RunMigrations(url, "../../migrations"))
 	t.Cleanup(func() {
-		d.Pool.Exec(context.Background(), "TRUNCATE organization_members, properties, units, leases, tenants, organizations, users RESTART IDENTITY CASCADE")
+		d.Pool.Exec(context.Background(), "TRUNCATE organization_members, lease_readjustments, properties, units, leases, tenants, organizations, users RESTART IDENTITY CASCADE")
 		d.Close()
 	})
 	return d
@@ -298,4 +298,34 @@ func TestLeaseRepository_End_SóContratoAtivoENãoEstendeFim(t *testing.T) {
 
 	_, err = repo.End(ctx, l.ID, orgID)
 	assert.ErrorIs(t, err, lease.ErrLeaseNotActive)
+}
+
+func TestReadjustmentRepository_CriaELista(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, ownerID := seedOrgAndUser(t, database)
+	unitID := seedUnit(t, database, seedProperty(t, database, orgID, ownerID))
+	tenantID := seedTenant(t, database, orgID, ownerID)
+	leases := lease.NewRepository(database)
+	readj := lease.NewReadjustmentRepository(database)
+
+	l, err := leases.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
+	require.NoError(t, err)
+
+	idx := "IGPM"
+	created, err := readj.Create(ctx, &lease.Readjustment{
+		LeaseID: l.ID, OrganizationID: orgID, AppliedAt: day(2026, 6, 1),
+		OldAmount: 1000, NewAmount: 1050, Percentage: 0.05, IndexName: &idx,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, orgID, created.OrganizationID)
+
+	list, err := readj.ListByLease(ctx, l.ID, orgID)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, 1050.0, list[0].NewAmount)
+
+	other, err := readj.ListByLease(ctx, l.ID, uuid.New())
+	require.NoError(t, err)
+	assert.Empty(t, other, "outra organização não vê o histórico")
 }

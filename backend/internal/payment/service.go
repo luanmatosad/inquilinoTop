@@ -166,8 +166,9 @@ func (s *Service) enrich(ctx context.Context, p Payment, leases map[uuid.UUID]*l
 		}
 		leases[p.LeaseID] = l
 	}
-	p.LateFeeAmount = round2(p.GrossAmount * l.LateFeePercent)
-	p.InterestAmount = round2(p.GrossAmount * l.DailyInterestPercent * float64(daysLate))
+	// late_fee_percent e daily_interest_percent são percentuais (2 = 2%), como validam os inputs do contrato.
+	p.LateFeeAmount = round2(p.GrossAmount * l.LateFeePercent / 100)
+	p.InterestAmount = round2(p.GrossAmount * l.DailyInterestPercent / 100 * float64(daysLate))
 	p.Status = "LATE"
 	return p
 }
@@ -204,8 +205,8 @@ func (s *Service) markPaid(ctx context.Context, id, orgID uuid.UUID, paidDate ti
 	if paidDate.After(current.DueDate) {
 		daysLate := int(paidDate.Sub(current.DueDate).Hours() / 24)
 		if daysLate > 0 {
-			lateFee = round2(current.GrossAmount * l.LateFeePercent)
-			interest = round2(current.GrossAmount * l.DailyInterestPercent * float64(daysLate))
+			lateFee = round2(current.GrossAmount * l.LateFeePercent / 100)
+			interest = round2(current.GrossAmount * l.DailyInterestPercent / 100 * float64(daysLate))
 		}
 	}
 
@@ -343,7 +344,9 @@ func dueDateForMonth(dueDay int, monthStart time.Time) time.Time {
 	return time.Date(y, m, day, 0, 0, 0, 0, time.UTC)
 }
 
-func (s *Service) BuildReceipt(ctx context.Context, id, orgID uuid.UUID) (*Receipt, error) {
+// BuildReceipt monta o recibo de uma cobrança paga. orgID escopa os dados; userID é o usuário
+// autenticado, exibido como locador (o ownerReader busca usuários, não organizações).
+func (s *Service) BuildReceipt(ctx context.Context, id, orgID, userID uuid.UUID) (*Receipt, error) {
 	p, err := s.repo.GetByID(ctx, id, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: %w", err)
@@ -359,7 +362,7 @@ func (s *Service) BuildReceipt(ctx context.Context, id, orgID uuid.UUID) (*Recei
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: load tenant: %w", err)
 	}
-	ow, err := s.ownerReader.GetByID(ctx, orgID)
+	ow, err := s.ownerReader.GetByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: load owner: %w", err)
 	}

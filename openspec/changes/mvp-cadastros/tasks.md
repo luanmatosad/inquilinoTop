@@ -46,5 +46,5 @@
 
 - [x] 7.1 Atualizar `CLAUDE.md` raiz (status Frontend dos módulos: Go API)
 - [x] 7.2 `make frontend-lint` e build sem erros
-- [ ] 7.3 Fluxo manual: criar imóvel SINGLE, unidade, inquilino PF, tentar duplicar CPF e unidade
+- [x] 7.3 Fluxo manual: criar imóvel SINGLE, unidade, inquilino PF, tentar duplicar CPF e unidade (feito no navegador em 2026-10-29: imóvel SINGLE com uma só Unidade 01, rótulo repetido, CPF inválido e duplicado barrados no campo)
 - [x] 7.4 `openspec validate mvp-cadastros`

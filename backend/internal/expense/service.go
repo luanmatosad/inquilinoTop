@@ -161,7 +161,7 @@ func (s *Service) Pay(ctx context.Context, id, orgID, userID uuid.UUID, in PayEx
 	if err != nil {
 		return nil, err
 	}
-	s.audit(ctx, orgID, userID, "expense:pay", id)
+	s.audit(ctx, userID, "expense:pay", id)
 	return e, nil
 }
 
@@ -174,13 +174,15 @@ func (s *Service) Unpay(ctx context.Context, id, orgID, userID uuid.UUID) (*Expe
 	if err != nil {
 		return nil, err
 	}
-	s.audit(ctx, orgID, userID, "expense:unpay", id)
+	s.audit(ctx, userID, "expense:unpay", id)
 	return s.withStatus(e), nil
 }
 
-func (s *Service) audit(ctx context.Context, orgID, userID uuid.UUID, entityType string, id uuid.UUID) {
+// audit registra a ação. O audit.Service espera o usuário como "owner" (FK para users) e lê a
+// organização do contexto da requisição; passar a organização aqui violaria a FK sem aviso.
+func (s *Service) audit(ctx context.Context, userID uuid.UUID, entityType string, id uuid.UUID) {
 	if s.auditor != nil {
-		s.auditor.LogUpdate(ctx, orgID, entityType, id, userID, "")
+		s.auditor.LogUpdate(ctx, userID, entityType, id, userID, "")
 	}
 }
 

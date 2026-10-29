@@ -41,6 +41,8 @@ Inputs:
 - `End` não recebe body — apenas id e ownerID. Nunca estende `end_date`: usa o menor entre o fim atual e hoje.
 - `Renew` pode omitir `rent_amount` (zero value no JSON); service decide se atualiza.
 - Deleção é soft-delete (`is_active=false`), distinto de `End` (muda apenas status).
+- `late_fee_percent` e `daily_interest_percent` são **percentuais** (2 = 2%); `payment.Enrich`/`markPaid` dividem por 100. `Readjust.percentage` é fração (0,05 = 5%).
+- `lease_readjustments` é escopada por `organization_id` (migration 000042; `owner_id` virou legado opcional).
 - `Readjust` exige percentage ∈ (0, 1] e lease ACTIVE. Não retroage sobre payments já gerados.
 - `payment_day` (migration 000017): obrigatório em `CreateLeaseInput` (1–31), usado como dia de vencimento por `payment.GenerateMonth`.
 - `scheduler.go`: stub (só registra log); **não** gera pagamentos.

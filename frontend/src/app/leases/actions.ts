@@ -108,11 +108,17 @@ export async function renewLease(id: string, values: RenewFormValues): Promise<L
     revalidatePath("/leases/" + id)
     return { success: true }
   } catch (error) {
-    const mapped = mapLeaseError(error, "Erro ao renovar contrato.")
-    // Na renovação o campo afetado é a nova data final, não end_date.
-    if (mapped.fieldErrors?.end_date) mapped.fieldErrors = { new_end_date: mapped.fieldErrors.end_date }
-    if (mapped.fieldErrors?.unit_id) mapped.fieldErrors = { new_end_date: mapped.fieldErrors.unit_id }
-    return mapped
+    const { code } = goErrorInfo(error)
+    // Na renovação o campo afetado é a nova data final, e o texto muda em relação à criação.
+    if (code === "INVALID_DATES") {
+      const message = "A nova data final deve ser posterior ao fim atual do contrato."
+      return { error: message, fieldErrors: { new_end_date: [message] } }
+    }
+    if (code === "LEASE_OVERLAP") {
+      const message = "Esta renovação invade o período de outro contrato ativo da unidade."
+      return { error: message, fieldErrors: { new_end_date: [message] } }
+    }
+    return mapLeaseError(error, "Erro ao renovar contrato.")
   }
 }
 

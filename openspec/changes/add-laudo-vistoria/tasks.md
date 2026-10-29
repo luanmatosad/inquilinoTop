@@ -1,7 +1,7 @@
 ## 1. Banco de dados
 
-- [ ] 1.1 Escrever `000042_create_inspections.up/down.sql` (tabela, FKs, CHECK de `type` e `status`, índice único parcial `(lease_id, type) WHERE is_active`)
-- [ ] 1.2 Escrever `000043_create_inspection_items.up/down.sql` (CHECK de `condition`, índice por `inspection_id`)
+- [ ] 1.1 Escrever `000043_create_inspections.up/down.sql` (tabela, FKs, CHECK de `type` e `status`, índice único parcial `(lease_id, type) WHERE is_active`)
+- [ ] 1.2 Escrever `000044_create_inspection_items.up/down.sql` (CHECK de `condition`, índice por `inspection_id`)
 - [ ] 1.3 Aplicar e reverter as migrations no Postgres de testes (`:5433`) sem erro
 
 ## 2. Backend: modelo e testes (TDD)
