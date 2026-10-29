@@ -3,6 +3,7 @@ package property
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -93,7 +94,26 @@ func (s *Service) CreateUnit(ctx context.Context, propertyID uuid.UUID, orgID uu
 	if _, err := s.repo.GetByID(ctx, propertyID, orgID); err != nil {
 		return nil, fmt.Errorf("property.svc: imóvel não encontrado ou sem permissão")
 	}
+	if err := s.ensureLabelFree(ctx, propertyID, uuid.Nil, in.Label); err != nil {
+		return nil, err
+	}
 	return s.repo.CreateUnit(ctx, propertyID, in)
+}
+
+// ensureLabelFree rejeita rótulo já usado por outra unidade ativa do imóvel, sem
+// diferenciar maiúsculas e espaços nas pontas. exceptID é a unidade em edição.
+func (s *Service) ensureLabelFree(ctx context.Context, propertyID, exceptID uuid.UUID, label string) error {
+	units, err := s.repo.ListUnits(ctx, propertyID)
+	if err != nil {
+		return fmt.Errorf("property.svc: listar unidades: %w", err)
+	}
+	want := strings.ToLower(strings.TrimSpace(label))
+	for _, u := range units {
+		if u.ID != exceptID && strings.ToLower(strings.TrimSpace(u.Label)) == want {
+			return ErrDuplicateUnitLabel
+		}
+	}
+	return nil
 }
 
 func (s *Service) GetUnit(ctx context.Context, id, orgID uuid.UUID) (*Unit, error) {
@@ -105,6 +125,13 @@ func (s *Service) ListUnits(ctx context.Context, propertyID uuid.UUID) ([]Unit, 
 }
 
 func (s *Service) UpdateUnit(ctx context.Context, id, orgID uuid.UUID, in CreateUnitInput) (*Unit, error) {
+	current, err := s.repo.GetUnit(ctx, id, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureLabelFree(ctx, current.PropertyID, id, in.Label); err != nil {
+		return nil, err
+	}
 	return s.repo.UpdateUnit(ctx, id, orgID, in)
 }
 

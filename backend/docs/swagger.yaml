@@ -261,6 +261,12 @@ definitions:
       name:
         maxLength: 200
         type: string
+      neighborhood:
+        maxLength: 100
+        type: string
+      postal_code:
+        description: PostalCode é o CEP com 8 dígitos, sem máscara.
+        type: string
       state:
         maxLength: 2
         type: string
@@ -275,6 +281,14 @@ definitions:
     type: object
   property.CreateUnitInput:
     properties:
+      area_m2:
+        type: number
+      bathrooms:
+        minimum: 0
+        type: integer
+      bedrooms:
+        minimum: 0
+        type: integer
       floor:
         maxLength: 50
         type: string
@@ -365,7 +379,15 @@ definitions:
     type: object
   tenant.CreateTenantInput:
     properties:
+      address_line:
+        maxLength: 500
+        type: string
+      city:
+        maxLength: 100
+        type: string
       document:
+        description: Document aceita CPF/CNPJ com ou sem máscara; o service grava
+          só dígitos.
         maxLength: 20
         type: string
       email:
@@ -374,6 +396,9 @@ definitions:
       name:
         maxLength: 200
         type: string
+      notes:
+        maxLength: 2000
+        type: string
       person_type:
         enum:
         - PF
@@ -381,6 +406,11 @@ definitions:
         type: string
       phone:
         maxLength: 20
+        type: string
+      postal_code:
+        description: PostalCode é o CEP com 8 dígitos, sem máscara.
+        type: string
+      state:
         type: string
     required:
     - name
@@ -1229,6 +1259,11 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "409":
+          description: DUPLICATE_UNIT_LABEL
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
       summary: Cria unidade em um imóvel
@@ -1314,6 +1349,16 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "400":
+          description: INVALID_DOCUMENT
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: DUPLICATE_DOCUMENT
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
       summary: Cria inquilino
@@ -1332,6 +1377,11 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: TENANT_HAS_ACTIVE_LEASE
           schema:
             additionalProperties: true
             type: object
@@ -1380,6 +1430,16 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: INVALID_DOCUMENT
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: DUPLICATE_DOCUMENT
           schema:
             additionalProperties: true
             type: object
@@ -1508,6 +1568,11 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: DUPLICATE_UNIT_LABEL
           schema:
             additionalProperties: true
             type: object

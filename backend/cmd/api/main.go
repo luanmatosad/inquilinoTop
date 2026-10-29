@@ -97,7 +97,7 @@ func main() {
 	propertyHandler := property.NewHandler(propertySvc)
 
 	tenantRepo := tenant.NewRepository(database)
-	tenantSvc := tenant.NewService(tenantRepo)
+	tenantSvc := tenant.NewService(tenantRepo).WithLeaseChecker(tenant.NewLeaseChecker(database))
 	tenantHandler := tenant.NewHandler(tenantSvc)
 
 	leaseRepo := lease.NewRepository(database)

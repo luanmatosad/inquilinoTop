@@ -93,3 +93,63 @@ func TestRepository_CreateUnit(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Apt 101", unit.Label)
 }
+
+func TestRepository_Property_CamposDeEndereço(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, userID := seedOrgAndUser(t, database)
+	repo := property.NewRepository(database)
+
+	cep, bairro := "01310100", "Bela Vista"
+	p, err := repo.Create(ctx, userID, orgID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio", PostalCode: &cep, Neighborhood: &bairro})
+	require.NoError(t, err)
+	require.NotNil(t, p.PostalCode)
+	assert.Equal(t, cep, *p.PostalCode)
+
+	novo := "04538133"
+	up, err := repo.Update(ctx, p.ID, orgID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio", PostalCode: &novo, Neighborhood: &bairro})
+	require.NoError(t, err)
+	assert.Equal(t, novo, *up.PostalCode)
+
+	got, err := repo.GetByID(ctx, p.ID, orgID)
+	require.NoError(t, err)
+	assert.Equal(t, bairro, *got.Neighborhood)
+}
+
+func TestRepository_Unit_MedidasEÍndiceÚnico(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, userID := seedOrgAndUser(t, database)
+	repo := property.NewRepository(database)
+	p, _ := repo.Create(ctx, userID, orgID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+
+	area, quartos, banheiros := 54.5, 2, 1
+	u, err := repo.CreateUnit(ctx, p.ID, property.CreateUnitInput{Label: "Apto 101", AreaM2: &area, Bedrooms: &quartos, Bathrooms: &banheiros})
+	require.NoError(t, err)
+	require.NotNil(t, u.AreaM2)
+	assert.InDelta(t, 54.5, *u.AreaM2, 0.001)
+	assert.Equal(t, 2, *u.Bedrooms)
+
+	_, err = repo.CreateUnit(ctx, p.ID, property.CreateUnitInput{Label: "APTO 101"})
+	assert.ErrorIs(t, err, property.ErrDuplicateUnitLabel)
+
+	u2, err := repo.CreateUnit(ctx, p.ID, property.CreateUnitInput{Label: "Apto 102"})
+	require.NoError(t, err)
+	_, err = repo.UpdateUnit(ctx, u2.ID, orgID, property.CreateUnitInput{Label: "apto 101"})
+	assert.ErrorIs(t, err, property.ErrDuplicateUnitLabel)
+}
+
+func TestRepository_Unit_RótuloLiberadoAposSoftDelete(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, userID := seedOrgAndUser(t, database)
+	repo := property.NewRepository(database)
+	p, _ := repo.Create(ctx, userID, orgID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+
+	u, err := repo.CreateUnit(ctx, p.ID, property.CreateUnitInput{Label: "101"})
+	require.NoError(t, err)
+	require.NoError(t, repo.DeleteUnit(ctx, u.ID, orgID))
+
+	_, err = repo.CreateUnit(ctx, p.ID, property.CreateUnitInput{Label: "101"})
+	assert.NoError(t, err)
+}

@@ -212,3 +212,85 @@ func TestHandler_List_Válido(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, rr.Code)
 }
+
+func postTenant(t *testing.T, r http.Handler, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/tenants", bytes.NewReader([]byte(body)))
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	return rr
+}
+
+func newTenantRouter(svc *tenant.Service, ownerID uuid.UUID) http.Handler {
+	r := chi.NewRouter()
+	tenant.NewHandler(svc).Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
+	return r
+}
+
+func TestHandler_Create_DocumentoInválido_400(t *testing.T) {
+	r := newTenantRouter(tenant.NewService(newMockTenantRepo()), uuid.New())
+	rr := postTenant(t, r, `{"name":"Ana","person_type":"PF","document":"52998224726"}`)
+	require.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "INVALID_DOCUMENT")
+}
+
+func TestHandler_Create_DocumentoDuplicado_409(t *testing.T) {
+	r := newTenantRouter(tenant.NewService(newMockTenantRepo()), uuid.New())
+	first := postTenant(t, r, `{"name":"Ana","person_type":"PF","document":"529.982.247-25"}`)
+	require.Equal(t, http.StatusCreated, first.Code)
+	assert.Contains(t, first.Body.String(), `"52998224725"`)
+
+	rr := postTenant(t, r, `{"name":"Outra","person_type":"PF","document":"52998224725"}`)
+	require.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "DUPLICATE_DOCUMENT")
+}
+
+func TestHandler_Create_CEPInválido_400(t *testing.T) {
+	r := newTenantRouter(tenant.NewService(newMockTenantRepo()), uuid.New())
+	rr := postTenant(t, r, `{"name":"Ana","person_type":"PF","postal_code":"123"}`)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestHandler_Update_DocumentoDuplicado_409(t *testing.T) {
+	ownerID := uuid.New()
+	svc := tenant.NewService(newMockTenantRepo())
+	r := newTenantRouter(svc, ownerID)
+	pf := "PF"
+	a, err := svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{Name: "Ana", PersonType: &pf, Document: sp(cpfA)})
+	require.NoError(t, err)
+	b, err := svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{Name: "Bia", PersonType: &pf, Document: sp(cpfB)})
+	require.NoError(t, err)
+	_ = a
+
+	req := httptest.NewRequest(http.MethodPut, "/tenants/"+b.ID.String(), bytes.NewReader([]byte(`{"name":"Bia","person_type":"PF","document":"`+cpfA+`"}`)))
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "DUPLICATE_DOCUMENT")
+}
+
+func TestHandler_Delete_ContratoAtivo_409(t *testing.T) {
+	ownerID := uuid.New()
+	checker := &fakeLeaseChecker{active: map[uuid.UUID]bool{}}
+	svc := tenant.NewService(newMockTenantRepo()).WithLeaseChecker(checker)
+	r := newTenantRouter(svc, ownerID)
+	pf := "PF"
+	a, err := svc.Create(context.Background(), ownerID, ownerID, tenant.CreateTenantInput{Name: "Ana", PersonType: &pf})
+	require.NoError(t, err)
+	checker.active[a.ID] = true
+
+	req := httptest.NewRequest(http.MethodDelete, "/tenants/"+a.ID.String(), nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "TENANT_HAS_ACTIVE_LEASE")
+}
+
+func TestHandler_List_Vazia(t *testing.T) {
+	r := newTenantRouter(tenant.NewService(newMockTenantRepo()), uuid.New())
+	req := httptest.NewRequest(http.MethodGet, "/tenants", nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), `"data":[]`)
+}

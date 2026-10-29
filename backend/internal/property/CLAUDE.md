@@ -6,8 +6,8 @@ Um módulo trata Property + Unit juntos. Repository interface tem 10 métodos (5
 
 | Struct | Campos chave |
 |---|---|
-| `Property` | id, owner_id, type (RESIDENTIAL\|SINGLE), name, address_line?, city?, state?, is_active |
-| `Unit` | id, property_id, label, floor?, notes?, is_active |
+| `Property` | id, organization_id, type (RESIDENTIAL\|SINGLE), name, address_line?, city?, state?, postal_code? (8 dígitos), neighborhood?, is_active |
+| `Unit` | id, property_id, label, floor?, notes?, area_m2? (>0), bedrooms? (>=0), bathrooms? (>=0), is_active |
 
 ## Rotas
 
@@ -29,6 +29,8 @@ Um módulo trata Property + Unit juntos. Repository interface tem 10 métodos (5
 - **SINGLE auto-unit**: `CreateProperty(SINGLE)` cria automaticamente `Unit{Label: "Unidade 01", Notes: "Unidade criada automaticamente"}` — feito no service.
 - `CreateUnit` verifica `ownerID` via `GetByID` antes de criar (autorização).
 - Soft-delete em todas as deleções (`is_active=false`).
+- **Rótulo de unidade único** por imóvel entre ativas, sem diferenciar maiúsculas/espaços: service checa via `ListUnits` e o índice `uq_units_property_label_active` é a rede contra corrida. Erro `ErrDuplicateUnitLabel` (envolve `apierr.ErrConflict`) → 409 `DUPLICATE_UNIT_LABEL`.
+- `postal_code` chega sem máscara (validator `len=8,numeric`); medidas negativas → 400.
 - Unit ops (get/update/delete) NÃO verificam `ownerID` diretamente — confiar no property_id.
 
 ## Gotchas

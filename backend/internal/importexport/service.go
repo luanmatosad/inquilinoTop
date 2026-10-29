@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/property"
 	"github.com/inquilinotop/api/internal/tenant"
+	"github.com/inquilinotop/api/pkg/brdoc"
 )
 
 type Service struct {
@@ -82,6 +83,12 @@ func (s *Service) importTenant(ctx context.Context, ownerID uuid.UUID, record ma
 	cpf := record["cpf"]
 	if cpf == "" {
 		return &ValidationError{Field: "cpf", Message: "CPF é obrigatório"}
+	}
+
+	// Mesma regra do cadastro: só dígitos e CPF válido, para casar com o documento gravado.
+	cpf = brdoc.OnlyDigits(cpf)
+	if !brdoc.ValidCPF(cpf) {
+		return &ValidationError{Field: "cpf", Message: "CPF inválido"}
 	}
 
 	existing, err := s.tenantRepo.GetByField(ctx, ownerID, "document", cpf)

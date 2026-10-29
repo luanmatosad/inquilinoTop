@@ -1339,6 +1339,13 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "409": {
+                        "description": "DUPLICATE_UNIT_LABEL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             }
@@ -1477,6 +1484,20 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "400": {
+                        "description": "INVALID_DOCUMENT",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "DUPLICATE_DOCUMENT",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             }
@@ -1555,6 +1576,20 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "400": {
+                        "description": "INVALID_DOCUMENT",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "DUPLICATE_DOCUMENT",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             },
@@ -1583,6 +1618,13 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "TENANT_HAS_ACTIVE_LEASE",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1757,6 +1799,13 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "DUPLICATE_UNIT_LABEL",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2259,6 +2308,14 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 200
                 },
+                "neighborhood": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "postal_code": {
+                    "description": "PostalCode é o CEP com 8 dígitos, sem máscara.",
+                    "type": "string"
+                },
                 "state": {
                     "type": "string",
                     "maxLength": 2
@@ -2278,6 +2335,17 @@ const docTemplate = `{
                 "label"
             ],
             "properties": {
+                "area_m2": {
+                    "type": "number"
+                },
+                "bathrooms": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "bedrooms": {
+                    "type": "integer",
+                    "minimum": 0
+                },
                 "floor": {
                     "type": "string",
                     "maxLength": 50
@@ -2407,7 +2475,16 @@ const docTemplate = `{
                 "person_type"
             ],
             "properties": {
+                "address_line": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "city": {
+                    "type": "string",
+                    "maxLength": 100
+                },
                 "document": {
+                    "description": "Document aceita CPF/CNPJ com ou sem máscara; o service grava só dígitos.",
                     "type": "string",
                     "maxLength": 20
                 },
@@ -2419,6 +2496,10 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 200
                 },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
                 "person_type": {
                     "type": "string",
                     "enum": [
@@ -2429,6 +2510,13 @@ const docTemplate = `{
                 "phone": {
                     "type": "string",
                     "maxLength": 20
+                },
+                "postal_code": {
+                    "description": "PostalCode é o CEP com 8 dígitos, sem máscara.",
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
                 }
             }
         }

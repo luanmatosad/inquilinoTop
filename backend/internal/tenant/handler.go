@@ -62,11 +62,17 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param body body CreateTenantInput true "Dados do inquilino"
 // @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{} "INVALID_DOCUMENT"
+// @Failure 409 {object} map[string]interface{} "DUPLICATE_DOCUMENT"
 // @Router /tenants [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	var in CreateTenantInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", err.Error())
+		return
+	}
+	if err := validator.Validate(in); err != nil {
+		httputil.ValidationErr(w, err)
 		return
 	}
 
@@ -75,6 +81,9 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 
 	t, err := h.svc.Create(r.Context(), userID, orgID, in)
 	if err != nil {
+		if writeDomainErr(w, err) {
+			return
+		}
 		httputil.Err(w, http.StatusBadRequest, "CREATE_FAILED", err.Error())
 		return
 	}
@@ -119,6 +128,8 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 // @Param id path string true "ID do inquilino"
 // @Param body body CreateTenantInput true "Dados do inquilino"
 // @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{} "INVALID_DOCUMENT"
+// @Failure 409 {object} map[string]interface{} "DUPLICATE_DOCUMENT"
 // @Router /tenants/{id} [put]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -146,6 +157,9 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "inquilino não encontrado")
 			return
 		}
+		if writeDomainErr(w, err) {
+			return
+		}
 		httputil.Err(w, http.StatusBadRequest, "UPDATE_FAILED", err.Error())
 		return
 	}
@@ -158,6 +172,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path string true "ID do inquilino"
 // @Success 200 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{} "TENANT_HAS_ACTIVE_LEASE"
 // @Router /tenants/{id} [delete]
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -175,8 +190,26 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "inquilino não encontrado")
 			return
 		}
+		if writeDomainErr(w, err) {
+			return
+		}
 		httputil.Err(w, http.StatusInternalServerError, "DELETE_FAILED", err.Error())
 		return
 	}
 	httputil.OK(w, map[string]bool{"deleted": true})
+}
+
+// writeDomainErr traduz erros de regra do cadastro para HTTP; devolve false se err não for um deles.
+func writeDomainErr(w http.ResponseWriter, err error) bool {
+	switch {
+	case errors.Is(err, ErrInvalidDocument):
+		httputil.Err(w, http.StatusBadRequest, "INVALID_DOCUMENT", "documento inválido para o tipo de pessoa")
+	case errors.Is(err, ErrDuplicateDocument):
+		httputil.Err(w, http.StatusConflict, "DUPLICATE_DOCUMENT", "já existe inquilino com esse documento")
+	case errors.Is(err, ErrHasActiveLease):
+		httputil.Err(w, http.StatusConflict, "TENANT_HAS_ACTIVE_LEASE", "inquilino possui contrato ativo")
+	default:
+		return false
+	}
+	return true
 }
