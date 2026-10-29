@@ -119,8 +119,8 @@ func TestPaymentRepository_Update_MarkAsPaid(t *testing.T) {
 
 	paidDate := time.Now()
 	p, err = repo.Update(context.Background(), p.ID, orgID, payment.UpdatePaymentInput{
-		Status:    "PAID",
-		PaidDate:  &paidDate,
+		Status:      "PAID",
+		PaidDate:    &paidDate,
 		GrossAmount: 1000,
 	})
 	require.NoError(t, err)
@@ -275,4 +275,52 @@ func TestPaymentRepository_DeactivateFuturePending_OutraOrganização(t *testing
 	res, err := repo.DeactivateFuturePending(ctx, leaseID, uuid.New(), time.Now())
 	require.NoError(t, err)
 	assert.Equal(t, 0, res.Deactivated)
+}
+
+func TestPaymentRepository_List_Filtros(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, ownerID, leaseID := seedLease(t, database)
+	repo := payment.NewRepository(database)
+	today := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
+
+	mk := func(due time.Time, comp string) *payment.Payment {
+		p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{
+			LeaseID: leaseID, DueDate: due, GrossAmount: 1000, Type: "RENT", Competency: &comp,
+		})
+		require.NoError(t, err)
+		return p
+	}
+	vencida := mk(today.AddDate(0, 0, -10), "2026-04")
+	hoje := mk(today, "2026-06")
+	futura := mk(today.AddDate(0, 1, 0), "2026-07")
+	paga := mk(today.AddDate(0, -1, 0), "2026-05")
+	paidDate := today
+	_, err := repo.Update(ctx, paga.ID, orgID, payment.UpdatePaymentInput{Status: "PAID", PaidDate: &paidDate, GrossAmount: 1000})
+	require.NoError(t, err)
+
+	ids := func(f payment.PaymentFilter) []uuid.UUID {
+		list, err := repo.List(ctx, orgID, f, today)
+		require.NoError(t, err)
+		out := []uuid.UUID{}
+		for _, p := range list {
+			out = append(out, p.ID)
+		}
+		return out
+	}
+	assert.Len(t, ids(payment.PaymentFilter{}), 4)
+	assert.ElementsMatch(t, []uuid.UUID{vencida.ID}, ids(payment.PaymentFilter{Status: "LATE"}))
+	assert.ElementsMatch(t, []uuid.UUID{hoje.ID, futura.ID}, ids(payment.PaymentFilter{Status: "PENDING"}))
+	assert.ElementsMatch(t, []uuid.UUID{paga.ID}, ids(payment.PaymentFilter{Status: "PAID"}))
+
+	from, to := today.AddDate(0, 0, -10), today
+	assert.ElementsMatch(t, []uuid.UUID{vencida.ID, hoje.ID}, ids(payment.PaymentFilter{From: &from, To: &to}), "extremidades inclusivas")
+
+	other := uuid.New()
+	assert.Empty(t, ids(payment.PaymentFilter{LeaseID: &other}))
+	assert.Len(t, ids(payment.PaymentFilter{LeaseID: &leaseID}), 4)
+
+	empty, err := repo.List(ctx, uuid.New(), payment.PaymentFilter{}, today)
+	require.NoError(t, err)
+	assert.Empty(t, empty, "isolamento por organização")
 }

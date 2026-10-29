@@ -11,6 +11,8 @@ import (
 )
 
 var (
+	// ErrInvalidFilter: status de filtro desconhecido (HTTP 400).
+	ErrInvalidFilter = errors.New("filtro inválido")
 	ErrInvalidMonth   = errors.New("mês inválido")
 	ErrLeaseNotActive = errors.New("contrato não ativo")
 	ErrIPTUMissing    = errors.New("IPTU não configurado")
@@ -85,13 +87,36 @@ type DeactivateResult struct {
 	NeedsReview int `json:"needs_review"`
 }
 
+// PaymentFilter restringe a listagem e o resumo. Status: PENDING (a vencer), LATE (vencida) ou PAID.
+// From/To filtram o vencimento, inclusive nas extremidades.
+type PaymentFilter struct {
+	Status  string
+	From    *time.Time
+	To      *time.Time
+	LeaseID *uuid.UUID
+}
+
+// Bucket agrupa quantidade e valor total.
+type Bucket struct {
+	Count int     `json:"count"`
+	Total float64 `json:"total"`
+}
+
+// Summary totaliza o período: a receber (a vencer), vencidos (valor atualizado com multa e juros) e recebidos.
+type Summary struct {
+	ToReceive Bucket `json:"to_receive"`
+	Overdue   Bucket `json:"overdue"`
+	Paid      Bucket `json:"paid"`
+}
+
 type Repository interface {
 	Create(ctx context.Context, userID, orgID uuid.UUID, in CreatePaymentInput) (*Payment, error)
 	CreateIfAbsent(ctx context.Context, userID, orgID uuid.UUID, in CreatePaymentInput) (*Payment, bool, error)
 	GetByID(ctx context.Context, id, orgID uuid.UUID) (*Payment, error)
 	GetByChargeID(ctx context.Context, chargeID string) (*Payment, error)
 	ListByLease(ctx context.Context, leaseID, orgID uuid.UUID) ([]Payment, error)
-	ListByOwner(ctx context.Context, orgID uuid.UUID, statusFilter string) ([]Payment, error)
+	// List filtra em SQL por status, vencimento e contrato; today separa a vencer de vencida.
+	List(ctx context.Context, orgID uuid.UUID, f PaymentFilter, today time.Time) ([]Payment, error)
 	// DeactivateFuturePending retira (is_active=false) as cobranças PENDING com vencimento depois de after
 	// e sem charge_id. É a única exceção à imutabilidade de payment (ADR payment-0003).
 	DeactivateFuturePending(ctx context.Context, leaseID, orgID uuid.UUID, after time.Time) (DeactivateResult, error)

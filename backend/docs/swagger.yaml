@@ -84,6 +84,13 @@ definitions:
       tenant_name:
         type: string
     type: object
+  expense.Bucket:
+    properties:
+      count:
+        type: integer
+      total:
+        type: number
+    type: object
   expense.CreateExpenseInput:
     properties:
       amount:
@@ -108,6 +115,55 @@ definitions:
     - category
     - description
     - due_date
+    type: object
+  expense.Expense:
+    properties:
+      amount:
+        type: number
+      category:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      organization_id:
+        type: string
+      paid_amount:
+        type: number
+      paid_date:
+        type: string
+      status:
+        description: Status é PENDING, PAID ou LATE (PENDING vencida, derivado na
+          leitura).
+        type: string
+      unit_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  expense.PayExpenseInput:
+    properties:
+      paid_amount:
+        type: number
+      paid_date:
+        type: string
+    required:
+    - paid_date
+    type: object
+  expense.Summary:
+    properties:
+      overdue:
+        $ref: '#/definitions/expense.Bucket'
+      paid:
+        $ref: '#/definitions/expense.Bucket'
+      to_pay:
+        $ref: '#/definitions/expense.Bucket'
     type: object
   identity.UpsertNotificationPreferencesInput:
     properties:
@@ -416,6 +472,13 @@ definitions:
     required:
     - rent_amount
     type: object
+  payment.Bucket:
+    properties:
+      count:
+        type: integer
+      total:
+        type: number
+    type: object
   payment.CreatePaymentInput:
     properties:
       competency:
@@ -440,6 +503,15 @@ definitions:
     - due_date
     - gross_amount
     - type
+    type: object
+  payment.Summary:
+    properties:
+      overdue:
+        $ref: '#/definitions/payment.Bucket'
+      paid:
+        $ref: '#/definitions/payment.Bucket'
+      to_receive:
+        $ref: '#/definitions/payment.Bucket'
     type: object
   payment.UpdatePaymentInput:
     properties:
@@ -908,6 +980,25 @@ paths:
       - dashboard
   /expenses:
     get:
+      description: 'Filtros: status (PENDING a vencer | LATE vencida | PAID), from/to
+        (vencimento, inclusive) e unit_id.'
+      parameters:
+      - description: PENDING, LATE ou PAID
+        in: query
+        name: status
+        type: string
+      - description: Vencimento a partir de (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: Vencimento até (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      - description: ID da unidade
+        in: query
+        name: unit_id
+        type: string
       produces:
       - application/json
       responses:
@@ -916,9 +1007,14 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
-      summary: Lista todas as despesas do owner autenticado
+      summary: Lista as despesas da organização
       tags:
       - expenses
   /expenses/{id}:
@@ -965,9 +1061,116 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "409":
+          description: EXPENSE_LOCKED
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
       summary: Atualiza despesa
+      tags:
+      - expenses
+  /expenses/{id}/pay:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da despesa
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Data e valor pagos
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/expense.PayExpenseInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/expense.Expense'
+        "404":
+          description: NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: EXPENSE_ALREADY_PAID
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Dá baixa em uma despesa
+      tags:
+      - expenses
+  /expenses/{id}/unpay:
+    post:
+      parameters:
+      - description: ID da despesa
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/expense.Expense'
+        "404":
+          description: NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: EXPENSE_NOT_PAID
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Estorna a baixa de uma despesa
+      tags:
+      - expenses
+  /expenses/summary:
+    get:
+      description: Totais a vencer, vencidos e pagos, por vencimento entre from e
+        to.
+      parameters:
+      - description: Vencimento a partir de (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: Vencimento até (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      - description: ID da unidade
+        in: query
+        name: unit_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/expense.Summary'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Resumo das despesas no período
       tags:
       - expenses
   /fiscal/annual-report:
@@ -1337,10 +1540,24 @@ paths:
       - rbac
   /payments:
     get:
+      description: 'Filtros: status (PENDING a vencer | LATE vencida, com multa e
+        juros | PAID), from/to (vencimento, inclusive) e lease_id.'
       parameters:
-      - description: Filtro de status (PENDING|PAID|LATE)
+      - description: PENDING, LATE ou PAID
         in: query
         name: status
+        type: string
+      - description: Vencimento a partir de (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: Vencimento até (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      - description: ID do contrato
+        in: query
+        name: lease_id
         type: string
       produces:
       - application/json
@@ -1350,9 +1567,14 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
-      summary: Lista todos os pagamentos do owner autenticado
+      summary: Lista as cobranças da organização
       tags:
       - payments
   /payments/{id}:
@@ -1428,6 +1650,40 @@ paths:
       security:
       - BearerAuth: []
       summary: Recibo mensal (status=PAID)
+      tags:
+      - payments
+  /payments/summary:
+    get:
+      description: Totais a receber, vencidos (valor atualizado com multa e juros)
+        e recebidos, por vencimento entre from e to.
+      parameters:
+      - description: Vencimento a partir de (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: Vencimento até (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      - description: ID do contrato
+        in: query
+        name: lease_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/payment.Summary'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Resumo das cobranças no período
       tags:
       - payments
   /properties:

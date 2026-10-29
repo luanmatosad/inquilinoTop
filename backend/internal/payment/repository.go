@@ -119,30 +119,49 @@ func (r *pgRepository) ListByLease(ctx context.Context, leaseID, orgID uuid.UUID
 	return list, nil
 }
 
-func (r *pgRepository) ListByOwner(ctx context.Context, orgID uuid.UUID, statusFilter string) ([]Payment, error) {
-	query := `SELECT ` + paymentCols + ` FROM payments WHERE organization_id=$1 AND is_active=true`
-	args := []interface{}{orgID}
-	if statusFilter != "" {
-		query += ` AND status=$2`
-		args = append(args, statusFilter)
+// List aplica os filtros em SQL. $1 é a organização e $2 a data de hoje; um status LATE guardado
+// com vencimento futuro seria dado inconsistente, então "vencida" é sempre decidida pela data.
+func (r *pgRepository) List(ctx context.Context, orgID uuid.UUID, f PaymentFilter, today time.Time) ([]Payment, error) {
+	// "$2::date IS NOT NULL" mantém $2 referenciado em qualquer filtro (o Postgres rejeita parâmetro sobrando).
+	query := `SELECT ` + paymentCols + ` FROM payments WHERE organization_id=$1 AND is_active=true AND $2::date IS NOT NULL`
+	args := []interface{}{orgID, today}
+	switch f.Status {
+	case "PENDING":
+		query += ` AND status<>'PAID' AND due_date >= $2`
+	case "LATE":
+		query += ` AND status<>'PAID' AND due_date < $2`
+	case "PAID":
+		query += ` AND status='PAID'`
 	}
-	query += ` ORDER BY due_date DESC`
+	if f.From != nil {
+		args = append(args, *f.From)
+		query += fmt.Sprintf(` AND due_date >= $%d`, len(args))
+	}
+	if f.To != nil {
+		args = append(args, *f.To)
+		query += fmt.Sprintf(` AND due_date <= $%d`, len(args))
+	}
+	if f.LeaseID != nil {
+		args = append(args, *f.LeaseID)
+		query += fmt.Sprintf(` AND lease_id = $%d`, len(args))
+	}
+	query += ` ORDER BY due_date DESC, created_at DESC`
 
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("payment.repo: list by owner: %w", err)
+		return nil, fmt.Errorf("payment.repo: list: %w", err)
 	}
 	defer rows.Close()
 	var list []Payment
 	for rows.Next() {
 		var p Payment
 		if err := scanPaymentRows(rows, &p); err != nil {
-			return nil, fmt.Errorf("payment.repo: list by owner scan: %w", err)
+			return nil, fmt.Errorf("payment.repo: list scan: %w", err)
 		}
 		list = append(list, p)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("payment.repo: list by owner rows: %w", err)
+		return nil, fmt.Errorf("payment.repo: list rows: %w", err)
 	}
 	return list, nil
 }

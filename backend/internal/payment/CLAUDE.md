@@ -10,6 +10,8 @@ Vinculado a Lease. Sem Delete (pagamentos são imutáveis); única exceção: `D
 
 | Método | Rota | Retorna |
 |---|---|---|
+| GET | /api/v1/payments?status=&from=&to=&lease_id= | lista da organização, com LATE, multa e juros |
+| GET | /api/v1/payments/summary?from=&to=&lease_id= | `{to_receive, overdue, paid}` com `{count, total}` |
 | GET | /api/v1/leases/{leaseId}/payments | lista por lease |
 | POST | /api/v1/leases/{leaseId}/payments | 201 payment |
 | GET | /api/v1/payments/{id} | payment |
@@ -38,6 +40,9 @@ Factory: `provider.NewProvider(providerType, config)` — string `"asaas"|"sicoo
 
 ## Gotchas
 
+- **Filtro `status`**: `PENDING` = a vencer, `LATE` = não paga e vencida, `PAID`; decidido em SQL pela data, não pelo status gravado. `from`/`to` filtram o vencimento, inclusive nas pontas.
+- **Resumo**: `overdue` soma o valor atualizado (bruto + multa + juros); `paid` soma o líquido quando existe, senão o bruto. É calculado no service sobre a lista filtrada (adequado ao porte do MVP; paginação futura exigirá agregar em SQL).
+- A listagem da organização agora passa por `Enrich` (antes só `Get` e `ListByLease` calculavam LATE/multa/juros).
 - `leaseID` vem do path; não vai no body de `CreatePaymentInput`.
 - `payments.is_active` (migration 000038): só `lease.End` desativa, via `LeaseHooks.CancelFuturePending` (pendentes futuras sem `charge_id`). Leituras filtram `is_active=true`.
 - `LeaseHooks` (`lease_hooks.go`) implementa `lease.PaymentHooks` sem `lease` importar `payment`.

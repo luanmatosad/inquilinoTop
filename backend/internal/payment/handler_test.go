@@ -165,20 +165,20 @@ func TestHandler_Update_BodyInválido(t *testing.T) {
 
 func setupLeaseInHandler(ts *testService, leaseID, ownerID uuid.UUID) {
 	l := &lease.Lease{
-		ID:         leaseID,
-		OrganizationID:    ownerID,
-		TenantID:   uuid.New(),
-		StartDate:  time.Now().AddDate(0, -6, 0),
-		RentAmount: 2000,
-		Status:     "ACTIVE",
+		ID:             leaseID,
+		OrganizationID: ownerID,
+		TenantID:       uuid.New(),
+		StartDate:      time.Now().AddDate(0, -6, 0),
+		RentAmount:     2000,
+		Status:         "ACTIVE",
 	}
 	ts.leaseReader.leases[leaseID] = l
 
 	t := &tenant.Tenant{
-		ID:         l.TenantID,
-		OrganizationID:    ownerID,
-		Name:       "Tenant Test",
-		PersonType: "PF",
+		ID:             l.TenantID,
+		OrganizationID: ownerID,
+		Name:           "Tenant Test",
+		PersonType:     "PF",
 	}
 	ts.addTenant(t)
 }
@@ -305,4 +305,49 @@ func TestHandler_ListByOwner_ComFiltroStatus(t *testing.T) {
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func payRouter(ts *testService, orgID uuid.UUID) http.Handler {
+	r := chi.NewRouter()
+	payment.NewHandler(ts.Service).Register(r, noopAuthMWWithOwnerID(orgID), noopWriteMw, noopWriteMw)
+	return r
+}
+
+func getPath(r http.Handler, path string) *httptest.ResponseRecorder {
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path, nil))
+	return rr
+}
+
+func TestHandler_Summary_RotaNãoÉTratadaComoID(t *testing.T) {
+	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	ts, leaseID, orgID := listSvc(now)
+	addPayment(ts, leaseID, orgID, time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC), 1000, "PENDING")
+
+	rr := getPath(payRouter(ts, orgID), "/payments/summary")
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), `"to_receive":{"count":1,"total":1000}`)
+	assert.Contains(t, rr.Body.String(), `"overdue":{"count":0,"total":0}`)
+}
+
+func TestHandler_List_Filtros(t *testing.T) {
+	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	ts, leaseID, orgID := listSvc(now)
+	addPayment(ts, leaseID, orgID, time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC), 1000, "PENDING")
+	addPayment(ts, leaseID, orgID, time.Date(2026, 7, 5, 0, 0, 0, 0, time.UTC), 1000, "PENDING")
+	r := payRouter(ts, orgID)
+
+	rr := getPath(r, "/payments?status=LATE")
+	require.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), `"status":"LATE"`)
+	assert.Contains(t, rr.Body.String(), `"late_fee_amount":20`)
+
+	rr = getPath(r, "/payments?status=PAID")
+	require.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), `"data":[]`)
+
+	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments?status=XYZ").Code)
+	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments?from=15/06/2026").Code)
+	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments?lease_id=nao-uuid").Code)
+	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments/summary?to=x").Code)
 }

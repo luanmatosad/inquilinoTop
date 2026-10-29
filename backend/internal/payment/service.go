@@ -20,10 +20,29 @@ type Service struct {
 	unitReader   UnitReader
 	ownerReader  OwnerReader
 	irrf         IRRFCalculator
+	loc          *time.Location
+	now          func() time.Time
 }
 
 func NewService(repo Repository, lr LeaseReader, tr TenantReader, ur UnitReader, ow OwnerReader, irrf IRRFCalculator) *Service {
-	return &Service{repo: repo, leaseReader: lr, tenantReader: tr, unitReader: ur, ownerReader: ow, irrf: irrf}
+	return &Service{repo: repo, leaseReader: lr, tenantReader: tr, unitReader: ur, ownerReader: ow, irrf: irrf, loc: time.UTC, now: time.Now}
+}
+
+// WithLocation define o fuso usado para decidir o que é "hoje" (vencida ou a vencer).
+func (s *Service) WithLocation(loc *time.Location) *Service {
+	s.loc = loc
+	return s
+}
+
+// WithClock troca o relógio (testes).
+func (s *Service) WithClock(now func() time.Time) *Service {
+	s.now = now
+	return s
+}
+
+func (s *Service) today() time.Time {
+	y, m, d := s.now().In(s.loc).Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
 func (s *Service) Create(ctx context.Context, userID, orgID uuid.UUID, in CreatePaymentInput) (*Payment, error) {
@@ -54,30 +73,98 @@ func (s *Service) ListByLease(ctx context.Context, leaseID, orgID uuid.UUID) ([]
 	if err != nil {
 		return nil, err
 	}
+	leases := map[uuid.UUID]*lease.Lease{}
 	for i, p := range list {
-		list[i] = s.Enrich(ctx, p)
+		list[i] = s.enrich(ctx, p, leases)
 	}
 	return list, nil
 }
 
-func (s *Service) ListByOwner(ctx context.Context, orgID uuid.UUID, statusFilter string) ([]Payment, error) {
-	return s.repo.ListByOwner(ctx, orgID, statusFilter)
+func validStatusFilter(status string) bool {
+	switch status {
+	case "", "PENDING", "LATE", "PAID":
+		return true
+	}
+	return false
 }
 
-func (s *Service) Enrich(ctx context.Context, p Payment) Payment {
-	if p.PaidDate != nil {
-		return p
+// List devolve as cobranças da organização filtradas em SQL, já com LATE, multa e juros calculados.
+func (s *Service) List(ctx context.Context, orgID uuid.UUID, f PaymentFilter) ([]Payment, error) {
+	if !validStatusFilter(f.Status) {
+		return nil, ErrInvalidFilter
 	}
-	if !time.Now().After(p.DueDate) {
-		return p
-	}
-	l, err := s.leaseReader.GetByID(ctx, p.LeaseID, p.OrganizationID)
+	list, err := s.repo.List(ctx, orgID, f, s.today())
 	if err != nil {
+		return nil, err
+	}
+	leases := map[uuid.UUID]*lease.Lease{}
+	for i, p := range list {
+		list[i] = s.enrich(ctx, p, leases)
+	}
+	return list, nil
+}
+
+// ListByOwner lista as cobranças da organização, opcionalmente só de um status.
+func (s *Service) ListByOwner(ctx context.Context, orgID uuid.UUID, statusFilter string) ([]Payment, error) {
+	return s.List(ctx, orgID, PaymentFilter{Status: statusFilter})
+}
+
+// Summary totaliza o período por vencimento. "Vencidos" soma o valor atualizado (bruto + multa + juros);
+// "recebidos" soma o líquido quando existe, senão o bruto. Filtro de status não se aplica.
+func (s *Service) Summary(ctx context.Context, orgID uuid.UUID, f PaymentFilter) (Summary, error) {
+	f.Status = ""
+	list, err := s.List(ctx, orgID, f)
+	if err != nil {
+		return Summary{}, err
+	}
+	var sum Summary
+	add := func(b *Bucket, v float64) {
+		b.Count++
+		b.Total = round2(b.Total + v)
+	}
+	for _, p := range list {
+		switch {
+		case p.Status == "PAID":
+			if p.NetAmount != nil {
+				add(&sum.Paid, *p.NetAmount)
+			} else {
+				add(&sum.Paid, p.GrossAmount)
+			}
+		case p.Status == "LATE":
+			add(&sum.Overdue, p.GrossAmount+p.LateFeeAmount+p.InterestAmount)
+		default:
+			add(&sum.ToReceive, p.GrossAmount)
+		}
+	}
+	return sum, nil
+}
+
+// Enrich calcula LATE, multa e juros de uma cobrança não paga e vencida.
+func (s *Service) Enrich(ctx context.Context, p Payment) Payment {
+	return s.enrich(ctx, p, map[uuid.UUID]*lease.Lease{})
+}
+
+// enrich reaproveita leases já lidos (cache por chamada) para não consultar o mesmo contrato N vezes.
+func (s *Service) enrich(ctx context.Context, p Payment, leases map[uuid.UUID]*lease.Lease) Payment {
+	if p.PaidDate != nil || p.Status == "PAID" {
 		return p
 	}
-	daysLate := int(time.Now().Sub(p.DueDate).Hours() / 24)
+	now := s.now()
+	if !now.After(p.DueDate) {
+		return p
+	}
+	daysLate := int(now.Sub(p.DueDate).Hours() / 24)
 	if daysLate <= 0 {
 		return p
+	}
+	l, ok := leases[p.LeaseID]
+	if !ok {
+		var err error
+		l, err = s.leaseReader.GetByID(ctx, p.LeaseID, p.OrganizationID)
+		if err != nil {
+			return p
+		}
+		leases[p.LeaseID] = l
 	}
 	p.LateFeeAmount = round2(p.GrossAmount * l.LateFeePercent)
 	p.InterestAmount = round2(p.GrossAmount * l.DailyInterestPercent * float64(daysLate))

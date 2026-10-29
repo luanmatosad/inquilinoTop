@@ -447,16 +447,102 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Filtros: status (PENDING a vencer | LATE vencida | PAID), from/to (vencimento, inclusive) e unit_id.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "expenses"
                 ],
-                "summary": "Lista todas as despesas do owner autenticado",
+                "summary": "Lista as despesas da organização",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "PENDING, LATE ou PAID",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vencimento a partir de (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vencimento até (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID da unidade",
+                        "name": "unit_id",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Totais a vencer, vencidos e pagos, por vencimento entre from e to.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Resumo das despesas no período",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vencimento a partir de (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vencimento até (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID da unidade",
+                        "name": "unit_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/expense.Summary"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -507,6 +593,13 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "409": {
+                        "description": "EXPENSE_LOCKED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             },
@@ -535,6 +628,112 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/{id}/pay": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Dá baixa em uma despesa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da despesa",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Data e valor pagos",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/expense.PayExpenseInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/expense.Expense"
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "EXPENSE_ALREADY_PAID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/{id}/unpay": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Estorna a baixa de uma despesa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da despesa",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/expense.Expense"
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "EXPENSE_NOT_PAID",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1120,24 +1319,102 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Filtros: status (PENDING a vencer | LATE vencida, com multa e juros | PAID), from/to (vencimento, inclusive) e lease_id.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "payments"
                 ],
-                "summary": "Lista todos os pagamentos do owner autenticado",
+                "summary": "Lista as cobranças da organização",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Filtro de status (PENDING|PAID|LATE)",
+                        "description": "PENDING, LATE ou PAID",
                         "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vencimento a partir de (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vencimento até (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "lease_id",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Totais a receber, vencidos (valor atualizado com multa e juros) e recebidos, por vencimento entre from e to.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Resumo das cobranças no período",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vencimento a partir de (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vencimento até (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "lease_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/payment.Summary"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2239,6 +2516,17 @@ const docTemplate = `{
                 }
             }
         },
+        "expense.Bucket": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "number"
+                }
+            }
+        },
         "expense.CreateExpenseInput": {
             "type": "object",
             "required": [
@@ -2269,6 +2557,79 @@ const docTemplate = `{
                 },
                 "due_date": {
                     "type": "string"
+                }
+            }
+        },
+        "expense.Expense": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "paid_amount": {
+                    "type": "number"
+                },
+                "paid_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Status é PENDING, PAID ou LATE (PENDING vencida, derivado na leitura).",
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "expense.PayExpenseInput": {
+            "type": "object",
+            "required": [
+                "paid_date"
+            ],
+            "properties": {
+                "paid_amount": {
+                    "type": "number"
+                },
+                "paid_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "expense.Summary": {
+            "type": "object",
+            "properties": {
+                "overdue": {
+                    "$ref": "#/definitions/expense.Bucket"
+                },
+                "paid": {
+                    "$ref": "#/definitions/expense.Bucket"
+                },
+                "to_pay": {
+                    "$ref": "#/definitions/expense.Bucket"
                 }
             }
         },
@@ -2718,6 +3079,17 @@ const docTemplate = `{
                 }
             }
         },
+        "payment.Bucket": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "number"
+                }
+            }
+        },
         "payment.CreatePaymentInput": {
             "type": "object",
             "required": [
@@ -2749,6 +3121,20 @@ const docTemplate = `{
                         "EXPENSE",
                         "OTHER"
                     ]
+                }
+            }
+        },
+        "payment.Summary": {
+            "type": "object",
+            "properties": {
+                "overdue": {
+                    "$ref": "#/definitions/payment.Bucket"
+                },
+                "paid": {
+                    "$ref": "#/definitions/payment.Bucket"
+                },
+                "to_receive": {
+                    "$ref": "#/definitions/payment.Bucket"
                 }
             }
         },

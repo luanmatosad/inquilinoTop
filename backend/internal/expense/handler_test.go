@@ -14,13 +14,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/expense"
 	"github.com/inquilinotop/api/pkg/apierr"
+	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// testOrg é a organização injetada pelo middleware de teste.
+var testOrg = uuid.New()
+
+// noopAuthMW injeta owner e organização fixos, como o middleware real faz após validar o JWT.
 func noopAuthMW(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r)
+		ctx := auth.WithOwnerIDOrgIDRole(r.Context(), testOrg, testOrg, "admin")
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
@@ -189,8 +195,7 @@ func TestHandler_Delete_NãoEncontrado(t *testing.T) {
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
-	// mock retorna erro genérico (não apierr.ErrNotFound), então 500
-	assert.Equal(t, http.StatusInternalServerError, rr.Code)
+	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
 func TestHandler_Delete_Válido(t *testing.T) {
@@ -200,10 +205,9 @@ func TestHandler_Delete_Válido(t *testing.T) {
 	r := chi.NewRouter()
 	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
 
-	// noopAuthMW não injeta ownerID, então OwnerIDFromCtx retorna uuid.Nil
-	ownerID := uuid.Nil
+	ownerID := testOrg
 	unitID := uuid.New()
-	e, _ := svc.Create(context.Background(), ownerID, expense.CreateExpenseInput{
+	e, _ := svc.Create(context.Background(), uuid.New(), ownerID, expense.CreateExpenseInput{
 		UnitID: unitID, Description: "Luz", Amount: 100, DueDate: time.Now(), Category: "ELECTRICITY",
 	})
 

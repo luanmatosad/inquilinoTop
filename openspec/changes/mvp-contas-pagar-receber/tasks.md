@@ -1,27 +1,27 @@
 ## 1. Banco de dados
 
-- [ ] 1.1 Escrever `000040_add_expense_payment_fields` up/down (`status` com CHECK, `paid_date`, `paid_amount`, índice `(organization_id, status, due_date)`)
-- [ ] 1.2 Aplicar e reverter no Postgres de testes (`:5433`) e confirmar que despesas existentes ficam `PENDING`
+- [x] 1.1 Escrever `000040_add_expense_payment_fields` up/down (`status` com CHECK, `paid_date`, `paid_amount`, índice `(organization_id, status, due_date)`)
+- [x] 1.2 Aplicar e reverter no Postgres de testes (`:5433`) e confirmar que despesas existentes ficam `PENDING`
 
 ## 2. Backend: expense (TDD)
 
-- [ ] 2.1 Atualizar `model.go`: campos novos, `PayExpenseInput`, filtros (`status`, `from`, `to`, `unit_id`) e interface `Repository`
-- [ ] 2.2 Escrever testes de service: baixa (valor padrão e diferente), baixa repetida, estorno, estorno de pendente, `LATE` derivado, bloqueio de `amount`/`due_date` em paga
-- [ ] 2.3 Implementar service e repository (filtros em SQL com `organization_id`, `LATE` por condição de data)
-- [ ] 2.4 Testes de integração do repositório (filtros, limites do período inclusivos, isolamento por organização)
-- [ ] 2.5 Implementar resumo `GET /api/v1/expenses/summary` (a vencer, vencidos, pagos) com testes
-- [ ] 2.6 Handler: `POST /expenses/{id}/pay`, `POST /expenses/{id}/unpay`, filtros na listagem, códigos `EXPENSE_ALREADY_PAID` e `EXPENSE_LOCKED`, Swagger
-- [ ] 2.7 Registrar baixa e estorno no `audit`
-- [ ] 2.8 Atualizar `internal/expense/CLAUDE.md` e checar uso de despesas em `internal/dashboard` e `internal/fiscal`
+- [x] 2.1 Atualizar `model.go`: campos novos, `PayExpenseInput`, filtros (`status`, `from`, `to`, `unit_id`) e interface `Repository`
+- [x] 2.2 Escrever testes de service: baixa (valor padrão e diferente), baixa repetida, estorno, estorno de pendente, `LATE` derivado, bloqueio de `amount`/`due_date` em paga
+- [x] 2.3 Implementar service e repository (filtros em SQL com `organization_id`, `LATE` por condição de data; `Create` agora grava `owner_id` com o usuário, e não com o id da organização, que violava a FK para `users` fora do caso legado em que org e usuário compartilham id)
+- [x] 2.4 Testes de integração do repositório (filtros, limites do período inclusivos, isolamento por organização)
+- [x] 2.5 Implementar resumo `GET /api/v1/expenses/summary` (a vencer, vencidos, pagos) com testes
+- [x] 2.6 Handler: `POST /expenses/{id}/pay`, `POST /expenses/{id}/unpay`, filtros na listagem, códigos `EXPENSE_ALREADY_PAID` e `EXPENSE_LOCKED`, Swagger
+- [x] 2.7 Registrar baixa e estorno no `audit`
+- [x] 2.8 Atualizar `internal/expense/CLAUDE.md` e checar uso de despesas em `internal/dashboard` e `internal/fiscal` (dashboard não lê despesas; fiscal soma despesas `TAX` por vencimento, independente do status)
 
 ## 3. Backend: payment
 
-- [ ] 3.1 Testes de filtros em `GET /payments` (`status`, `from`, `to`, `lease_id`) incluindo `LATE`
-- [ ] 3.2 Implementar filtros no repositório e service, preservando o cálculo de multa e juros
-- [ ] 3.3 Implementar `GET /api/v1/payments/summary` (rota registrada antes de `/payments/{id}`) com testes
-- [ ] 3.4 Conferir baixa de cobrança paga (409) e recibo de cobrança não paga (409); corrigir se divergir
-- [ ] 3.5 Atualizar Swagger (`swag init`) e `internal/payment/CLAUDE.md`
-- [ ] 3.6 `make test-backend` e `make test-backend-integration` sem falhas
+- [x] 3.1 Testes de filtros em `GET /payments` (`status`, `from`, `to`, `lease_id`) incluindo `LATE`
+- [x] 3.2 Implementar filtros no repositório e service, preservando o cálculo de multa e juros (a listagem da organização não calculava LATE, multa e juros; agora passa por `Enrich`, com cache de contratos por chamada)
+- [x] 3.3 Implementar `GET /api/v1/payments/summary` (rota registrada antes de `/payments/{id}`) com testes
+- [x] 3.4 Conferir baixa de cobrança paga (409) e recibo de cobrança não paga (409); corrigir se divergir
+- [x] 3.5 Atualizar Swagger (`swag init`) e `internal/payment/CLAUDE.md`
+- [ ] 3.6 `make test-backend` e `make test-backend-integration` sem falhas (`expense`, `payment` (exceto 1 teste), `lease`, `dashboard`, `tenant`, `property` passam; restam falhas preexistentes em `audit`, `support` e `TestFinancialRepository_DeleteFinancialConfig_SoftDelete`)
 
 ## 4. Frontend: dados
 

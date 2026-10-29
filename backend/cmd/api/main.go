@@ -21,11 +21,11 @@ import (
 	"github.com/google/uuid"
 	httpSwagger "github.com/swaggo/http-swagger"
 
+	_ "github.com/inquilinotop/api/docs"
 	"github.com/inquilinotop/api/internal/audit"
 	"github.com/inquilinotop/api/internal/dashboard"
 	"github.com/inquilinotop/api/internal/document"
 	"github.com/inquilinotop/api/internal/expense"
-	_ "github.com/inquilinotop/api/docs"
 	"github.com/inquilinotop/api/internal/fiscal"
 	"github.com/inquilinotop/api/internal/identity"
 	"github.com/inquilinotop/api/internal/importexport"
@@ -34,8 +34,8 @@ import (
 	"github.com/inquilinotop/api/internal/organization"
 	"github.com/inquilinotop/api/internal/payment"
 	"github.com/inquilinotop/api/internal/property"
-	"github.com/inquilinotop/api/internal/rbac"
 	"github.com/inquilinotop/api/internal/ratelimit"
+	"github.com/inquilinotop/api/internal/rbac"
 	"github.com/inquilinotop/api/internal/support"
 	"github.com/inquilinotop/api/internal/tenant"
 	"github.com/inquilinotop/api/pkg/auth"
@@ -100,6 +100,12 @@ func main() {
 	tenantSvc := tenant.NewService(tenantRepo).WithLeaseChecker(tenant.NewLeaseChecker(database))
 	tenantHandler := tenant.NewHandler(tenantSvc)
 
+	appLoc, err := time.LoadLocation(envOr("APP_TIMEZONE", "America/Sao_Paulo"))
+	if err != nil {
+		slog.Error("invalid APP_TIMEZONE", "error", err)
+		os.Exit(1)
+	}
+
 	leaseRepo := lease.NewRepository(database)
 	leaseReadjRepo := lease.NewReadjustmentRepository(database)
 	indexRepo := lease.NewIndexRepository(database)
@@ -113,21 +119,16 @@ func main() {
 	ownerReader := &payment.OwnerReaderAdapter{Repo: identityRepoForPayment}
 
 	paymentRepo := payment.NewRepository(database)
-	paymentSvc := payment.NewService(paymentRepo, leaseRepo, tenantRepo, unitReader, ownerReader, irrTable)
+	paymentSvc := payment.NewService(paymentRepo, leaseRepo, tenantRepo, unitReader, ownerReader, irrTable).WithLocation(appLoc)
 	paymentHandler := payment.NewHandler(paymentSvc)
 	leaseSvc.WithPayments(payment.NewLeaseHooks(paymentSvc))
 
 	dashboardRepo := dashboard.NewRepository(database)
-	appLoc, err := time.LoadLocation(envOr("APP_TIMEZONE", "America/Sao_Paulo"))
-	if err != nil {
-		slog.Error("invalid APP_TIMEZONE", "error", err)
-		os.Exit(1)
-	}
 	dashboardSvc := dashboard.NewService(dashboardRepo, appLoc)
 	dashboardHandler := dashboard.NewHandler(dashboardSvc)
 
 	expenseRepo := expense.NewRepository(database)
-	expenseSvc := expense.NewService(expenseRepo)
+	expenseSvc := expense.NewService(expenseRepo).WithAuditor(auditSvc).WithLocation(appLoc)
 	expenseHandler := expense.NewHandler(expenseSvc)
 
 	fiscalAggRepo := fiscal.NewAggregateRepository(database)
@@ -158,8 +159,8 @@ func main() {
 
 	rateLimiter := ratelimit.NewMiddleware(ratelimit.Config{
 		IPRate:    100 / 60.0,
-		IPBurst:  100,
-		UserRate: 200 / 60.0,
+		IPBurst:   100,
+		UserRate:  200 / 60.0,
 		UserBurst: 200,
 	})
 
@@ -188,7 +189,7 @@ func main() {
 		slog.Error("failed to initialize metrics", "error", err)
 	}
 
-r := chi.NewRouter()
+	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(sentryMiddleware)
@@ -260,7 +261,7 @@ r := chi.NewRouter()
 		Handler:      r,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
-		IdleTimeout: 60 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	idleConnsClosed := make(chan struct{})
@@ -272,7 +273,7 @@ r := chi.NewRouter()
 		slog.Info("shutting down server...")
 		notifWorkerCancel()
 		idxScheduler.Stop()
-		
+
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
@@ -440,4 +441,3 @@ func initSentry() {
 
 	slog.Info("Sentry initialized", "dsn", dsn)
 }
-
