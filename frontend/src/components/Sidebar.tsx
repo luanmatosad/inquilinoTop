@@ -14,8 +14,6 @@ const navItems = [
   { href: '/properties', label: 'Imóveis', icon: 'home_work' },
   { href: '/tenants', label: 'Inquilinos', icon: 'groups' },
   { href: '/leases', label: 'Contratos', icon: 'description' },
-  { href: '/payments', label: 'Pagamentos', icon: 'payments' },
-  { href: '/expenses', label: 'Despesas', icon: 'receipt' },
   { href: '/import', label: 'Importar', icon: 'importar' },
 ]
 
@@ -23,9 +21,7 @@ const financialItems = [
   { href: '/financial/dashboard', label: 'Dashboard', icon: 'wallet' },
   { href: '/financial/receivables', label: 'Contas a Receber', icon: 'receber' },
   { href: '/financial/payables', label: 'Contas a Pagar', icon: 'pagar' },
-  { href: '/financial/reconciliation', label: 'Conciliação Bancária', icon: 'conciliacao' },
-  { href: '/financial/transfers', label: 'Repasses', icon: 'repasses' },
-  { href: '/financial/commissions', label: 'Comissões', icon: 'comissoes' },
+  // Conciliação, Repasses e Comissões ainda não têm backend: as rotas existem, mas ficam fora do menu.
 ]
 
 const supportItems = [

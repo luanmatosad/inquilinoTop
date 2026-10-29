@@ -25,22 +25,22 @@
 
 ## 4. Frontend: dados
 
-- [ ] 4.1 Atualizar `GoExpense`/`GoPayment` e `src/data/financial/dal.ts` com status real, valores pagos e resumos
-- [ ] 4.2 Actions para baixa, estorno, baixa em lote, filtros e resumos em `src/app/financial/actions.ts`, tratando 404/409/422
-- [ ] 4.3 Remover mapeamentos que inventavam status de despesa
+- [x] 4.1 Atualizar `GoExpense`/`GoPayment` e `src/data/financial/dal.ts` com status real, valores pagos e resumos
+- [x] 4.2 Actions para baixa, estorno, baixa em lote, filtros e resumos em `src/app/financial/actions.ts`, tratando 404/409/422 (também corrigido: criação de despesa e de cobrança enviava `YYYY-MM-DD`, que o backend em Go rejeita; agora vai em RFC3339)
+- [x] 4.3 Remover mapeamentos que inventavam status de despesa
 
 ## 5. Frontend: telas
 
-- [ ] 5.1 `/financial/receivables`: filtros (período, status, imóvel), cartões de totais, badge de atraso, valor atualizado, ação "Dar baixa" e link do recibo
-- [ ] 5.2 `/financial/payables`: filtros, cartões de totais, badge de atraso, "Dar baixa" e "Estornar"
-- [ ] 5.3 Baixa em lote em contas a pagar (seleção múltipla, data única, relatório de falhas)
-- [ ] 5.4 Estados de carregamento, vazio e erro nas duas telas
-- [ ] 5.5 Redirecionar `/payments` e `/expenses` para as telas financeiras (mantendo criação de despesa acessível)
-- [ ] 5.6 Ajustar `Sidebar`: manter Contas a Receber e a Pagar e ocultar Conciliação, Repasses e Comissões (rotas preservadas)
-- [ ] 5.7 Aviso na primeira abertura sobre despesas antigas `PENDING` e como baixá-las em lote
+- [x] 5.1 `/financial/receivables`: filtros (período, status, imóvel), cartões de totais, badge de atraso, valor atualizado, ação "Dar baixa" e link do recibo
+- [x] 5.2 `/financial/payables`: filtros, cartões de totais, badge de atraso, "Dar baixa" e "Estornar"
+- [x] 5.3 Baixa em lote em contas a pagar (seleção múltipla, data única, relatório de falhas)
+- [x] 5.4 Estados de carregamento, vazio e erro nas duas telas
+- [x] 5.5 Redirecionar `/payments` e `/expenses` para as telas financeiras (mantendo criação de despesa acessível) (redirects permanentes em `next.config.ts`; "Nova despesa" fica em Contas a Pagar; a criação manual de cobrança avulsa saiu das telas: cobranças nascem dos contratos, e `PaymentDialog` segue disponível no código)
+- [x] 5.6 Ajustar `Sidebar`: manter Contas a Receber e a Pagar e ocultar Conciliação, Repasses e Comissões (rotas preservadas)
+- [x] 5.7 Aviso na primeira abertura sobre despesas antigas `PENDING` e como baixá-las em lote
 
 ## 6. Verificação
 
-- [ ] 6.1 `make frontend-lint` e build sem erros
+- [x] 6.1 `make frontend-lint` e build sem erros
 - [ ] 6.2 Fluxo manual: contrato com cobranças, baixar uma em atraso, lançar despesa, baixar e estornar, conferir totais
-- [ ] 6.3 `openspec validate mvp-contas-pagar-receber`
+- [x] 6.3 `openspec validate mvp-contas-pagar-receber`

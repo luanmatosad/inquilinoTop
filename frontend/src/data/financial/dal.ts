@@ -1,5 +1,56 @@
 export type TransactionStatus = 'PAID' | 'PENDING' | 'OVERDUE'
 
+/** Status devolvido pelo backend: PENDING (a vencer), LATE (vencida) ou PAID. */
+export type LedgerStatus = 'PENDING' | 'LATE' | 'PAID'
+
+export interface Bucket {
+  count: number
+  total: number
+}
+
+export interface ReceivablesSummary {
+  to_receive: Bucket
+  overdue: Bucket
+  paid: Bucket
+}
+
+export interface PayablesSummary {
+  to_pay: Bucket
+  overdue: Bucket
+  paid: Bucket
+}
+
+export interface ReceivableRow {
+  id: string
+  leaseId: string
+  dueDate: string
+  paidDate: string | null
+  competency: string | null
+  description: string | null
+  type: 'RENT' | 'DEPOSIT' | 'EXPENSE' | 'OTHER'
+  status: LedgerStatus
+  /** Valor bruto da cobrança. */
+  amount: number
+  lateFee: number
+  interest: number
+  /** Bruto + multa + juros (valor atualizado quando vencida). */
+  updatedTotal: number
+  netAmount: number | null
+  chargeMethod: string | null
+}
+
+export interface PayableRow {
+  id: string
+  unitId: string
+  dueDate: string
+  paidDate: string | null
+  description: string
+  category: 'ELECTRICITY' | 'WATER' | 'CONDO' | 'TAX' | 'MAINTENANCE' | 'OTHER'
+  status: LedgerStatus
+  amount: number
+  paidAmount: number | null
+}
+
 export interface Receivable {
   id: string
   dueDate: string

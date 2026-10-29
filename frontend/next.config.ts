@@ -14,6 +14,9 @@ const nextConfig: NextConfig = {
       { source: "/owner/properties/:path*", destination: "/properties/:path*", permanent: true },
       { source: "/owner/tenants", destination: "/tenants", permanent: true },
       { source: "/owner/tenants/:path*", destination: "/tenants/:path*", permanent: true },
+      // /payments e /expenses viram as telas financeiras (criação de despesa e cobrança fica nelas).
+      { source: "/payments", destination: "/financial/receivables", permanent: true },
+      { source: "/expenses", destination: "/financial/payables", permanent: true },
       { source: "/owner/contracts", destination: "/leases", permanent: true },
       { source: "/owner/contracts/new", destination: "/leases", permanent: true },
       { source: "/owner/contracts/:path*", destination: "/leases/:path*", permanent: true },

@@ -1,26 +1,10 @@
 import { z } from "zod"
+import { compact, parseDecimal, toRfc3339 } from "./form-utils"
 
 // Campos numéricos e datas ficam como string no formulário e são convertidos nos toXxxPayload.
 // O backend (Go) exige datas em RFC3339, então "2026-01-01" vira "2026-01-01T00:00:00Z".
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
-
-function parseDecimal(v: string): number {
-  const s = v.trim()
-  // "1500,50" e "1500.50" valem; "1.500,50" (milhar) não.
-  if (!/^\d+([.,]\d+)?$/.test(s)) return NaN
-  return Number(s.replace(",", "."))
-}
-
-function toRfc3339(date: string): string {
-  return `${date}T00:00:00Z`
-}
-
-function compact<T extends Record<string, unknown>>(obj: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([, v]) => v !== undefined && v !== null && v !== "")
-  ) as Partial<T>
-}
 
 const requiredDate = (msg: string) => z.string().regex(DATE, msg)
 const optionalDate = z.string().optional().refine((v) => !v || DATE.test(v), "Data inválida")
