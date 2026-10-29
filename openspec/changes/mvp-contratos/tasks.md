@@ -37,4 +37,4 @@
 - [x] 5.1 `make frontend-lint` e build sem erros
 - [ ] 5.2 Fluxo manual: criar contrato com cobranças, tentar sobrepor, reajustar, renovar e encerrar
 - [x] 5.3 Atualizar `CLAUDE.md` raiz se o status do módulo mudar
-- [ ] 5.4 `openspec validate mvp-contratos`
+- [x] 5.4 `openspec validate mvp-contratos`
