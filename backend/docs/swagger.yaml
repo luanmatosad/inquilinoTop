@@ -84,6 +84,13 @@ definitions:
       tenant_name:
         type: string
     type: object
+  expense.Bucket:
+    properties:
+      count:
+        type: integer
+      total:
+        type: number
+    type: object
   expense.CreateExpenseInput:
     properties:
       amount:
@@ -108,6 +115,55 @@ definitions:
     - category
     - description
     - due_date
+    type: object
+  expense.Expense:
+    properties:
+      amount:
+        type: number
+      category:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      organization_id:
+        type: string
+      paid_amount:
+        type: number
+      paid_date:
+        type: string
+      status:
+        description: Status é PENDING, PAID ou LATE (PENDING vencida, derivado na
+          leitura).
+        type: string
+      unit_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  expense.PayExpenseInput:
+    properties:
+      paid_amount:
+        type: number
+      paid_date:
+        type: string
+    required:
+    - paid_date
+    type: object
+  expense.Summary:
+    properties:
+      overdue:
+        $ref: '#/definitions/expense.Bucket'
+      paid:
+        $ref: '#/definitions/expense.Bucket'
+      to_pay:
+        $ref: '#/definitions/expense.Bucket'
     type: object
   identity.UpsertNotificationPreferencesInput:
     properties:
@@ -167,6 +223,210 @@ definitions:
     required:
     - index_type
     type: object
+  lease.CreateLeaseInput:
+    properties:
+      annual_iptu_amount:
+        minimum: 0
+        type: number
+      daily_interest_percent:
+        maximum: 10
+        minimum: 0
+        type: number
+      deposit_amount:
+        minimum: 0
+        type: number
+      end_date:
+        type: string
+      generate_payments:
+        description: GeneratePayments gera as cobranças de aluguel do período (no
+          máximo MaxInitialPayments meses).
+        type: boolean
+      iptu_reimbursable:
+        type: boolean
+      iptu_year:
+        maximum: 2100
+        minimum: 2000
+        type: integer
+      late_fee_percent:
+        maximum: 100
+        minimum: 0
+        type: number
+      notes:
+        maxLength: 2000
+        type: string
+      payment_day:
+        maximum: 31
+        minimum: 1
+        type: integer
+      rent_amount:
+        minimum: 0
+        type: number
+      start_date:
+        type: string
+      tenant_id:
+        type: string
+      unit_id:
+        type: string
+    required:
+    - payment_day
+    - rent_amount
+    - start_date
+    - tenant_id
+    - unit_id
+    type: object
+  lease.CreateOutput:
+    properties:
+      annual_iptu_amount:
+        type: number
+      created_at:
+        type: string
+      daily_interest_percent:
+        type: number
+      deposit_amount:
+        type: number
+      end_date:
+        type: string
+      id:
+        type: string
+      iptu_reimbursable:
+        type: boolean
+      iptu_year:
+        type: integer
+      is_active:
+        type: boolean
+      late_fee_percent:
+        type: number
+      notes:
+        type: string
+      organization_id:
+        type: string
+      owner_id:
+        type: string
+      payment_day:
+        type: integer
+      payments_error:
+        type: string
+      payments_generated:
+        type: integer
+      rent_amount:
+        type: number
+      start_date:
+        type: string
+      status:
+        type: string
+      tenant_id:
+        type: string
+      unit_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  lease.EndOutput:
+    properties:
+      annual_iptu_amount:
+        type: number
+      created_at:
+        type: string
+      daily_interest_percent:
+        type: number
+      deposit_amount:
+        type: number
+      end_date:
+        type: string
+      id:
+        type: string
+      iptu_reimbursable:
+        type: boolean
+      iptu_year:
+        type: integer
+      is_active:
+        type: boolean
+      late_fee_percent:
+        type: number
+      notes:
+        type: string
+      organization_id:
+        type: string
+      owner_id:
+        type: string
+      payment_day:
+        type: integer
+      payments_canceled:
+        type: integer
+      payments_error:
+        type: string
+      payments_need_review:
+        type: integer
+      rent_amount:
+        type: number
+      start_date:
+        type: string
+      status:
+        type: string
+      tenant_id:
+        type: string
+      unit_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  lease.Lease:
+    properties:
+      annual_iptu_amount:
+        type: number
+      created_at:
+        type: string
+      daily_interest_percent:
+        type: number
+      deposit_amount:
+        type: number
+      end_date:
+        type: string
+      id:
+        type: string
+      iptu_reimbursable:
+        type: boolean
+      iptu_year:
+        type: integer
+      is_active:
+        type: boolean
+      late_fee_percent:
+        type: number
+      notes:
+        type: string
+      organization_id:
+        type: string
+      owner_id:
+        type: string
+      payment_day:
+        type: integer
+      rent_amount:
+        type: number
+      start_date:
+        type: string
+      status:
+        type: string
+      tenant_id:
+        type: string
+      unit_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  lease.RenewLeaseInput:
+    properties:
+      new_end_date:
+        type: string
+      payment_day:
+        maximum: 31
+        minimum: 1
+        type: integer
+      rent_amount:
+        minimum: 0
+        type: number
+    required:
+    - new_end_date
+    type: object
   lease.UpdateLeaseInput:
     properties:
       annual_iptu_amount:
@@ -191,6 +451,9 @@ definitions:
         maximum: 100
         minimum: 0
         type: number
+      notes:
+        maxLength: 2000
+        type: string
       payment_day:
         maximum: 31
         minimum: 1
@@ -199,6 +462,8 @@ definitions:
         minimum: 0
         type: number
       status:
+        description: 'Status é opcional e, se enviado, precisa ser igual ao atual:
+          use encerrar/renovar para mudá-lo.'
         enum:
         - ACTIVE
         - ENDED
@@ -206,7 +471,13 @@ definitions:
         type: string
     required:
     - rent_amount
-    - status
+    type: object
+  payment.Bucket:
+    properties:
+      count:
+        type: integer
+      total:
+        type: number
     type: object
   payment.CreatePaymentInput:
     properties:
@@ -232,6 +503,15 @@ definitions:
     - due_date
     - gross_amount
     - type
+    type: object
+  payment.Summary:
+    properties:
+      overdue:
+        $ref: '#/definitions/payment.Bucket'
+      paid:
+        $ref: '#/definitions/payment.Bucket'
+      to_receive:
+        $ref: '#/definitions/payment.Bucket'
     type: object
   payment.UpdatePaymentInput:
     properties:
@@ -261,6 +541,12 @@ definitions:
       name:
         maxLength: 200
         type: string
+      neighborhood:
+        maxLength: 100
+        type: string
+      postal_code:
+        description: PostalCode é o CEP com 8 dígitos, sem máscara.
+        type: string
       state:
         maxLength: 2
         type: string
@@ -275,6 +561,14 @@ definitions:
     type: object
   property.CreateUnitInput:
     properties:
+      area_m2:
+        type: number
+      bathrooms:
+        minimum: 0
+        type: integer
+      bedrooms:
+        minimum: 0
+        type: integer
       floor:
         maxLength: 50
         type: string
@@ -365,7 +659,15 @@ definitions:
     type: object
   tenant.CreateTenantInput:
     properties:
+      address_line:
+        maxLength: 500
+        type: string
+      city:
+        maxLength: 100
+        type: string
       document:
+        description: Document aceita CPF/CNPJ com ou sem máscara; o service grava
+          só dígitos.
         maxLength: 20
         type: string
       email:
@@ -374,6 +676,9 @@ definitions:
       name:
         maxLength: 200
         type: string
+      notes:
+        maxLength: 2000
+        type: string
       person_type:
         enum:
         - PF
@@ -381,6 +686,11 @@ definitions:
         type: string
       phone:
         maxLength: 20
+        type: string
+      postal_code:
+        description: PostalCode é o CEP com 8 dígitos, sem máscara.
+        type: string
+      state:
         type: string
     required:
     - name
@@ -670,6 +980,25 @@ paths:
       - dashboard
   /expenses:
     get:
+      description: 'Filtros: status (PENDING a vencer | LATE vencida | PAID), from/to
+        (vencimento, inclusive) e unit_id.'
+      parameters:
+      - description: PENDING, LATE ou PAID
+        in: query
+        name: status
+        type: string
+      - description: Vencimento a partir de (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: Vencimento até (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      - description: ID da unidade
+        in: query
+        name: unit_id
+        type: string
       produces:
       - application/json
       responses:
@@ -678,9 +1007,14 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
-      summary: Lista todas as despesas do owner autenticado
+      summary: Lista as despesas da organização
       tags:
       - expenses
   /expenses/{id}:
@@ -727,9 +1061,116 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "409":
+          description: EXPENSE_LOCKED
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
       summary: Atualiza despesa
+      tags:
+      - expenses
+  /expenses/{id}/pay:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da despesa
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Data e valor pagos
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/expense.PayExpenseInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/expense.Expense'
+        "404":
+          description: NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: EXPENSE_ALREADY_PAID
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Dá baixa em uma despesa
+      tags:
+      - expenses
+  /expenses/{id}/unpay:
+    post:
+      parameters:
+      - description: ID da despesa
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/expense.Expense'
+        "404":
+          description: NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: EXPENSE_NOT_PAID
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Estorna a baixa de uma despesa
+      tags:
+      - expenses
+  /expenses/summary:
+    get:
+      description: Totais a vencer, vencidos e pagos, por vencimento entre from e
+        to.
+      parameters:
+      - description: Vencimento a partir de (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: Vencimento até (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      - description: ID da unidade
+        in: query
+        name: unit_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/expense.Summary'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Resumo das despesas no período
       tags:
       - expenses
   /fiscal/annual-report:
@@ -794,6 +1235,45 @@ paths:
       summary: Lista contratos
       tags:
       - leases
+    post:
+      consumes:
+      - application/json
+      description: Valida datas, unidade/inquilino da organização e sobreposição;
+        com generate_payments gera até 12 cobranças.
+      parameters:
+      - description: Dados do contrato
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/lease.CreateLeaseInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/lease.CreateOutput'
+        "404":
+          description: UNIT_NOT_FOUND | TENANT_NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: LEASE_OVERLAP
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: INVALID_DATES
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria contrato
+      tags:
+      - leases
   /leases/{id}:
     put:
       consumes:
@@ -815,6 +1295,16 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: LEASE_OVERLAP | STATUS_CHANGE_NOT_ALLOWED
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: INVALID_DATES
           schema:
             additionalProperties: true
             type: object
@@ -852,6 +1342,38 @@ paths:
       summary: Aplica reajuste automático usando o índice mais recente
       tags:
       - leases
+  /leases/{id}/end:
+    post:
+      description: Encerra um contrato ACTIVE e retira as cobranças futuras pendentes
+        sem cobrança emitida.
+      parameters:
+      - description: ID do contrato
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/lease.EndOutput'
+        "404":
+          description: NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: LEASE_NOT_ACTIVE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Encerra contrato
+      tags:
+      - leases
   /leases/{id}/readjustments:
     get:
       parameters:
@@ -871,6 +1393,49 @@ paths:
       security:
       - BearerAuth: []
       summary: Lista reajustes de um contrato
+      tags:
+      - leases
+  /leases/{id}/renew:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do contrato
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nova data final
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/lease.RenewLeaseInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/lease.Lease'
+        "404":
+          description: NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: LEASE_NOT_ACTIVE | LEASE_OVERLAP
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: INVALID_DATES
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Renova contrato
       tags:
       - leases
   /leases/{leaseId}/payments:
@@ -975,10 +1540,24 @@ paths:
       - rbac
   /payments:
     get:
+      description: 'Filtros: status (PENDING a vencer | LATE vencida, com multa e
+        juros | PAID), from/to (vencimento, inclusive) e lease_id.'
       parameters:
-      - description: Filtro de status (PENDING|PAID|LATE)
+      - description: PENDING, LATE ou PAID
         in: query
         name: status
+        type: string
+      - description: Vencimento a partir de (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: Vencimento até (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      - description: ID do contrato
+        in: query
+        name: lease_id
         type: string
       produces:
       - application/json
@@ -988,9 +1567,14 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
-      summary: Lista todos os pagamentos do owner autenticado
+      summary: Lista as cobranças da organização
       tags:
       - payments
   /payments/{id}:
@@ -1066,6 +1650,40 @@ paths:
       security:
       - BearerAuth: []
       summary: Recibo mensal (status=PAID)
+      tags:
+      - payments
+  /payments/summary:
+    get:
+      description: Totais a receber, vencidos (valor atualizado com multa e juros)
+        e recebidos, por vencimento entre from e to.
+      parameters:
+      - description: Vencimento a partir de (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: Vencimento até (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      - description: ID do contrato
+        in: query
+        name: lease_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/payment.Summary'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Resumo das cobranças no período
       tags:
       - payments
   /properties:
@@ -1229,6 +1847,11 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "409":
+          description: DUPLICATE_UNIT_LABEL
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
       summary: Cria unidade em um imóvel
@@ -1314,6 +1937,16 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "400":
+          description: INVALID_DOCUMENT
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: DUPLICATE_DOCUMENT
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
       summary: Cria inquilino
@@ -1332,6 +1965,11 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: TENANT_HAS_ACTIVE_LEASE
           schema:
             additionalProperties: true
             type: object
@@ -1380,6 +2018,16 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: INVALID_DOCUMENT
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: DUPLICATE_DOCUMENT
           schema:
             additionalProperties: true
             type: object
@@ -1508,6 +2156,11 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: DUPLICATE_UNIT_LABEL
           schema:
             additionalProperties: true
             type: object

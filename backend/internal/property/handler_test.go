@@ -366,3 +366,71 @@ func TestHandler_DeleteUnit_Válido(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, rr.Code)
 }
+
+func TestHandler_CreateUnit_RótuloDuplicado_409(t *testing.T) {
+	svc := property.NewService(newMockRepo())
+	h := property.NewHandler(svc)
+	ownerID := uuid.New()
+	r := chi.NewRouter()
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
+
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	_, err := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "Apto 101"})
+	require.NoError(t, err)
+
+	body, _ := json.Marshal(property.CreateUnitInput{Label: "apto 101"})
+	req := httptest.NewRequest(http.MethodPost, "/properties/"+p.ID.String()+"/units", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "DUPLICATE_UNIT_LABEL")
+}
+
+func TestHandler_UpdateUnit_RótuloDuplicado_409(t *testing.T) {
+	svc := property.NewService(newMockRepo())
+	h := property.NewHandler(svc)
+	ownerID := uuid.New()
+	r := chi.NewRouter()
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
+
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	_, _ = svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "101"})
+	u2, _ := svc.CreateUnit(context.Background(), p.ID, ownerID, property.CreateUnitInput{Label: "102"})
+
+	body, _ := json.Marshal(property.CreateUnitInput{Label: "101"})
+	req := httptest.NewRequest(http.MethodPut, "/units/"+u2.ID.String(), bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "DUPLICATE_UNIT_LABEL")
+}
+
+func TestHandler_Create_CEPInválido_400(t *testing.T) {
+	h := property.NewHandler(property.NewService(newMockRepo()))
+	r := chi.NewRouter()
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
+
+	body := `{"type":"RESIDENTIAL","name":"Predio","postal_code":"123"}`
+	req := httptest.NewRequest(http.MethodPost, "/properties", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestHandler_CreateUnit_ÁreaNegativa_400(t *testing.T) {
+	svc := property.NewService(newMockRepo())
+	h := property.NewHandler(svc)
+	ownerID := uuid.New()
+	r := chi.NewRouter()
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
+	p, _ := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+
+	req := httptest.NewRequest(http.MethodPost, "/properties/"+p.ID.String()+"/units", strings.NewReader(`{"label":"101","area_m2":-5}`))
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}

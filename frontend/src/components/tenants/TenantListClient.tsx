@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, CheckCircle2, XCircle } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -28,19 +29,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
-import { TenantForm } from './TenantForm'
-import { deleteTenant, toggleTenantStatus } from '@/app/tenants/actions'
+import { TenantForm, type TenantFormData } from './TenantForm'
+import { deleteTenant } from '@/app/tenants/actions'
+import { maskCpfCnpj, maskPhone } from '@/lib/masks'
 import { toast } from 'sonner'
 
-interface Tenant {
-  id: string
-  name: string
-  email?: string | null
-  phone?: string | null
-  document?: string | null
-  is_active: boolean
-}
+type Tenant = TenantFormData & { is_active: boolean }
 
 interface TenantListClientProps {
   tenants: Tenant[]
@@ -66,21 +60,8 @@ export function TenantListClient({ tenants }: TenantListClientProps) {
         toast.success('Inquilino removido com sucesso!')
         setDeletingTenant(null)
       }
-    } catch (error) {
+    } catch {
       toast.error('Erro ao remover inquilino.')
-    }
-  }
-
-  const handleToggleStatus = async (id: string, currentStatus: boolean) => {
-    try {
-      const result = await toggleTenantStatus(id, !currentStatus)
-      if (result.error) {
-        toast.error(result.error)
-      } else {
-        toast.success(`Inquilino ${!currentStatus ? 'ativado' : 'desativado'} com sucesso!`)
-      }
-    } catch (error) {
-      toast.error('Erro ao alterar status.')
     }
   }
 
@@ -94,7 +75,7 @@ export function TenantListClient({ tenants }: TenantListClientProps) {
               <Plus className="mr-2 h-4 w-4" /> Novo Inquilino
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Novo Inquilino</DialogTitle>
             </DialogHeader>
@@ -113,46 +94,30 @@ export function TenantListClient({ tenants }: TenantListClientProps) {
               <TableHead>Nome</TableHead>
               <TableHead>Contato</TableHead>
               <TableHead>Documento</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {tenants.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                   Nenhum inquilino cadastrado.
                 </TableCell>
               </TableRow>
             ) : (
               tenants.map((tenant) => (
                 <TableRow key={tenant.id}>
-                  <TableCell className="font-medium">{tenant.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link href={`/tenants/${tenant.id}`} className="hover:underline">{tenant.name}</Link>
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-col text-sm">
                       <span>{tenant.email || '-'}</span>
-                      <span className="text-muted-foreground">{tenant.phone || '-'}</span>
+                      <span className="text-muted-foreground">{tenant.phone ? maskPhone(tenant.phone) : '-'}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{tenant.document || '-'}</TableCell>
-                  <TableCell>
-                    <Badge variant={tenant.is_active ? 'outline' : 'destructive'}>
-                      {tenant.is_active ? 'Ativo' : 'Inativo'}
-                    </Badge>
-                  </TableCell>
+                  <TableCell>{tenant.document ? maskCpfCnpj(tenant.document) : '-'}</TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleToggleStatus(tenant.id, tenant.is_active)}
-                      title={tenant.is_active ? "Desativar" : "Ativar"}
-                    >
-                      {tenant.is_active ? (
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      ) : (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      )}
-                    </Button>
                     <Button 
                       variant="ghost" 
                       size="icon"
@@ -178,7 +143,7 @@ export function TenantListClient({ tenants }: TenantListClientProps) {
 
       {/* Edit Dialog */}
       <Dialog open={!!editingTenant} onOpenChange={(open) => !open && setEditingTenant(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Inquilino</DialogTitle>
           </DialogHeader>
@@ -198,9 +163,8 @@ export function TenantListClient({ tenants }: TenantListClientProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
             <AlertDialogDescription>
-              Isso irá remover permanentemente o inquilino &quot;{deletingTenant?.name}&quot;.
-              Cuidado: Se ele tiver contratos ativos, isso pode gerar inconsistências.
-              Recomendamos apenas desativar.
+              O inquilino &quot;{deletingTenant?.name}&quot; deixa de aparecer na lista, mas o histórico
+              é mantido. Não é possível excluir quem tem contrato ativo.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

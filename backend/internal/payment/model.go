@@ -11,9 +11,11 @@ import (
 )
 
 var (
-	ErrInvalidMonth    = errors.New("mês inválido")
-	ErrLeaseNotActive  = errors.New("contrato não ativo")
-	ErrIPTUMissing     = errors.New("IPTU não configurado")
+	// ErrInvalidFilter: status de filtro desconhecido (HTTP 400).
+	ErrInvalidFilter = errors.New("filtro inválido")
+	ErrInvalidMonth   = errors.New("mês inválido")
+	ErrLeaseNotActive = errors.New("contrato não ativo")
+	ErrIPTUMissing    = errors.New("IPTU não configurado")
 )
 
 type LeaseReader interface {
@@ -29,29 +31,29 @@ type IRRFCalculator interface {
 }
 
 type Payment struct {
-	ID               uuid.UUID  `json:"id"`
-	OrganizationID   uuid.UUID  `json:"organization_id"`
-	LeaseID          uuid.UUID  `json:"lease_id"`
-	DueDate          time.Time  `json:"due_date"`
-	PaidDate         *time.Time `json:"paid_date,omitempty"`
-	GrossAmount     float64    `json:"gross_amount"`
-	LateFeeAmount   float64    `json:"late_fee_amount"`
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	LeaseID        uuid.UUID  `json:"lease_id"`
+	DueDate        time.Time  `json:"due_date"`
+	PaidDate       *time.Time `json:"paid_date,omitempty"`
+	GrossAmount    float64    `json:"gross_amount"`
+	LateFeeAmount  float64    `json:"late_fee_amount"`
 	InterestAmount float64    `json:"interest_amount"`
-	IRRFAmount    float64    `json:"irrf_amount"`
+	IRRFAmount     float64    `json:"irrf_amount"`
 	NetAmount      *float64   `json:"net_amount,omitempty"`
-	Competency     *string   `json:"competency,omitempty"`
-	Description    *string   `json:"description,omitempty"`
-	Status         string    `json:"status"`
-	Type           string    `json:"type"`
-	ChargeID       *string   `json:"charge_id,omitempty"`
-	ChargeMethod   *string   `json:"charge_method,omitempty"`
-	ChargeQRCode   *string   `json:"charge_qrcode,omitempty"`
-	ChargeLink    *string   `json:"charge_link,omitempty"`
-	ChargeBarcode *string   `json:"charge_barcode,omitempty"`
-	PayoutID      *string   `json:"payout_id,omitempty"`
-	PayoutStatus *string   `json:"payout_status,omitempty"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	Competency     *string    `json:"competency,omitempty"`
+	Description    *string    `json:"description,omitempty"`
+	Status         string     `json:"status"`
+	Type           string     `json:"type"`
+	ChargeID       *string    `json:"charge_id,omitempty"`
+	ChargeMethod   *string    `json:"charge_method,omitempty"`
+	ChargeQRCode   *string    `json:"charge_qrcode,omitempty"`
+	ChargeLink     *string    `json:"charge_link,omitempty"`
+	ChargeBarcode  *string    `json:"charge_barcode,omitempty"`
+	PayoutID       *string    `json:"payout_id,omitempty"`
+	PayoutStatus   *string    `json:"payout_status,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type CreatePaymentInput struct {
@@ -73,8 +75,38 @@ type UpdateChargeInfoInput struct {
 	ChargeID     string `json:"charge_id" validate:"required"`
 	ChargeMethod string `json:"charge_method" validate:"required,oneof=PIX BOLETO TED"`
 	QRCode       string `json:"qr_code,omitempty" validate:"omitempty"`
-	Link          string `json:"link,omitempty" validate:"omitempty,url"`
-	BarCode       string `json:"bar_code,omitempty" validate:"omitempty,numeric"`
+	Link         string `json:"link,omitempty" validate:"omitempty,url"`
+	BarCode      string `json:"bar_code,omitempty" validate:"omitempty,numeric"`
+}
+
+// DeactivateResult resume o cancelamento das cobranças futuras de um contrato encerrado.
+type DeactivateResult struct {
+	// Deactivated é o número de cobranças pendentes futuras retiradas (is_active=false).
+	Deactivated int `json:"deactivated"`
+	// NeedsReview conta pendentes futuras com cobrança emitida (charge_id), mantidas para decisão manual.
+	NeedsReview int `json:"needs_review"`
+}
+
+// PaymentFilter restringe a listagem e o resumo. Status: PENDING (a vencer), LATE (vencida) ou PAID.
+// From/To filtram o vencimento, inclusive nas extremidades.
+type PaymentFilter struct {
+	Status  string
+	From    *time.Time
+	To      *time.Time
+	LeaseID *uuid.UUID
+}
+
+// Bucket agrupa quantidade e valor total.
+type Bucket struct {
+	Count int     `json:"count"`
+	Total float64 `json:"total"`
+}
+
+// Summary totaliza o período: a receber (a vencer), vencidos (valor atualizado com multa e juros) e recebidos.
+type Summary struct {
+	ToReceive Bucket `json:"to_receive"`
+	Overdue   Bucket `json:"overdue"`
+	Paid      Bucket `json:"paid"`
 }
 
 type Repository interface {
@@ -83,7 +115,11 @@ type Repository interface {
 	GetByID(ctx context.Context, id, orgID uuid.UUID) (*Payment, error)
 	GetByChargeID(ctx context.Context, chargeID string) (*Payment, error)
 	ListByLease(ctx context.Context, leaseID, orgID uuid.UUID) ([]Payment, error)
-	ListByOwner(ctx context.Context, orgID uuid.UUID, statusFilter string) ([]Payment, error)
+	// List filtra em SQL por status, vencimento e contrato; today separa a vencer de vencida.
+	List(ctx context.Context, orgID uuid.UUID, f PaymentFilter, today time.Time) ([]Payment, error)
+	// DeactivateFuturePending retira (is_active=false) as cobranças PENDING com vencimento depois de after
+	// e sem charge_id. É a única exceção à imutabilidade de payment (ADR payment-0003).
+	DeactivateFuturePending(ctx context.Context, leaseID, orgID uuid.UUID, after time.Time) (DeactivateResult, error)
 	Update(ctx context.Context, id, orgID uuid.UUID, in UpdatePaymentInput) (*Payment, error)
 	MarkPaid(ctx context.Context, id, orgID uuid.UUID, paidDate time.Time,
 		lateFee, interest, irrf, netAmount float64) (*Payment, error)
@@ -148,15 +184,15 @@ type Amounts struct {
 }
 
 type FinancialConfig struct {
-	ID        uuid.UUID         `json:"id"`
-	OrganizationID   uuid.UUID         `json:"organization_id"`
-	Provider  string            `json:"provider" validate:"required,oneof=ASAAS BRADESCO ITAU SICOOB MOCK"`
-	Config    map[string]any    `json:"config,omitempty"`
-	PixKey    *string           `json:"pix_key,omitempty" validate:"omitempty,max=100"`
-	BankInfo  *BankInfo         `json:"bank_info,omitempty"`
-	IsActive  bool              `json:"is_active"`
-	CreatedAt time.Time         `json:"created_at"`
-	UpdatedAt time.Time         `json:"updated_at"`
+	ID             uuid.UUID      `json:"id"`
+	OrganizationID uuid.UUID      `json:"organization_id"`
+	Provider       string         `json:"provider" validate:"required,oneof=ASAAS BRADESCO ITAU SICOOB MOCK"`
+	Config         map[string]any `json:"config,omitempty"`
+	PixKey         *string        `json:"pix_key,omitempty" validate:"omitempty,max=100"`
+	BankInfo       *BankInfo      `json:"bank_info,omitempty"`
+	IsActive       bool           `json:"is_active"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
 }
 
 type BankInfo struct {

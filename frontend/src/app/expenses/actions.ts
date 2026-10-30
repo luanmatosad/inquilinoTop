@@ -57,12 +57,14 @@ export async function createExpense(prevState: ExpenseActionState, formData: For
       body: JSON.stringify({
         description: validatedFields.data.description,
         amount: validatedFields.data.amount,
-        due_date: validatedFields.data.due_date,
+        // O backend (Go) exige data em RFC3339; <input type=date> envia só YYYY-MM-DD.
+        due_date: `${validatedFields.data.due_date}T00:00:00Z`,
         category: validatedFields.data.category,
       }),
     })
 
     revalidatePath(`/units/${validatedFields.data.unit_id}`)
+    revalidatePath("/financial/payables")
     return { success: "Despesa registrada com sucesso!" }
   } catch (error) {
     return {

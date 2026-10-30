@@ -447,16 +447,102 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Filtros: status (PENDING a vencer | LATE vencida | PAID), from/to (vencimento, inclusive) e unit_id.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "expenses"
                 ],
-                "summary": "Lista todas as despesas do owner autenticado",
+                "summary": "Lista as despesas da organização",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "PENDING, LATE ou PAID",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vencimento a partir de (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vencimento até (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID da unidade",
+                        "name": "unit_id",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Totais a vencer, vencidos e pagos, por vencimento entre from e to.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Resumo das despesas no período",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vencimento a partir de (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vencimento até (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID da unidade",
+                        "name": "unit_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/expense.Summary"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -507,6 +593,13 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "409": {
+                        "description": "EXPENSE_LOCKED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             },
@@ -535,6 +628,112 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/{id}/pay": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Dá baixa em uma despesa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da despesa",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Data e valor pagos",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/expense.PayExpenseInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/expense.Expense"
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "EXPENSE_ALREADY_PAID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/{id}/unpay": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Estorna a baixa de uma despesa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da despesa",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/expense.Expense"
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "EXPENSE_NOT_PAID",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -641,6 +840,64 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Valida datas, unidade/inquilino da organização e sobreposição; com generate_payments gera até 12 cobranças.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "leases"
+                ],
+                "summary": "Cria contrato",
+                "parameters": [
+                    {
+                        "description": "Dados do contrato",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/lease.CreateLeaseInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/lease.CreateOutput"
+                        }
+                    },
+                    "404": {
+                        "description": "UNIT_NOT_FOUND | TENANT_NOT_FOUND",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "LEASE_OVERLAP",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "INVALID_DATES",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
             }
         },
         "/leases/{id}": {
@@ -681,6 +938,20 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "LEASE_OVERLAP | STATUS_CHANGE_NOT_ALLOWED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "INVALID_DATES",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -735,6 +1006,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/leases/{id}/end": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Encerra um contrato ACTIVE e retira as cobranças futuras pendentes sem cobrança emitida.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "leases"
+                ],
+                "summary": "Encerra contrato",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/lease.EndOutput"
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "LEASE_NOT_ACTIVE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/leases/{id}/readjustments": {
             "get": {
                 "security": [
@@ -761,6 +1080,72 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/leases/{id}/renew": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "leases"
+                ],
+                "summary": "Renova contrato",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Nova data final",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/lease.RenewLeaseInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/lease.Lease"
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "LEASE_NOT_ACTIVE | LEASE_OVERLAP",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "INVALID_DATES",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -934,24 +1319,102 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Filtros: status (PENDING a vencer | LATE vencida, com multa e juros | PAID), from/to (vencimento, inclusive) e lease_id.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "payments"
                 ],
-                "summary": "Lista todos os pagamentos do owner autenticado",
+                "summary": "Lista as cobranças da organização",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Filtro de status (PENDING|PAID|LATE)",
+                        "description": "PENDING, LATE ou PAID",
                         "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vencimento a partir de (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vencimento até (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "lease_id",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Totais a receber, vencidos (valor atualizado com multa e juros) e recebidos, por vencimento entre from e to.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Resumo das cobranças no período",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vencimento a partir de (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vencimento até (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "lease_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/payment.Summary"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1339,6 +1802,13 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "409": {
+                        "description": "DUPLICATE_UNIT_LABEL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             }
@@ -1477,6 +1947,20 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "400": {
+                        "description": "INVALID_DOCUMENT",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "DUPLICATE_DOCUMENT",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             }
@@ -1555,6 +2039,20 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "400": {
+                        "description": "INVALID_DOCUMENT",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "DUPLICATE_DOCUMENT",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             },
@@ -1583,6 +2081,13 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "TENANT_HAS_ACTIVE_LEASE",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1757,6 +2262,13 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "DUPLICATE_UNIT_LABEL",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2004,6 +2516,17 @@ const docTemplate = `{
                 }
             }
         },
+        "expense.Bucket": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "number"
+                }
+            }
+        },
         "expense.CreateExpenseInput": {
             "type": "object",
             "required": [
@@ -2034,6 +2557,79 @@ const docTemplate = `{
                 },
                 "due_date": {
                     "type": "string"
+                }
+            }
+        },
+        "expense.Expense": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "paid_amount": {
+                    "type": "number"
+                },
+                "paid_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Status é PENDING, PAID ou LATE (PENDING vencida, derivado na leitura).",
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "expense.PayExpenseInput": {
+            "type": "object",
+            "required": [
+                "paid_date"
+            ],
+            "properties": {
+                "paid_amount": {
+                    "type": "number"
+                },
+                "paid_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "expense.Summary": {
+            "type": "object",
+            "properties": {
+                "overdue": {
+                    "$ref": "#/definitions/expense.Bucket"
+                },
+                "paid": {
+                    "$ref": "#/definitions/expense.Bucket"
+                },
+                "to_pay": {
+                    "$ref": "#/definitions/expense.Bucket"
                 }
             }
         },
@@ -2127,11 +2723,307 @@ const docTemplate = `{
                 }
             }
         },
+        "lease.CreateLeaseInput": {
+            "type": "object",
+            "required": [
+                "payment_day",
+                "rent_amount",
+                "start_date",
+                "tenant_id",
+                "unit_id"
+            ],
+            "properties": {
+                "annual_iptu_amount": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "daily_interest_percent": {
+                    "type": "number",
+                    "maximum": 10,
+                    "minimum": 0
+                },
+                "deposit_amount": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "generate_payments": {
+                    "description": "GeneratePayments gera as cobranças de aluguel do período (no máximo MaxInitialPayments meses).",
+                    "type": "boolean"
+                },
+                "iptu_reimbursable": {
+                    "type": "boolean"
+                },
+                "iptu_year": {
+                    "type": "integer",
+                    "maximum": 2100,
+                    "minimum": 2000
+                },
+                "late_fee_percent": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "payment_day": {
+                    "type": "integer",
+                    "maximum": 31,
+                    "minimum": 1
+                },
+                "rent_amount": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "lease.CreateOutput": {
+            "type": "object",
+            "properties": {
+                "annual_iptu_amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "daily_interest_percent": {
+                    "type": "number"
+                },
+                "deposit_amount": {
+                    "type": "number"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "iptu_reimbursable": {
+                    "type": "boolean"
+                },
+                "iptu_year": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "late_fee_percent": {
+                    "type": "number"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "payment_day": {
+                    "type": "integer"
+                },
+                "payments_error": {
+                    "type": "string"
+                },
+                "payments_generated": {
+                    "type": "integer"
+                },
+                "rent_amount": {
+                    "type": "number"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "lease.EndOutput": {
+            "type": "object",
+            "properties": {
+                "annual_iptu_amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "daily_interest_percent": {
+                    "type": "number"
+                },
+                "deposit_amount": {
+                    "type": "number"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "iptu_reimbursable": {
+                    "type": "boolean"
+                },
+                "iptu_year": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "late_fee_percent": {
+                    "type": "number"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "payment_day": {
+                    "type": "integer"
+                },
+                "payments_canceled": {
+                    "type": "integer"
+                },
+                "payments_error": {
+                    "type": "string"
+                },
+                "payments_need_review": {
+                    "type": "integer"
+                },
+                "rent_amount": {
+                    "type": "number"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "lease.Lease": {
+            "type": "object",
+            "properties": {
+                "annual_iptu_amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "daily_interest_percent": {
+                    "type": "number"
+                },
+                "deposit_amount": {
+                    "type": "number"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "iptu_reimbursable": {
+                    "type": "boolean"
+                },
+                "iptu_year": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "late_fee_percent": {
+                    "type": "number"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "payment_day": {
+                    "type": "integer"
+                },
+                "rent_amount": {
+                    "type": "number"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "lease.RenewLeaseInput": {
+            "type": "object",
+            "required": [
+                "new_end_date"
+            ],
+            "properties": {
+                "new_end_date": {
+                    "type": "string"
+                },
+                "payment_day": {
+                    "type": "integer",
+                    "maximum": 31,
+                    "minimum": 1
+                },
+                "rent_amount": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
         "lease.UpdateLeaseInput": {
             "type": "object",
             "required": [
-                "rent_amount",
-                "status"
+                "rent_amount"
             ],
             "properties": {
                 "annual_iptu_amount": {
@@ -2163,6 +3055,10 @@ const docTemplate = `{
                     "maximum": 100,
                     "minimum": 0
                 },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
                 "payment_day": {
                     "type": "integer",
                     "maximum": 31,
@@ -2173,12 +3069,24 @@ const docTemplate = `{
                     "minimum": 0
                 },
                 "status": {
+                    "description": "Status é opcional e, se enviado, precisa ser igual ao atual: use encerrar/renovar para mudá-lo.",
                     "type": "string",
                     "enum": [
                         "ACTIVE",
                         "ENDED",
                         "CANCELED"
                     ]
+                }
+            }
+        },
+        "payment.Bucket": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "number"
                 }
             }
         },
@@ -2213,6 +3121,20 @@ const docTemplate = `{
                         "EXPENSE",
                         "OTHER"
                     ]
+                }
+            }
+        },
+        "payment.Summary": {
+            "type": "object",
+            "properties": {
+                "overdue": {
+                    "$ref": "#/definitions/payment.Bucket"
+                },
+                "paid": {
+                    "$ref": "#/definitions/payment.Bucket"
+                },
+                "to_receive": {
+                    "$ref": "#/definitions/payment.Bucket"
                 }
             }
         },
@@ -2259,6 +3181,14 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 200
                 },
+                "neighborhood": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "postal_code": {
+                    "description": "PostalCode é o CEP com 8 dígitos, sem máscara.",
+                    "type": "string"
+                },
                 "state": {
                     "type": "string",
                     "maxLength": 2
@@ -2278,6 +3208,17 @@ const docTemplate = `{
                 "label"
             ],
             "properties": {
+                "area_m2": {
+                    "type": "number"
+                },
+                "bathrooms": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "bedrooms": {
+                    "type": "integer",
+                    "minimum": 0
+                },
                 "floor": {
                     "type": "string",
                     "maxLength": 50
@@ -2407,7 +3348,16 @@ const docTemplate = `{
                 "person_type"
             ],
             "properties": {
+                "address_line": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "city": {
+                    "type": "string",
+                    "maxLength": 100
+                },
                 "document": {
+                    "description": "Document aceita CPF/CNPJ com ou sem máscara; o service grava só dígitos.",
                     "type": "string",
                     "maxLength": 20
                 },
@@ -2419,6 +3369,10 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 200
                 },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
                 "person_type": {
                     "type": "string",
                     "enum": [
@@ -2429,6 +3383,13 @@ const docTemplate = `{
                 "phone": {
                     "type": "string",
                     "maxLength": 20
+                },
+                "postal_code": {
+                    "description": "PostalCode é o CEP com 8 dígitos, sem máscara.",
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
                 }
             }
         }

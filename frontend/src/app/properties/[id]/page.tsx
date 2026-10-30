@@ -3,6 +3,7 @@ import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { ArrowLeft, Pencil, Building, MapPin } from "lucide-react"
 import { goFetch } from "@/lib/go/client"
+import { maskCep } from "@/lib/masks"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,8 +17,10 @@ interface Property {
   name: string
   type: string
   address_line?: string
+  neighborhood?: string
   city?: string
   state?: string
+  postal_code?: string
   is_active: boolean
   created_at: string
   units: Unit[]
@@ -56,9 +59,12 @@ async function PropertyDetails({ id, addUnit }: { id: string, addUnit: boolean }
           <div className="mt-2 text-muted-foreground flex items-center gap-2">
             <MapPin className="h-4 w-4" />
             <span>
-              {property.address_line 
-                ? `${property.address_line}, ${property.city}/${property.state}`
-                : "Endereço não informado"}
+              {[
+                property.address_line,
+                property.neighborhood,
+                [property.city, property.state].filter(Boolean).join("/"),
+                property.postal_code ? `CEP ${maskCep(property.postal_code)}` : undefined,
+              ].filter(Boolean).join(", ") || "Endereço não informado"}
             </span>
           </div>
           <div className="mt-1 text-muted-foreground flex items-center gap-2">

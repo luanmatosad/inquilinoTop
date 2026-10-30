@@ -35,7 +35,7 @@ func (r *pgRepository) Create(ctx context.Context, orgID, userID uuid.UUID, in C
 
 	err := r.db.Pool.QueryRow(ctx, `
 		INSERT INTO support_tickets (id, organization_id, user_id, tipo, assunto, descricao, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, organization_id, user_id, tipo, assunto, descricao, status, created_at, updated_at`,
 		ticket.ID, ticket.OrganizationID, ticket.UserID, ticket.Tipo, ticket.Assunto,
 		ticket.Descricao, ticket.Status, ticket.CreatedAt, ticket.UpdatedAt,

@@ -1,206 +1,77 @@
-'use client'
+import { goFetch } from '@/lib/go/client'
+import { ReceivablesTable } from '@/components/financial/ReceivablesTable'
+import { ErrorState, FilterBar, SummaryCards } from '@/components/financial/shared'
+import { parseFilters } from '@/lib/financial-schemas'
+import { getReceivablesSummary, listReceivables } from '../actions'
 
-import React, { useState, useEffect } from 'react';
-import { getReceivables, Receivable, TransactionStatus } from '../actions';
-import { Search, Plus, Filter, MoreVertical, FileText, Send, CheckCircle, FilePlus2 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-
-function StatusBadge({ status }: { status: TransactionStatus }) {
-  if (status === 'PAID') {
-    return <span className="px-2 py-1 bg-success/10 text-success text-xs rounded-full font-medium">Pago</span>;
-  }
-  if (status === 'PENDING') {
-    return <span className="px-2 py-1 bg-warning/10 text-warning text-xs rounded-full font-medium">Pendente</span>;
-  }
-  return <span className="px-2 py-1 bg-error/10 text-error text-xs rounded-full font-medium">Atrasado</span>;
+interface Lease {
+  id: string
+  unit_id: string
+  tenant_id: string
 }
 
-export default function ReceivablesPage() {
-  const [data, setData] = useState<Receivable[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<TransactionStatus | 'ALL'>('ALL');
-  const [searchTerm, setSearchTerm] = useState('');
-  type TabId = 'RENT' | 'SALE_INSTALLMENT' | 'CONDO_FEE';
-  const [activeTab, setActiveTab] = useState<TabId>('RENT');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+interface PropertyWithUnits {
+  id: string
+  name: string
+  units: { id: string; label: string }[]
+}
 
-  useEffect(() => {
-    getReceivables().then(res => {
-      setData(res);
-      setLoading(false);
-    });
-  }, []);
+async function load<T>(path: string): Promise<T[]> {
+  try {
+    return (await goFetch<T[]>(path, {})) ?? []
+  } catch (error) {
+    console.error('Erro ao buscar', path, error)
+    return []
+  }
+}
 
-  const formatBRL = (val: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-  };
+export default async function ReceivablesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; from?: string; to?: string; ref?: string }>
+}) {
+  const filters = parseFilters(await searchParams)
 
-  const formatDate = (iso: string) => {
-    const [y, m, d] = iso.split('-');
-    return `${d}/${m}/${y}`;
-  };
+  const [leases, properties, tenants] = await Promise.all([
+    load<Lease>('/api/v1/leases'),
+    load<PropertyWithUnits>('/api/v1/properties'),
+    load<{ id: string; name: string }>('/api/v1/tenants'),
+  ])
 
-  const filtered = data.filter(item => {
-    const matchStatus = filterStatus === 'ALL' || item.status === filterStatus;
-    const matchTab = item.type === activeTab;
-    const matchSearch = item.payer.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        item.property.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchStatus && matchTab && matchSearch;
-  });
+  const unitLabel = new Map<string, string>()
+  for (const p of properties) for (const u of p.units ?? []) unitLabel.set(u.id, `${p.name} - ${u.label}`)
+  const tenantName = new Map(tenants.map((t) => [t.id, t.name]))
+  const leaseLabels: Record<string, string> = {}
+  for (const l of leases) {
+    leaseLabels[l.id] = `${unitLabel.get(l.unit_id) ?? 'Unidade'} · ${tenantName.get(l.tenant_id) ?? 'Inquilino'}`
+  }
+
+  const [list, summary] = await Promise.all([listReceivables(filters), getReceivablesSummary(filters)])
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Contas a Receber</h1>
-          <p className="text-muted-foreground">Gestão de cobranças e recebimentos</p>
-        </div>
-        <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Nova Cobrança
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Contas a Receber</h1>
+        <p className="text-muted-foreground">Cobranças de aluguel e encargos, com baixa e recibo</p>
       </div>
 
-      <div className="flex gap-4 border-b border-border">
-        {[
-          { id: 'RENT', label: 'Aluguel' },
-          { id: 'SALE_INSTALLMENT', label: 'Parcela de Venda' },
-          { id: 'CONDO_FEE', label: 'Taxa Condominial' }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === tab.id ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-            onClick={() => setActiveTab(tab.id as TabId)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <SummaryCards
+        labels={['A receber', 'Vencidas (atualizado)', 'Recebidas']}
+        buckets={summary ? [summary.to_receive, summary.overdue, summary.paid] : null}
+      />
 
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-background p-4 rounded-lg border border-border shadow-sm">
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input 
-            type="text" 
-            placeholder="Buscar por pagador ou imóvel..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-muted border border-input rounded-md focus:ring-2 focus:ring-primary outline-none"
-          />
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Filter className="w-4 h-4 text-muted-foreground" />
-          <select 
-            className="text-sm bg-background border border-input rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-primary w-full sm:w-auto"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as TransactionStatus | 'ALL')}
-          >
-            <option value="ALL">Todos os Status</option>
-            <option value="PAID">Pago</option>
-            <option value="PENDING">Pendente</option>
-            <option value="OVERDUE">Atrasado</option>
-          </select>
-        </div>
-      </div>
+      <FilterBar
+        action="/financial/receivables"
+        filters={filters}
+        refLabel="Contrato"
+        refOptions={Object.entries(leaseLabels).map(([value, label]) => ({ value, label }))}
+      />
 
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-muted text-muted-foreground uppercase text-xs">
-              <tr>
-                <th className="px-6 py-3 font-medium">Vencimento</th>
-                <th className="px-6 py-3 font-medium">Pagador</th>
-                <th className="px-6 py-3 font-medium">Imóvel / Contrato</th>
-                <th className="px-6 py-3 font-medium">Valor</th>
-                <th className="px-6 py-3 font-medium">Forma Pagto</th>
-                <th className="px-6 py-3 font-medium">Status</th>
-                <th className="px-6 py-3 font-medium text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {loading ? (
-                <tr><td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">Carregando...</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">Nenhuma cobrança encontrada.</td></tr>
-              ) : filtered.map(item => (
-                <tr key={item.id} className="hover:bg-muted transition-colors group">
-                  <td className="px-6 py-4 whitespace-nowrap">{formatDate(item.dueDate)}</td>
-                  <td className="px-6 py-4 font-medium text-foreground">{item.payer}</td>
-                  <td className="px-6 py-4 text-muted-foreground">{item.property}</td>
-                  <td className="px-6 py-4 font-semibold">{formatBRL(item.amount)}</td>
-                  <td className="px-6 py-4 text-muted-foreground">
-                    {item.paymentMethod === 'CREDIT_CARD' ? 'Cartão' : item.paymentMethod}
-                  </td>
-                  <td className="px-6 py-4"><StatusBadge status={item.status} /></td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Opções">
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      {/* Modal Nova Cobrança */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-background rounded-xl shadow-lg w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-card">
-              <h2 className="text-lg font-bold">Gerar Nova Cobrança</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground">✕</button>
-            </div>
-            
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Selecionar Contrato</label>
-                  <select className="w-full text-sm bg-background border border-input rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-primary">
-                    <option>João Silva - Apto 101</option>
-                    <option>Maria Souza - Casa 3</option>
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Vencimento</label>
-                    <input type="date" className="w-full text-sm bg-background border border-input rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-primary" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Valor (R$)</label>
-                    <input type="text" placeholder="0,00" className="w-full text-sm bg-background border border-input rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-primary" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Multa por atraso (%)</label>
-                  <input type="number" defaultValue="2" className="w-full text-sm bg-background border border-input rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-                <button className="text-sm text-primary font-medium flex items-center gap-1 hover:underline">
-                  <Plus className="w-3 h-3" /> Adicionar Despesa Extraordinária
-                </button>
-              </div>
-
-              {/* Preview UI */}
-              <div className="bg-muted p-4 rounded-lg border border-border flex flex-col items-center justify-center text-center space-y-4">
-                <div className="w-24 h-24 bg-card p-2 rounded border border-border shadow-sm flex items-center justify-center">
-                  <div className="w-full h-full bg-black/10 rounded-sm flex items-center justify-center">QR</div>
-                </div>
-                <div>
-                  <p className="text-sm font-bold">Preview da Cobrança</p>
-                  <p className="text-xs text-muted-foreground">O inquilino receberá um link com PIX Copia e Cola e o Boleto bancário.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-border bg-card flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-              <Button onClick={() => setIsModalOpen(false)}>Gerar e Enviar</Button>
-            </div>
-          </div>
-        </div>
+      {list.data ? (
+        <ReceivablesTable rows={list.data} leaseLabels={leaseLabels} />
+      ) : (
+        <ErrorState message={list.error ?? 'Não foi possível carregar as contas a receber.'} retryHref="/financial/receivables" />
       )}
     </div>
-  );
+  )
 }

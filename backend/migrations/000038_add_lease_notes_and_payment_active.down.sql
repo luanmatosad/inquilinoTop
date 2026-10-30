@@ -1,0 +1,2 @@
+ALTER TABLE payments DROP COLUMN IF EXISTS is_active;
+ALTER TABLE leases DROP COLUMN IF EXISTS notes;

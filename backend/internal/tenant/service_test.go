@@ -28,16 +28,16 @@ func (m *mockTenantRepo) Create(_ context.Context, userID, orgID uuid.UUID, in t
 		pt = *in.PersonType
 	}
 	t := &tenant.Tenant{
-		ID:           uuid.New(),
+		ID:             uuid.New(),
 		OrganizationID: orgID,
-		Name:       in.Name,
-		Email:      in.Email,
-		Phone:      in.Phone,
-		Document:   in.Document,
-		PersonType: pt,
-		IsActive:   true,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+		Name:           in.Name,
+		Email:          in.Email,
+		Phone:          in.Phone,
+		Document:       in.Document,
+		PersonType:     pt,
+		IsActive:       true,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 	m.tenants[t.ID] = t
 	return t, nil

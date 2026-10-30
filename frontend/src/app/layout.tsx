@@ -1,19 +1,24 @@
 import type { Metadata } from "next";
-import { Urbanist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import Header from "@/components/Header";
 import { AppShell } from "@/components/AppShell";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const urbanist = Urbanist({
+// Fontes self-hosted (pacotes @fontsource-variable): next/font/google baixa a fonte em tempo de
+// execução e quebra o `next dev` em ambientes sem acesso à internet, como o container.
+const urbanist = localFont({
   variable: "--font-urbanist",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  src: "../../node_modules/@fontsource-variable/urbanist/files/urbanist-latin-wght-normal.woff2",
+  weight: "100 900",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  src: "../../node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2",
+  weight: "100 900",
+  display: "swap",
 });
 
 export const metadata: Metadata = {

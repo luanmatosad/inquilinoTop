@@ -9,8 +9,8 @@ import (
 )
 
 func (h *Handler) getFinancialConfig(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
-	config, err := h.svc.GetFinancialConfig(r.Context(), ownerID)
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	config, err := h.svc.GetFinancialConfig(r.Context(), orgID)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -19,15 +19,15 @@ func (h *Handler) getFinancialConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) updateFinancialConfig(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
-	
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+
 	var in UpsertFinancialConfigInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_JSON", "Payload inválido")
 		return
 	}
 
-	config, err := h.svc.UpdateFinancialConfig(r.Context(), ownerID, in)
+	config, err := h.svc.UpdateFinancialConfig(r.Context(), orgID, in)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return

@@ -3,17 +3,19 @@ package payment
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/internal/payment/provider"
 	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/httputil"
 	"github.com/inquilinotop/api/pkg/validator"
-	"github.com/inquilinotop/api/internal/payment/provider"
 )
 
 type Handler struct {
@@ -31,6 +33,7 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler,
 		r.With(writeMw).Post("/leases/{leaseId}/payments", h.create)
 		r.With(writeMw).Post("/leases/{leaseId}/payments/generate", h.Generate)
 		r.With(readMw).Get("/payments", h.listByOwner)
+		r.With(readMw).Get("/payments/summary", h.summary)
 		r.With(readMw).Get("/payments/{id}", h.get)
 		r.With(writeMw).Put("/payments/{id}", h.update)
 		r.With(readMw).Get("/payments/{id}/receipt", h.Receipt)
@@ -43,12 +46,49 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler,
 	r.Post("/webhook/{provider}", h.handleWebhook)
 }
 
-// @Summary Lista todos os pagamentos do owner autenticado
+// parseFilter lê status, from, to (YYYY-MM-DD) e lease_id da query string.
+func parseFilter(r *http.Request) (PaymentFilter, error) {
+	q := r.URL.Query()
+	f := PaymentFilter{Status: q.Get("status")}
+	parseDate := func(name string) (*time.Time, error) {
+		v := q.Get(name)
+		if v == "" {
+			return nil, nil
+		}
+		t, err := time.Parse("2006-01-02", v)
+		if err != nil {
+			return nil, fmt.Errorf("%s inválido: use YYYY-MM-DD", name)
+		}
+		return &t, nil
+	}
+	var err error
+	if f.From, err = parseDate("from"); err != nil {
+		return f, err
+	}
+	if f.To, err = parseDate("to"); err != nil {
+		return f, err
+	}
+	if v := q.Get("lease_id"); v != "" {
+		id, err := uuid.Parse(v)
+		if err != nil {
+			return f, fmt.Errorf("lease_id inválido")
+		}
+		f.LeaseID = &id
+	}
+	return f, nil
+}
+
+// @Summary Lista as cobranças da organização
+// @Description Filtros: status (PENDING a vencer | LATE vencida, com multa e juros | PAID), from/to (vencimento, inclusive) e lease_id.
 // @Tags payments
 // @Security BearerAuth
 // @Produce json
-// @Param status query string false "Filtro de status (PENDING|PAID|LATE)"
+// @Param status query string false "PENDING, LATE ou PAID"
+// @Param from query string false "Vencimento a partir de (YYYY-MM-DD)"
+// @Param to query string false "Vencimento até (YYYY-MM-DD)"
+// @Param lease_id query string false "ID do contrato"
 // @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
 // @Router /payments [get]
 func (h *Handler) listByOwner(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -56,10 +96,18 @@ func (h *Handler) listByOwner(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
 		return
 	}
-	statusFilter := r.URL.Query().Get("status")
-	list, err := h.svc.ListByOwner(r.Context(), orgID, statusFilter)
+	f, err := parseFilter(r)
 	if err != nil {
-		slog.Error("payment: list by owner failed", "org_id", orgID, "status_filter", statusFilter, "error", err)
+		httputil.Err(w, http.StatusBadRequest, "INVALID_FILTER", err.Error())
+		return
+	}
+	list, err := h.svc.List(r.Context(), orgID, f)
+	if err != nil {
+		if errors.Is(err, ErrInvalidFilter) {
+			httputil.Err(w, http.StatusBadRequest, "INVALID_FILTER", "status inválido: use PENDING, LATE ou PAID")
+			return
+		}
+		slog.Error("payment: list failed", "org_id", orgID, "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
 		return
 	}
@@ -67,6 +115,37 @@ func (h *Handler) listByOwner(w http.ResponseWriter, r *http.Request) {
 		list = []Payment{}
 	}
 	httputil.OK(w, list)
+}
+
+// @Summary Resumo das cobranças no período
+// @Description Totais a receber, vencidos (valor atualizado com multa e juros) e recebidos, por vencimento entre from e to.
+// @Tags payments
+// @Security BearerAuth
+// @Produce json
+// @Param from query string false "Vencimento a partir de (YYYY-MM-DD)"
+// @Param to query string false "Vencimento até (YYYY-MM-DD)"
+// @Param lease_id query string false "ID do contrato"
+// @Success 200 {object} Summary
+// @Failure 400 {object} map[string]interface{}
+// @Router /payments/summary [get]
+func (h *Handler) summary(w http.ResponseWriter, r *http.Request) {
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	f, err := parseFilter(r)
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_FILTER", err.Error())
+		return
+	}
+	sum, err := h.svc.Summary(r.Context(), orgID, f)
+	if err != nil {
+		slog.Error("payment: summary failed", "org_id", orgID, "error", err)
+		httputil.Err(w, http.StatusInternalServerError, "SUMMARY_FAILED", err.Error())
+		return
+	}
+	httputil.OK(w, sum)
 }
 
 // @Summary Lista pagamentos de um contrato
@@ -273,13 +352,14 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 // @Failure 409 {object} map[string]interface{}
 // @Router /payments/{id}/receipt [get]
 func (h *Handler) Receipt(w http.ResponseWriter, r *http.Request) {
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	userID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	rec, err := h.svc.BuildReceipt(r.Context(), id, ownerID)
+	rec, err := h.svc.BuildReceipt(r.Context(), id, orgID, userID)
 	if err != nil {
 		if h.svc.IsNotPaid(err) {
 			httputil.Err(w, http.StatusConflict, "PAYMENT_NOT_PAID", "payment não está PAID")
@@ -306,7 +386,7 @@ func (h *Handler) handleCreateCharge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 
 	var req CreateChargeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -319,7 +399,7 @@ func (h *Handler) handleCreateCharge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.svc.CreateCharge(r.Context(), id, ownerID, req.Method)
+	resp, err := h.svc.CreateCharge(r.Context(), id, orgID, req.Method)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "CREATE_CHARGE_FAILED", err.Error())
 		return
@@ -335,9 +415,9 @@ func (h *Handler) handleGetChargeStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 
-	status, err := h.svc.GetChargeStatus(r.Context(), id, ownerID)
+	status, err := h.svc.GetChargeStatus(r.Context(), id, orgID)
 	if err != nil {
 		httputil.Err(w, http.StatusBadRequest, "GET_STATUS_FAILED", err.Error())
 		return
@@ -348,11 +428,11 @@ func (h *Handler) handleGetChargeStatus(w http.ResponseWriter, r *http.Request) 
 
 type CreatePayoutRequest struct {
 	Destination struct {
-		Type        string `json:"type"`
+		Type       string `json:"type"`
 		PixKey     string `json:"pix_key,omitempty"`
 		PixKeyType string `json:"pix_key_type,omitempty"`
-		OwnerName string `json:"owner_name"`
-		Document  string `json:"document"`
+		OwnerName  string `json:"owner_name"`
+		Document   string `json:"document"`
 	} `json:"destination"`
 }
 
@@ -363,7 +443,7 @@ func (h *Handler) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ownerID := auth.OwnerIDFromCtx(r.Context())
+	orgID := auth.OrganizationIDFromCtx(r.Context())
 
 	var req CreatePayoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -372,14 +452,14 @@ func (h *Handler) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dest := provider.Destination{
-		Type:        req.Destination.Type,
+		Type:       req.Destination.Type,
 		PixKey:     req.Destination.PixKey,
 		PixKeyType: req.Destination.PixKeyType,
-		OwnerName: req.Destination.OwnerName,
-		Document:  req.Destination.Document,
+		OwnerName:  req.Destination.OwnerName,
+		Document:   req.Destination.Document,
 	}
 
-	resp, err := h.svc.CreatePayout(r.Context(), id, ownerID, dest)
+	resp, err := h.svc.CreatePayout(r.Context(), id, orgID, dest)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "CREATE_PAYOUT_FAILED", err.Error())
 		return

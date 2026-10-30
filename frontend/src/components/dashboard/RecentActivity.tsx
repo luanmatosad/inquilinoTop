@@ -106,7 +106,7 @@ export function RecentActivity({ payments, expiringLeases }: RecentActivityProps
 
       <CardFooter>
         <Button variant="outline" className="w-full" asChild>
-          <Link href="/payments">Ver todo histórico</Link>
+          <Link href="/financial/receivables">Ver todo histórico</Link>
         </Button>
       </CardFooter>
     </Card>

@@ -165,20 +165,20 @@ func TestHandler_Update_BodyInválido(t *testing.T) {
 
 func setupLeaseInHandler(ts *testService, leaseID, ownerID uuid.UUID) {
 	l := &lease.Lease{
-		ID:         leaseID,
-		OrganizationID:    ownerID,
-		TenantID:   uuid.New(),
-		StartDate:  time.Now().AddDate(0, -6, 0),
-		RentAmount: 2000,
-		Status:     "ACTIVE",
+		ID:             leaseID,
+		OrganizationID: ownerID,
+		TenantID:       uuid.New(),
+		StartDate:      time.Now().AddDate(0, -6, 0),
+		RentAmount:     2000,
+		Status:         "ACTIVE",
 	}
 	ts.leaseReader.leases[leaseID] = l
 
 	t := &tenant.Tenant{
-		ID:         l.TenantID,
-		OrganizationID:    ownerID,
-		Name:       "Tenant Test",
-		PersonType: "PF",
+		ID:             l.TenantID,
+		OrganizationID: ownerID,
+		Name:           "Tenant Test",
+		PersonType:     "PF",
 	}
 	ts.addTenant(t)
 }
@@ -305,4 +305,95 @@ func TestHandler_ListByOwner_ComFiltroStatus(t *testing.T) {
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func payRouter(ts *testService, orgID uuid.UUID) http.Handler {
+	r := chi.NewRouter()
+	payment.NewHandler(ts.Service).Register(r, noopAuthMWWithOwnerID(orgID), noopWriteMw, noopWriteMw)
+	return r
+}
+
+func getPath(r http.Handler, path string) *httptest.ResponseRecorder {
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path, nil))
+	return rr
+}
+
+func TestHandler_Summary_RotaNãoÉTratadaComoID(t *testing.T) {
+	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	ts, leaseID, orgID := listSvc(now)
+	addPayment(ts, leaseID, orgID, time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC), 1000, "PENDING")
+
+	rr := getPath(payRouter(ts, orgID), "/payments/summary")
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), `"to_receive":{"count":1,"total":1000}`)
+	assert.Contains(t, rr.Body.String(), `"overdue":{"count":0,"total":0}`)
+}
+
+func TestHandler_List_Filtros(t *testing.T) {
+	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	ts, leaseID, orgID := listSvc(now)
+	addPayment(ts, leaseID, orgID, time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC), 1000, "PENDING")
+	addPayment(ts, leaseID, orgID, time.Date(2026, 7, 5, 0, 0, 0, 0, time.UTC), 1000, "PENDING")
+	r := payRouter(ts, orgID)
+
+	rr := getPath(r, "/payments?status=LATE")
+	require.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), `"status":"LATE"`)
+	assert.Contains(t, rr.Body.String(), `"late_fee_amount":20`)
+
+	rr = getPath(r, "/payments?status=PAID")
+	require.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), `"data":[]`)
+
+	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments?status=XYZ").Code)
+	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments?from=15/06/2026").Code)
+	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments?lease_id=nao-uuid").Code)
+	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments/summary?to=x").Code)
+}
+
+// distinctAuthMW injeta usuário e organização com ids diferentes, como o JWT real faz.
+func distinctAuthMW(userID, orgID uuid.UUID) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := auth.WithOwnerIDOrgIDRole(r.Context(), userID, orgID, "admin")
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+func TestHandler_Receipt_UsaOrganizaçãoNãoOUsuário(t *testing.T) {
+	ts := newTestService()
+	userID, orgID, leaseID := uuid.New(), uuid.New(), uuid.New()
+	setupLease(ts, leaseID, orgID, 5, 0.1)
+	tenantID := ts.leaseReader.leases[leaseID].TenantID
+	ts.tenantReader.tenants[tenantID] = &tenant.Tenant{ID: tenantID, OrganizationID: orgID, PersonType: "PF"}
+	ts.ownerReader.owners[userID] = &payment.OwnerSummary{ID: userID, Name: "Locador"}
+	ts.unitReader.units[ts.leaseReader.leases[leaseID].UnitID] = &payment.UnitSummary{ID: ts.leaseReader.leases[leaseID].UnitID}
+	p, _ := ts.mockRepo.Create(context.Background(), userID, orgID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
+	})
+	ts.mockRepo.MarkPaid(context.Background(), p.ID, orgID, time.Now(), 0, 0, 0, 2000)
+
+	r := chi.NewRouter()
+	payment.NewHandler(ts.Service).Register(r, distinctAuthMW(userID, orgID), noopWriteMw, noopWriteMw)
+	rr := getPath(r, "/payments/"+p.ID.String()+"/receipt")
+
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), "Locador")
+}
+
+func TestHandler_UpdateConfig_GravaNaOrganização(t *testing.T) {
+	ts := newTestService()
+	userID, orgID := uuid.New(), uuid.New()
+	r := chi.NewRouter()
+	payment.NewHandler(ts.Service).Register(r, distinctAuthMW(userID, orgID), noopWriteMw, noopWriteMw)
+
+	req := httptest.NewRequest(http.MethodPut, "/payments/config", strings.NewReader(`{"provider":"MOCK","config":{"k":"v"}}`))
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), orgID.String(), "a configuração pertence à organização, não ao usuário")
+	assert.NotContains(t, rr.Body.String(), userID.String())
 }

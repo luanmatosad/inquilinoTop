@@ -12,8 +12,10 @@ interface PropertyWithUnits {
   name: string
   type: string
   address_line?: string
+  neighborhood?: string
   city?: string
   state?: string
+  postal_code?: string
   is_active: boolean
   created_at: string
   units: { id: string }[]
@@ -39,6 +41,11 @@ function getPropertyTypeBadgeClass(type: string): string {
   return PROPERTY_TYPE_BADGE_CLASS[type] || 'bg-muted text-foreground'
 }
 
+function formatAddress(p: PropertyWithUnits): string {
+  const cityState = [p.city, p.state].filter(Boolean).join("/")
+  return [p.address_line, p.neighborhood, cityState].filter(Boolean).join(", ")
+}
+
 async function PropertiesList({ search }: { search?: string }) {
   let properties: PropertyWithUnits[] = []
 
@@ -46,11 +53,20 @@ async function PropertiesList({ search }: { search?: string }) {
     properties = await goFetch<PropertyWithUnits[]>("/api/v1/properties", {})
   } catch (error) {
     console.error("Erro ao buscar propriedades:", error)
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3 border border-border rounded-xl bg-card">
+        <p className="text-muted-foreground">Não foi possível carregar os imóveis.</p>
+        <Link href={search ? `/properties?q=${encodeURIComponent(search)}` : "/properties"}>
+          <Button variant="outline">Tentar novamente</Button>
+        </Link>
+      </div>
+    )
   }
 
   if (search) {
-    properties = properties.filter(p => 
-      p.name.toLowerCase().includes(search.toLowerCase())
+    const q = search.toLowerCase()
+    properties = (properties ?? []).filter(p =>
+      [p.name, p.address_line, p.neighborhood, p.city].some(f => f?.toLowerCase().includes(q))
     )
   }
 
@@ -83,7 +99,7 @@ async function PropertiesList({ search }: { search?: string }) {
               <div className="flex items-start gap-1 text-muted-foreground mb-4">
                 <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
                 <span className="text-sm line-clamp-1">
-                  {property.address_line || "Sem endereço"}
+                  {formatAddress(property) || "Sem endereço"}
                 </span>
               </div>
 

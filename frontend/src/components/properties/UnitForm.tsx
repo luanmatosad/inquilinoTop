@@ -36,8 +36,17 @@ export function UnitForm({ propertyId, initialData, onSuccess, onCancel }: UnitF
       label: "",
       floor: "",
       notes: "",
+      area_m2: "",
+      bedrooms: "",
+      bathrooms: "",
     },
   })
+
+  function applyServerErrors(details?: Record<string, string[] | undefined>) {
+    for (const [name, messages] of Object.entries(details ?? {})) {
+      if (messages?.[0]) form.setError(name as keyof UnitFormValues, { message: messages[0] })
+    }
+  }
 
   async function onSubmit(data: UnitFormValues) {
     setLoading(true)
@@ -45,6 +54,7 @@ export function UnitForm({ propertyId, initialData, onSuccess, onCancel }: UnitF
       if (initialData) {
         const result = await updateUnit(initialData.id, propertyId, data)
         if (result.error) {
+          applyServerErrors(result.details)
           toast.error(result.error)
         } else {
           toast.success("Unidade atualizada com sucesso!")
@@ -53,6 +63,7 @@ export function UnitForm({ propertyId, initialData, onSuccess, onCancel }: UnitF
       } else {
         const result = await createUnit(propertyId, data)
         if (result.error) {
+          applyServerErrors(result.details)
           toast.error(result.error)
         } else {
           toast.success("Unidade criada com sucesso!")
@@ -96,6 +107,48 @@ export function UnitForm({ propertyId, initialData, onSuccess, onCancel }: UnitF
             </FormItem>
           )}
         />
+
+        <div className="grid grid-cols-3 gap-4">
+          <FormField
+            control={form.control}
+            name="area_m2"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Área (m²)</FormLabel>
+                <FormControl>
+                  <Input placeholder="54,5" inputMode="decimal" {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="bedrooms"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Quartos</FormLabel>
+                <FormControl>
+                  <Input placeholder="2" inputMode="numeric" {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="bathrooms"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Banheiros</FormLabel>
+                <FormControl>
+                  <Input placeholder="1" inputMode="numeric" {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}

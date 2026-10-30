@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { propertySchema, PropertyFormValues } from "@/lib/schemas"
+import { maskCep } from "@/lib/masks"
 import { createProperty, updateProperty } from "@/app/properties/actions"
 
 interface PropertyFormProps {
@@ -38,12 +39,16 @@ export function PropertyForm({ initialData }: PropertyFormProps) {
 
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema),
-    defaultValues: initialData || {
+    defaultValues: initialData
+      ? { ...initialData, postal_code: maskCep(initialData.postal_code) }
+      : {
       name: "",
       type: "SINGLE", // Default to SINGLE
       address_line: "",
+      neighborhood: "",
       city: "",
       state: "",
+      postal_code: "",
     },
   })
 
@@ -129,14 +134,50 @@ export function PropertyForm({ initialData }: PropertyFormProps) {
           )}
         />
 
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <FormField
+            control={form.control}
+            name="postal_code"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>CEP</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="00000-000"
+                    inputMode="numeric"
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(maskCep(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="address_line"
+            render={({ field }) => (
+              <FormItem className="sm:col-span-2">
+                <FormLabel>Endereço</FormLabel>
+                <FormControl>
+                  <Input placeholder="Rua, número, complemento" {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <FormField
           control={form.control}
-          name="address_line"
+          name="neighborhood"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Endereço</FormLabel>
+              <FormLabel>Bairro</FormLabel>
               <FormControl>
-                <Input placeholder="Rua, número, bairro" {...field} />
+                <Input placeholder="Bairro" {...field} value={field.value ?? ""} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -151,7 +192,7 @@ export function PropertyForm({ initialData }: PropertyFormProps) {
               <FormItem>
                 <FormLabel>Cidade</FormLabel>
                 <FormControl>
-                  <Input placeholder="Cidade" {...field} />
+                  <Input placeholder="Cidade" {...field} value={field.value ?? ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -165,7 +206,13 @@ export function PropertyForm({ initialData }: PropertyFormProps) {
               <FormItem>
                 <FormLabel>Estado</FormLabel>
                 <FormControl>
-                  <Input placeholder="UF" maxLength={2} {...field} />
+                  <Input
+                    placeholder="UF"
+                    maxLength={2}
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

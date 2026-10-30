@@ -22,7 +22,7 @@ func testDB(t *testing.T) *db.DB {
 	require.NoError(t, err)
 	require.NoError(t, db.RunMigrations(url, "../../migrations"))
 	t.Cleanup(func() {
-		d.Pool.Exec(context.Background(), "TRUNCATE organization_members, tenants, organizations, users RESTART IDENTITY CASCADE")
+		d.Pool.Exec(context.Background(), "TRUNCATE organization_members, leases, units, properties, tenants, organizations, users RESTART IDENTITY CASCADE")
 		d.Close()
 	})
 	return d
@@ -102,4 +102,120 @@ func TestRepository_Create_PersonTypePJ(t *testing.T) {
 	got, err := repo.GetByID(context.Background(), tn.ID, orgID)
 	require.NoError(t, err)
 	assert.Equal(t, "PJ", got.PersonType)
+}
+
+func strPtr(s string) *string { return &s }
+
+func TestTenantRepository_CamposDeEndereço(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, userID := seedOrgAndUser(t, database)
+	repo := tenant.NewRepository(database)
+
+	pt := "PF"
+	created, err := repo.Create(ctx, userID, orgID, tenant.CreateTenantInput{
+		Name: "Ana", PersonType: &pt, PostalCode: strPtr("01310100"), AddressLine: strPtr("Av. Paulista, 1000"),
+		City: strPtr("São Paulo"), State: strPtr("SP"), Notes: strPtr("prefere contato por e-mail"),
+	})
+	require.NoError(t, err)
+
+	got, err := repo.GetByID(ctx, created.ID, orgID)
+	require.NoError(t, err)
+	assert.Equal(t, "01310100", *got.PostalCode)
+	assert.Equal(t, "SP", *got.State)
+	assert.Equal(t, "prefere contato por e-mail", *got.Notes)
+
+	up, err := repo.Update(ctx, created.ID, orgID, tenant.CreateTenantInput{Name: "Ana", PersonType: &pt, City: strPtr("Campinas")})
+	require.NoError(t, err)
+	assert.Equal(t, "Campinas", *up.City)
+	assert.Nil(t, up.PostalCode, "campos não enviados no PUT são limpos")
+}
+
+func TestTenantRepository_DocumentoÚnicoPorOrganização(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, userID := seedOrgAndUser(t, database)
+	repo := tenant.NewRepository(database)
+	pt, doc := "PF", "52998224725"
+
+	first, err := repo.Create(ctx, userID, orgID, tenant.CreateTenantInput{Name: "Ana", PersonType: &pt, Document: &doc})
+	require.NoError(t, err)
+
+	_, err = repo.Create(ctx, userID, orgID, tenant.CreateTenantInput{Name: "Outra", PersonType: &pt, Document: &doc})
+	assert.ErrorIs(t, err, tenant.ErrDuplicateDocument)
+
+	// outro documento, depois tenta atualizar para o duplicado
+	doc2 := "11144477735"
+	second, err := repo.Create(ctx, userID, orgID, tenant.CreateTenantInput{Name: "Bia", PersonType: &pt, Document: &doc2})
+	require.NoError(t, err)
+	_, err = repo.Update(ctx, second.ID, orgID, tenant.CreateTenantInput{Name: "Bia", PersonType: &pt, Document: &doc})
+	assert.ErrorIs(t, err, tenant.ErrDuplicateDocument)
+
+	// sem documento pode repetir
+	_, err = repo.Create(ctx, userID, orgID, tenant.CreateTenantInput{Name: "S1", PersonType: &pt})
+	require.NoError(t, err)
+	_, err = repo.Create(ctx, userID, orgID, tenant.CreateTenantInput{Name: "S2", PersonType: &pt})
+	require.NoError(t, err)
+
+	// reuso após soft-delete
+	require.NoError(t, repo.Delete(ctx, first.ID, orgID))
+	_, err = repo.Create(ctx, userID, orgID, tenant.CreateTenantInput{Name: "Ana de novo", PersonType: &pt, Document: &doc})
+	assert.NoError(t, err)
+}
+
+func TestTenantRepository_MesmoDocumentoEmOutraOrganização(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgA, userA := seedOrgAndUser(t, database)
+	orgB, userB := seedOrgAndUser(t, database)
+	repo := tenant.NewRepository(database)
+	pt, doc := "PF", "52998224725"
+
+	_, err := repo.Create(ctx, userA, orgA, tenant.CreateTenantInput{Name: "Ana", PersonType: &pt, Document: &doc})
+	require.NoError(t, err)
+	_, err = repo.Create(ctx, userB, orgB, tenant.CreateTenantInput{Name: "Ana", PersonType: &pt, Document: &doc})
+	assert.NoError(t, err)
+
+	list, err := repo.List(ctx, orgA)
+	require.NoError(t, err)
+	assert.Len(t, list, 1)
+}
+
+func TestTenantRepository_HasActiveLease(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, userID := seedOrgAndUser(t, database)
+	repo := tenant.NewRepository(database)
+	checker := tenant.NewLeaseChecker(database)
+	pt := "PF"
+	tn, err := repo.Create(ctx, userID, orgID, tenant.CreateTenantInput{Name: "Ana", PersonType: &pt})
+	require.NoError(t, err)
+
+	has, err := checker.HasActiveLease(ctx, tn.ID, orgID)
+	require.NoError(t, err)
+	assert.False(t, has)
+
+	var propID, unitID uuid.UUID
+	require.NoError(t, database.Pool.QueryRow(ctx,
+		`INSERT INTO properties (organization_id, owner_id, type, name) VALUES ($1,$2,'SINGLE','Casa') RETURNING id`, orgID, userID).Scan(&propID))
+	require.NoError(t, database.Pool.QueryRow(ctx,
+		`INSERT INTO units (property_id, label) VALUES ($1,'Unidade 01') RETURNING id`, propID).Scan(&unitID))
+	var leaseID uuid.UUID
+	require.NoError(t, database.Pool.QueryRow(ctx,
+		`INSERT INTO leases (organization_id, owner_id, unit_id, tenant_id, start_date, rent_amount, status)
+		 VALUES ($1,$2,$3,$4,CURRENT_DATE,1000,'ACTIVE') RETURNING id`, orgID, userID, unitID, tn.ID).Scan(&leaseID))
+
+	has, err = checker.HasActiveLease(ctx, tn.ID, orgID)
+	require.NoError(t, err)
+	assert.True(t, has)
+
+	has, err = checker.HasActiveLease(ctx, tn.ID, uuid.New())
+	require.NoError(t, err)
+	assert.False(t, has, "outra organização não enxerga o contrato")
+
+	_, err = database.Pool.Exec(ctx, `UPDATE leases SET status='ENDED' WHERE id=$1`, leaseID)
+	require.NoError(t, err)
+	has, err = checker.HasActiveLease(ctx, tn.ID, orgID)
+	require.NoError(t, err)
+	assert.False(t, has)
 }

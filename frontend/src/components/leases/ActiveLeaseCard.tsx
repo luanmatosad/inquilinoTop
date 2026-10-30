@@ -15,7 +15,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { endLease, cancelLease } from '@/app/leases/actions'
+import Link from 'next/link'
+import { endLease } from '@/app/leases/actions'
 import { toast } from 'sonner'
 import { useState } from 'react'
 
@@ -35,6 +36,15 @@ interface Lease {
   }
 }
 
+function endedMessage(data?: { payments_canceled?: number; payments_need_review?: number }) {
+  const canceled = data?.payments_canceled ?? 0
+  const review = data?.payments_need_review ?? 0
+  let msg = 'Contrato encerrado com sucesso!'
+  if (canceled > 0) msg += ` ${canceled} cobrança(s) futura(s) cancelada(s).`
+  if (review > 0) msg += ` ${review} cobrança(s) já emitida(s) precisam de decisão manual.`
+  return msg
+}
+
 interface ActiveLeaseCardProps {
   lease: Lease
 }
@@ -48,25 +58,12 @@ export function ActiveLeaseCard({ lease }: ActiveLeaseCardProps) {
       if (result.error) {
         toast.error(result.error)
       } else {
-        toast.success('Contrato encerrado com sucesso!')
+        toast.success(endedMessage(result.data))
       }
-    } catch (error) {
+    } catch {
       toast.error('Erro ao encerrar contrato.')
     }
   }
-
-  const handleCancelLease = async () => {
-      try {
-        const result = await cancelLease(lease.id, lease.unit_id)
-        if (result.error) {
-          toast.error(result.error)
-        } else {
-          toast.success('Contrato cancelado com sucesso!')
-        }
-      } catch (error) {
-        toast.error('Erro ao cancelar contrato.')
-      }
-    }
 
   return (
     <Card className="border-green-200 bg-green-50/30">
@@ -125,28 +122,9 @@ export function ActiveLeaseCard({ lease }: ActiveLeaseCardProps) {
         )}
 
         <div className="mt-6 flex gap-2 justify-end border-t pt-4 border-green-200">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50">
-                Cancelar Contrato (Erro)
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Cancelar Contrato?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Use esta opção apenas se o contrato foi criado por engano. Isso irá marcar como CANCELADO e não gerará histórico financeiro válido.
-                  Para encerrar um contrato que chegou ao fim, use &quot;Encerrar Contrato&quot;.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Voltar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleCancelLease} className="bg-red-600 hover:bg-red-700">
-                  Confirmar Cancelamento
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button variant="outline" asChild>
+            <Link href={`/leases/${lease.id}`}>Ver contrato</Link>
+          </Button>
 
           <AlertDialog>
             <AlertDialogTrigger asChild>

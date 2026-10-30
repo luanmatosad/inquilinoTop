@@ -45,7 +45,22 @@ export interface Unit {
   label: string
   floor?: string
   notes?: string
+  area_m2?: number
+  bedrooms?: number
+  bathrooms?: number
   is_active: boolean
+}
+
+function toFormValues(unit: Unit) {
+  return {
+    id: unit.id,
+    label: unit.label,
+    floor: unit.floor ?? "",
+    notes: unit.notes ?? "",
+    area_m2: unit.area_m2 != null ? String(unit.area_m2).replace(".", ",") : "",
+    bedrooms: unit.bedrooms != null ? String(unit.bedrooms) : "",
+    bathrooms: unit.bathrooms != null ? String(unit.bathrooms) : "",
+  }
 }
 
 interface UnitListProps {
@@ -108,6 +123,8 @@ export function UnitList({ propertyId, units, defaultOpenAdd = false }: UnitList
             <TableRow>
               <TableHead>Identificação</TableHead>
               <TableHead>Andar</TableHead>
+              <TableHead>Área</TableHead>
+              <TableHead>Quartos / Banheiros</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[100px]">Ações</TableHead>
             </TableRow>
@@ -115,7 +132,7 @@ export function UnitList({ propertyId, units, defaultOpenAdd = false }: UnitList
           <TableBody>
             {units.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                   Nenhuma unidade cadastrada.
                 </TableCell>
               </TableRow>
@@ -124,6 +141,8 @@ export function UnitList({ propertyId, units, defaultOpenAdd = false }: UnitList
                 <TableRow key={unit.id}>
                   <TableCell className="font-medium">{unit.label}</TableCell>
                   <TableCell>{unit.floor || "-"}</TableCell>
+                  <TableCell>{unit.area_m2 != null ? `${unit.area_m2.toLocaleString("pt-BR")} m²` : "-"}</TableCell>
+                  <TableCell>{unit.bedrooms ?? "-"} / {unit.bathrooms ?? "-"}</TableCell>
                   <TableCell>
                     {unit.is_active ? (
                       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Ativo</Badge>
@@ -174,7 +193,7 @@ export function UnitList({ propertyId, units, defaultOpenAdd = false }: UnitList
           {editingUnit && (
             <UnitForm
               propertyId={propertyId}
-              initialData={editingUnit}
+              initialData={toFormValues(editingUnit)}
               onSuccess={() => setEditingUnit(null)}
               onCancel={() => setEditingUnit(null)}
             />

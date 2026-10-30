@@ -84,7 +84,7 @@ func (r *pgRepository) CreateIfAbsent(ctx context.Context, userID, orgID uuid.UU
 func (r *pgRepository) GetByID(ctx context.Context, id, orgID uuid.UUID) (*Payment, error) {
 	var p Payment
 	err := scanPayment(r.db.Pool.QueryRow(ctx,
-		`SELECT `+paymentCols+` FROM payments WHERE id=$1 AND organization_id=$2`,
+		`SELECT `+paymentCols+` FROM payments WHERE id=$1 AND organization_id=$2 AND is_active=true`,
 		id, orgID,
 	), &p)
 	if err != nil {
@@ -98,7 +98,7 @@ func (r *pgRepository) GetByID(ctx context.Context, id, orgID uuid.UUID) (*Payme
 
 func (r *pgRepository) ListByLease(ctx context.Context, leaseID, orgID uuid.UUID) ([]Payment, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		`SELECT `+paymentCols+` FROM payments WHERE lease_id=$1 AND organization_id=$2 ORDER BY due_date`,
+		`SELECT `+paymentCols+` FROM payments WHERE lease_id=$1 AND organization_id=$2 AND is_active=true ORDER BY due_date`,
 		leaseID, orgID,
 	)
 	if err != nil {
@@ -119,30 +119,49 @@ func (r *pgRepository) ListByLease(ctx context.Context, leaseID, orgID uuid.UUID
 	return list, nil
 }
 
-func (r *pgRepository) ListByOwner(ctx context.Context, orgID uuid.UUID, statusFilter string) ([]Payment, error) {
-	query := `SELECT ` + paymentCols + ` FROM payments WHERE organization_id=$1`
-	args := []interface{}{orgID}
-	if statusFilter != "" {
-		query += ` AND status=$2`
-		args = append(args, statusFilter)
+// List aplica os filtros em SQL. $1 é a organização e $2 a data de hoje; um status LATE guardado
+// com vencimento futuro seria dado inconsistente, então "vencida" é sempre decidida pela data.
+func (r *pgRepository) List(ctx context.Context, orgID uuid.UUID, f PaymentFilter, today time.Time) ([]Payment, error) {
+	// "$2::date IS NOT NULL" mantém $2 referenciado em qualquer filtro (o Postgres rejeita parâmetro sobrando).
+	query := `SELECT ` + paymentCols + ` FROM payments WHERE organization_id=$1 AND is_active=true AND $2::date IS NOT NULL`
+	args := []interface{}{orgID, today}
+	switch f.Status {
+	case "PENDING":
+		query += ` AND status<>'PAID' AND due_date >= $2`
+	case "LATE":
+		query += ` AND status<>'PAID' AND due_date < $2`
+	case "PAID":
+		query += ` AND status='PAID'`
 	}
-	query += ` ORDER BY due_date DESC`
+	if f.From != nil {
+		args = append(args, *f.From)
+		query += fmt.Sprintf(` AND due_date >= $%d`, len(args))
+	}
+	if f.To != nil {
+		args = append(args, *f.To)
+		query += fmt.Sprintf(` AND due_date <= $%d`, len(args))
+	}
+	if f.LeaseID != nil {
+		args = append(args, *f.LeaseID)
+		query += fmt.Sprintf(` AND lease_id = $%d`, len(args))
+	}
+	query += ` ORDER BY due_date DESC, created_at DESC`
 
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("payment.repo: list by owner: %w", err)
+		return nil, fmt.Errorf("payment.repo: list: %w", err)
 	}
 	defer rows.Close()
 	var list []Payment
 	for rows.Next() {
 		var p Payment
 		if err := scanPaymentRows(rows, &p); err != nil {
-			return nil, fmt.Errorf("payment.repo: list by owner scan: %w", err)
+			return nil, fmt.Errorf("payment.repo: list scan: %w", err)
 		}
 		list = append(list, p)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("payment.repo: list by owner rows: %w", err)
+		return nil, fmt.Errorf("payment.repo: list rows: %w", err)
 	}
 	return list, nil
 }
@@ -210,4 +229,28 @@ func (r *pgRepository) GetByChargeID(ctx context.Context, chargeID string) (*Pay
 		return nil, fmt.Errorf("payment.repo: get by charge id: %w", err)
 	}
 	return &p, nil
+}
+
+func (r *pgRepository) DeactivateFuturePending(ctx context.Context, leaseID, orgID uuid.UUID, after time.Time) (DeactivateResult, error) {
+	var res DeactivateResult
+	tag, err := r.db.Pool.Exec(ctx,
+		`UPDATE payments SET is_active=false, updated_at=NOW()
+		 WHERE lease_id=$1 AND organization_id=$2 AND is_active=true
+		   AND status='PENDING' AND due_date > $3 AND charge_id IS NULL`,
+		leaseID, orgID, after,
+	)
+	if err != nil {
+		return res, fmt.Errorf("payment.repo: deactivate future pending: %w", err)
+	}
+	res.Deactivated = int(tag.RowsAffected())
+	err = r.db.Pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM payments
+		 WHERE lease_id=$1 AND organization_id=$2 AND is_active=true
+		   AND status='PENDING' AND due_date > $3 AND charge_id IS NOT NULL`,
+		leaseID, orgID, after,
+	).Scan(&res.NeedsReview)
+	if err != nil {
+		return res, fmt.Errorf("payment.repo: count needs review: %w", err)
+	}
+	return res, nil
 }

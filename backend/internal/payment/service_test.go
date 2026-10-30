@@ -127,20 +127,20 @@ func (m *mockPaymentRepo) GetFinancialConfig(_ context.Context, ownerID uuid.UUI
 
 func (m *mockPaymentRepo) UpsertFinancialConfig(_ context.Context, ownerID uuid.UUID, in payment.UpsertFinancialConfigInput) (*payment.FinancialConfig, error) {
 	cfg := &payment.FinancialConfig{
-		ID:       uuid.New(),
-		OrganizationID:  ownerID,
-		Provider: in.Provider,
-		IsActive: true,
+		ID:             uuid.New(),
+		OrganizationID: ownerID,
+		Provider:       in.Provider,
+		IsActive:       true,
 	}
 	return cfg, nil
 }
 
 func (m *mockPaymentRepo) CreateFinancialConfig(_ context.Context, ownerID uuid.UUID, in payment.CreateFinancialConfigInput) (*payment.FinancialConfig, error) {
 	cfg := &payment.FinancialConfig{
-		ID:       uuid.New(),
-		OrganizationID:  ownerID,
-		Provider: in.Provider,
-		IsActive: true,
+		ID:             uuid.New(),
+		OrganizationID: ownerID,
+		Provider:       in.Provider,
+		IsActive:       true,
 	}
 	return cfg, nil
 }
@@ -158,13 +158,38 @@ func (m *mockPaymentRepo) GetByChargeID(_ context.Context, chargeID string) (*pa
 	return nil, errors.New("not found")
 }
 
-func (m *mockPaymentRepo) ListByOwner(_ context.Context, ownerID uuid.UUID, statusFilter string) ([]payment.Payment, error) {
+func (m *mockPaymentRepo) DeactivateFuturePending(_ context.Context, _, _ uuid.UUID, _ time.Time) (payment.DeactivateResult, error) {
+	return payment.DeactivateResult{}, nil
+}
+
+func (m *mockPaymentRepo) List(_ context.Context, orgID uuid.UUID, f payment.PaymentFilter, today time.Time) ([]payment.Payment, error) {
 	var list []payment.Payment
 	for _, p := range m.payments {
-		if p.OrganizationID != ownerID {
+		if p.OrganizationID != orgID {
 			continue
 		}
-		if statusFilter != "" && p.Status != statusFilter {
+		overdue := p.Status != "PAID" && p.DueDate.Before(today)
+		switch f.Status {
+		case "PENDING":
+			if p.Status == "PAID" || overdue {
+				continue
+			}
+		case "LATE":
+			if !overdue {
+				continue
+			}
+		case "PAID":
+			if p.Status != "PAID" {
+				continue
+			}
+		}
+		if f.From != nil && p.DueDate.Before(*f.From) {
+			continue
+		}
+		if f.To != nil && p.DueDate.After(*f.To) {
+			continue
+		}
+		if f.LeaseID != nil && p.LeaseID != *f.LeaseID {
 			continue
 		}
 		list = append(list, *p)
@@ -291,7 +316,7 @@ func setupLease(svc *testService, leaseID, ownerID uuid.UUID, lateFeePercent, da
 	tenantID := uuid.New()
 	l := &lease.Lease{
 		ID:                   leaseID,
-		OrganizationID:              ownerID,
+		OrganizationID:       ownerID,
 		TenantID:             tenantID,
 		StartDate:            time.Now().AddDate(0, -6, 0),
 		RentAmount:           2000,
@@ -302,10 +327,10 @@ func setupLease(svc *testService, leaseID, ownerID uuid.UUID, lateFeePercent, da
 	svc.leaseReader.leases[leaseID] = l
 
 	t := &tenant.Tenant{
-		ID:         tenantID,
-		OrganizationID:    ownerID,
-		Name:       "Tenant Test",
-		PersonType: "PF",
+		ID:             tenantID,
+		OrganizationID: ownerID,
+		Name:           "Tenant Test",
+		PersonType:     "PF",
 	}
 	svc.addTenant(t)
 }
@@ -313,13 +338,13 @@ func setupLease(svc *testService, leaseID, ownerID uuid.UUID, lateFeePercent, da
 func setupLeaseBasic(svc *testService, leaseID, ownerID uuid.UUID, rentAmount float64, startDate time.Time, iptuReimbursable bool, annualIPTU float64) {
 	l := &lease.Lease{
 		ID:                   leaseID,
-		OrganizationID:              ownerID,
+		OrganizationID:       ownerID,
 		TenantID:             uuid.New(),
 		StartDate:            startDate,
 		RentAmount:           rentAmount,
 		Status:               "ACTIVE",
-		LateFeePercent:       0.10,
-		DailyInterestPercent: 0.001,
+		LateFeePercent:       10,
+		DailyInterestPercent: 0.1,
 		IPTUReimbursable:     iptuReimbursable,
 	}
 	if annualIPTU > 0 {
@@ -330,12 +355,12 @@ func setupLeaseBasic(svc *testService, leaseID, ownerID uuid.UUID, rentAmount fl
 
 func setupLeaseEnded(svc *testService, leaseID, ownerID uuid.UUID) {
 	l := &lease.Lease{
-		ID:         leaseID,
-		OrganizationID:    ownerID,
-		TenantID:   uuid.New(),
-		StartDate:  time.Now().AddDate(0, -6, 0),
-		RentAmount: 2000,
-		Status:     "ENDED",
+		ID:             leaseID,
+		OrganizationID: ownerID,
+		TenantID:       uuid.New(),
+		StartDate:      time.Now().AddDate(0, -6, 0),
+		RentAmount:     2000,
+		Status:         "ENDED",
 	}
 	svc.leaseReader.leases[leaseID] = l
 }
@@ -343,7 +368,7 @@ func setupLeaseEnded(svc *testService, leaseID, ownerID uuid.UUID) {
 func setupLeaseIPTUMissing(svc *testService, leaseID, ownerID uuid.UUID) {
 	l := &lease.Lease{
 		ID:               leaseID,
-		OrganizationID:          ownerID,
+		OrganizationID:   ownerID,
 		TenantID:         uuid.New(),
 		StartDate:        time.Now().AddDate(0, -6, 0),
 		RentAmount:       2000,
@@ -445,12 +470,12 @@ func TestService_Update_StatusInválido(t *testing.T) {
 func TestService_Update_MarcarPago(t *testing.T) {
 	svc := newTestService()
 	ownerID, leaseID := uuid.New(), uuid.New()
-	setupLease(svc, leaseID, ownerID, 0.05, 0.001)
+	setupLease(svc, leaseID, ownerID, 5, 0.1)
 
 	p, _ := svc.mockRepo.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
-	
+
 	// Add tenant since the mock uses it for the receipt
 	tenantID := svc.leaseReader.leases[leaseID].TenantID
 	svc.tenantReader.tenants[tenantID] = &tenant.Tenant{ID: tenantID, OrganizationID: ownerID, PersonType: "PF"}
@@ -470,7 +495,7 @@ func TestService_Enrich_NãoAtrasado(t *testing.T) {
 	svc := newTestService()
 	leaseID := uuid.New()
 	ownerID := uuid.New()
-	setupLease(svc, leaseID, ownerID, 0.10, 0.000333)
+	setupLease(svc, leaseID, ownerID, 10, 0.0333)
 
 	p := payment.Payment{
 		LeaseID: leaseID, OrganizationID: ownerID,
@@ -485,7 +510,7 @@ func TestService_Enrich_NãoAtrasado(t *testing.T) {
 func TestService_Enrich_Atrasado(t *testing.T) {
 	svc := newTestService()
 	leaseID, ownerID := uuid.New(), uuid.New()
-	setupLease(svc, leaseID, ownerID, 0.10, 0.001)
+	setupLease(svc, leaseID, ownerID, 10, 0.1)
 
 	p := payment.Payment{
 		LeaseID: leaseID, OrganizationID: ownerID,
@@ -585,7 +610,7 @@ func ptr[T any](v T) *T {
 func TestService_BuildReceipt_Pago(t *testing.T) {
 	svc := newTestService()
 	ownerID, leaseID := uuid.New(), uuid.New()
-	setupLease(svc, leaseID, ownerID, 0.05, 0.001)
+	setupLease(svc, leaseID, ownerID, 5, 0.1)
 
 	// Add tenant since the mock uses it for the receipt
 	tenantID := svc.leaseReader.leases[leaseID].TenantID
@@ -600,7 +625,7 @@ func TestService_BuildReceipt_Pago(t *testing.T) {
 	})
 	svc.mockRepo.MarkPaid(context.Background(), p.ID, ownerID, paidDate, 0, 0, 0, 2000)
 
-	rec, err := svc.BuildReceipt(context.Background(), p.ID, ownerID)
+	rec, err := svc.BuildReceipt(context.Background(), p.ID, ownerID, ownerID)
 	require.NoError(t, err)
 	assert.Equal(t, 2000.0, rec.Amounts.Gross)
 }
@@ -613,7 +638,7 @@ func TestService_BuildReceipt_NãoPago(t *testing.T) {
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
 
-	_, err := svc.BuildReceipt(context.Background(), p.ID, ownerID)
+	_, err := svc.BuildReceipt(context.Background(), p.ID, ownerID, ownerID)
 	require.Error(t, err)
 }
 
@@ -621,7 +646,7 @@ func TestService_BuildReceipt_NãoEncontrado(t *testing.T) {
 	svc := newTestService()
 	ownerID := uuid.New()
 
-	_, err := svc.BuildReceipt(context.Background(), uuid.New(), ownerID)
+	_, err := svc.BuildReceipt(context.Background(), uuid.New(), ownerID, ownerID)
 	require.Error(t, err)
 }
 
@@ -658,7 +683,7 @@ func TestService_Update_StatusInválidoNaCriação(t *testing.T) {
 func TestService_MarkPaid_PagoAnteriormente(t *testing.T) {
 	svc := newTestService()
 	ownerID, leaseID := uuid.New(), uuid.New()
-	setupLease(svc, leaseID, ownerID, 0.1, 0.001)
+	setupLease(svc, leaseID, ownerID, 10, 0.1)
 
 	tenantID := uuid.New()
 	tn := &tenant.Tenant{
@@ -800,4 +825,167 @@ func TestService_Enrich_LeaseNãoEncontrado(t *testing.T) {
 
 	enriched := svc.Enrich(context.Background(), p)
 	assert.Equal(t, "PENDING", enriched.Status)
+}
+
+func TestService_GenerateMonth_UsaPaymentDayDoContrato(t *testing.T) {
+	svc := newTestService()
+	leaseID, ownerID := uuid.New(), uuid.New()
+	setupLeaseBasic(svc, leaseID, ownerID, 2000, time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), false, 0)
+	svc.leaseReader.leases[leaseID].PaymentDay = 5
+
+	ps, err := svc.GenerateMonth(context.Background(), ownerID, leaseID, ownerID, "2026-04")
+	require.NoError(t, err)
+	assert.Equal(t, 5, ps[0].DueDate.Day())
+}
+
+func TestService_GenerateMonth_PaymentDay31AjustaParaFimDoMês(t *testing.T) {
+	svc := newTestService()
+	leaseID, ownerID := uuid.New(), uuid.New()
+	setupLeaseBasic(svc, leaseID, ownerID, 2000, time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), false, 0)
+	svc.leaseReader.leases[leaseID].PaymentDay = 31
+
+	ps, err := svc.GenerateMonth(context.Background(), ownerID, leaseID, ownerID, "2026-02")
+	require.NoError(t, err)
+	assert.Equal(t, 28, ps[0].DueDate.Day())
+}
+
+func TestLeaseHooks_GenerateRentMonth(t *testing.T) {
+	svc := newTestService()
+	leaseID, ownerID := uuid.New(), uuid.New()
+	setupLeaseBasic(svc, leaseID, ownerID, 2000, time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), false, 0)
+	hooks := payment.NewLeaseHooks(svc.Service)
+
+	require.NoError(t, hooks.GenerateRentMonth(context.Background(), ownerID, leaseID, ownerID, "2026-04"))
+	require.NoError(t, hooks.GenerateRentMonth(context.Background(), ownerID, leaseID, ownerID, "2026-04"), "idempotente")
+	list, err := svc.ListByLease(context.Background(), leaseID, ownerID)
+	require.NoError(t, err)
+	assert.Len(t, list, 1)
+}
+
+// ---- filtros e resumo ----
+
+func addPayment(svc *testService, leaseID, orgID uuid.UUID, due time.Time, gross float64, status string) *payment.Payment {
+	p := &payment.Payment{
+		ID: uuid.New(), OrganizationID: orgID, LeaseID: leaseID, DueDate: due,
+		GrossAmount: gross, Status: status, Type: "RENT",
+	}
+	svc.mockRepo.payments[p.ID] = p
+	return p
+}
+
+func listSvc(now time.Time) (*testService, uuid.UUID, uuid.UUID) {
+	svc := newTestService()
+	svc.Service.WithClock(func() time.Time { return now })
+	leaseID, orgID := uuid.New(), uuid.New()
+	setupLeaseBasic(svc, leaseID, orgID, 1000, time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC), false, 0)
+	svc.leaseReader.leases[leaseID].LateFeePercent = 2
+	svc.leaseReader.leases[leaseID].DailyInterestPercent = 0.1
+	return svc, leaseID, orgID
+}
+
+func TestService_List_VencidaVemComoLateComMultaEJuros(t *testing.T) {
+	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	svc, leaseID, orgID := listSvc(now)
+	addPayment(svc, leaseID, orgID, time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC), 1000, "PENDING") // 10 dias de atraso
+
+	list, err := svc.List(context.Background(), orgID, payment.PaymentFilter{})
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, "LATE", list[0].Status)
+	assert.InDelta(t, 20.0, list[0].LateFeeAmount, 0.001)
+	assert.InDelta(t, 10.0, list[0].InterestAmount, 0.001)
+}
+
+func TestService_List_FiltroPorStatus(t *testing.T) {
+	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	svc, leaseID, orgID := listSvc(now)
+	venc := addPayment(svc, leaseID, orgID, time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC), 1000, "PENDING")
+	futura := addPayment(svc, leaseID, orgID, time.Date(2026, 7, 5, 0, 0, 0, 0, time.UTC), 1000, "PENDING")
+	paga := addPayment(svc, leaseID, orgID, time.Date(2026, 5, 5, 0, 0, 0, 0, time.UTC), 1000, "PAID")
+
+	ids := func(status string) []uuid.UUID {
+		list, err := svc.List(context.Background(), orgID, payment.PaymentFilter{Status: status})
+		require.NoError(t, err)
+		out := []uuid.UUID{}
+		for _, p := range list {
+			out = append(out, p.ID)
+		}
+		return out
+	}
+	assert.ElementsMatch(t, []uuid.UUID{venc.ID}, ids("LATE"))
+	assert.ElementsMatch(t, []uuid.UUID{futura.ID}, ids("PENDING"))
+	assert.ElementsMatch(t, []uuid.UUID{paga.ID}, ids("PAID"))
+	assert.Len(t, ids(""), 3)
+}
+
+func TestService_List_PeríodoELease(t *testing.T) {
+	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	svc, leaseID, orgID := listSvc(now)
+	other := uuid.New()
+	setupLeaseBasic(svc, other, orgID, 500, time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC), false, 0)
+	inicio := addPayment(svc, leaseID, orgID, time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC), 1, "PENDING")
+	fim := addPayment(svc, leaseID, orgID, time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC), 2, "PENDING")
+	addPayment(svc, leaseID, orgID, time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC), 3, "PENDING")
+	addPayment(svc, other, orgID, time.Date(2026, 6, 25, 0, 0, 0, 0, time.UTC), 4, "PENDING")
+	from, to := time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC)
+
+	list, err := svc.List(context.Background(), orgID, payment.PaymentFilter{From: &from, To: &to, LeaseID: &leaseID})
+	require.NoError(t, err)
+	got := []uuid.UUID{}
+	for _, p := range list {
+		got = append(got, p.ID)
+	}
+	assert.ElementsMatch(t, []uuid.UUID{inicio.ID, fim.ID}, got, "extremidades inclusivas e só o contrato pedido")
+}
+
+func TestService_List_OutraOrganização(t *testing.T) {
+	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	svc, leaseID, orgID := listSvc(now)
+	addPayment(svc, leaseID, orgID, time.Date(2026, 7, 5, 0, 0, 0, 0, time.UTC), 1000, "PENDING")
+
+	list, err := svc.List(context.Background(), uuid.New(), payment.PaymentFilter{})
+	require.NoError(t, err)
+	assert.Empty(t, list)
+}
+
+func TestService_List_StatusInválido(t *testing.T) {
+	svc, _, orgID := listSvc(time.Now())
+	_, err := svc.List(context.Background(), orgID, payment.PaymentFilter{Status: "XYZ"})
+	assert.ErrorIs(t, err, payment.ErrInvalidFilter)
+}
+
+func TestService_Summary(t *testing.T) {
+	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	svc, leaseID, orgID := listSvc(now)
+	addPayment(svc, leaseID, orgID, time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC), 1000, "PENDING")
+	addPayment(svc, leaseID, orgID, time.Date(2026, 6, 25, 0, 0, 0, 0, time.UTC), 500, "PENDING")
+	addPayment(svc, leaseID, orgID, time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC), 1000, "PENDING") // vencida há 10 dias: 1000+20+10
+	paga := addPayment(svc, leaseID, orgID, time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), 1000, "PAID")
+	net := 980.0
+	paga.NetAmount = &net
+
+	sum, err := svc.Summary(context.Background(), orgID, payment.PaymentFilter{Status: "PAID"})
+	require.NoError(t, err)
+	assert.Equal(t, payment.Bucket{Count: 2, Total: 1500}, sum.ToReceive)
+	assert.Equal(t, payment.Bucket{Count: 1, Total: 1030}, sum.Overdue, "vencidos usam o valor atualizado")
+	assert.Equal(t, payment.Bucket{Count: 1, Total: 980}, sum.Paid, "recebido usa o líquido")
+}
+
+func TestService_Summary_Vazio(t *testing.T) {
+	svc, _, orgID := listSvc(time.Now())
+	sum, err := svc.Summary(context.Background(), orgID, payment.PaymentFilter{})
+	require.NoError(t, err)
+	assert.Equal(t, payment.Summary{}, sum)
+}
+
+func TestService_Enrich_PercentuaisSãoEmPorcento(t *testing.T) {
+	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	svc, leaseID, orgID := listSvc(now)
+	l := svc.leaseReader.leases[leaseID]
+	l.LateFeePercent, l.DailyInterestPercent = 2, 0.033 // 2% de multa e 0,033% ao dia, como a tela envia
+	p := addPayment(svc, leaseID, orgID, time.Date(2026, 5, 16, 0, 0, 0, 0, time.UTC), 1500, "PENDING") // 30 dias
+
+	got := svc.Enrich(context.Background(), *p)
+	assert.InDelta(t, 30.0, got.LateFeeAmount, 0.001, "2% de 1500")
+	assert.InDelta(t, 14.85, got.InterestAmount, 0.001, "0,033%% x 30 dias de 1500")
 }

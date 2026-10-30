@@ -20,10 +20,29 @@ type Service struct {
 	unitReader   UnitReader
 	ownerReader  OwnerReader
 	irrf         IRRFCalculator
+	loc          *time.Location
+	now          func() time.Time
 }
 
 func NewService(repo Repository, lr LeaseReader, tr TenantReader, ur UnitReader, ow OwnerReader, irrf IRRFCalculator) *Service {
-	return &Service{repo: repo, leaseReader: lr, tenantReader: tr, unitReader: ur, ownerReader: ow, irrf: irrf}
+	return &Service{repo: repo, leaseReader: lr, tenantReader: tr, unitReader: ur, ownerReader: ow, irrf: irrf, loc: time.UTC, now: time.Now}
+}
+
+// WithLocation define o fuso usado para decidir o que é "hoje" (vencida ou a vencer).
+func (s *Service) WithLocation(loc *time.Location) *Service {
+	s.loc = loc
+	return s
+}
+
+// WithClock troca o relógio (testes).
+func (s *Service) WithClock(now func() time.Time) *Service {
+	s.now = now
+	return s
+}
+
+func (s *Service) today() time.Time {
+	y, m, d := s.now().In(s.loc).Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
 func (s *Service) Create(ctx context.Context, userID, orgID uuid.UUID, in CreatePaymentInput) (*Payment, error) {
@@ -54,33 +73,102 @@ func (s *Service) ListByLease(ctx context.Context, leaseID, orgID uuid.UUID) ([]
 	if err != nil {
 		return nil, err
 	}
+	leases := map[uuid.UUID]*lease.Lease{}
 	for i, p := range list {
-		list[i] = s.Enrich(ctx, p)
+		list[i] = s.enrich(ctx, p, leases)
 	}
 	return list, nil
 }
 
-func (s *Service) ListByOwner(ctx context.Context, orgID uuid.UUID, statusFilter string) ([]Payment, error) {
-	return s.repo.ListByOwner(ctx, orgID, statusFilter)
+func validStatusFilter(status string) bool {
+	switch status {
+	case "", "PENDING", "LATE", "PAID":
+		return true
+	}
+	return false
 }
 
-func (s *Service) Enrich(ctx context.Context, p Payment) Payment {
-	if p.PaidDate != nil {
-		return p
+// List devolve as cobranças da organização filtradas em SQL, já com LATE, multa e juros calculados.
+func (s *Service) List(ctx context.Context, orgID uuid.UUID, f PaymentFilter) ([]Payment, error) {
+	if !validStatusFilter(f.Status) {
+		return nil, ErrInvalidFilter
 	}
-	if !time.Now().After(p.DueDate) {
-		return p
-	}
-	l, err := s.leaseReader.GetByID(ctx, p.LeaseID, p.OrganizationID)
+	list, err := s.repo.List(ctx, orgID, f, s.today())
 	if err != nil {
+		return nil, err
+	}
+	leases := map[uuid.UUID]*lease.Lease{}
+	for i, p := range list {
+		list[i] = s.enrich(ctx, p, leases)
+	}
+	return list, nil
+}
+
+// ListByOwner lista as cobranças da organização, opcionalmente só de um status.
+func (s *Service) ListByOwner(ctx context.Context, orgID uuid.UUID, statusFilter string) ([]Payment, error) {
+	return s.List(ctx, orgID, PaymentFilter{Status: statusFilter})
+}
+
+// Summary totaliza o período por vencimento. "Vencidos" soma o valor atualizado (bruto + multa + juros);
+// "recebidos" soma o líquido quando existe, senão o bruto. Filtro de status não se aplica.
+func (s *Service) Summary(ctx context.Context, orgID uuid.UUID, f PaymentFilter) (Summary, error) {
+	f.Status = ""
+	list, err := s.List(ctx, orgID, f)
+	if err != nil {
+		return Summary{}, err
+	}
+	var sum Summary
+	add := func(b *Bucket, v float64) {
+		b.Count++
+		b.Total = round2(b.Total + v)
+	}
+	for _, p := range list {
+		switch {
+		case p.Status == "PAID":
+			if p.NetAmount != nil {
+				add(&sum.Paid, *p.NetAmount)
+			} else {
+				add(&sum.Paid, p.GrossAmount)
+			}
+		case p.Status == "LATE":
+			add(&sum.Overdue, p.GrossAmount+p.LateFeeAmount+p.InterestAmount)
+		default:
+			add(&sum.ToReceive, p.GrossAmount)
+		}
+	}
+	return sum, nil
+}
+
+// Enrich calcula LATE, multa e juros de uma cobrança não paga e vencida.
+func (s *Service) Enrich(ctx context.Context, p Payment) Payment {
+	return s.enrich(ctx, p, map[uuid.UUID]*lease.Lease{})
+}
+
+// enrich reaproveita leases já lidos (cache por chamada) para não consultar o mesmo contrato N vezes.
+func (s *Service) enrich(ctx context.Context, p Payment, leases map[uuid.UUID]*lease.Lease) Payment {
+	if p.PaidDate != nil || p.Status == "PAID" {
 		return p
 	}
-	daysLate := int(time.Now().Sub(p.DueDate).Hours() / 24)
+	now := s.now()
+	if !now.After(p.DueDate) {
+		return p
+	}
+	daysLate := int(now.Sub(p.DueDate).Hours() / 24)
 	if daysLate <= 0 {
 		return p
 	}
-	p.LateFeeAmount = round2(p.GrossAmount * l.LateFeePercent)
-	p.InterestAmount = round2(p.GrossAmount * l.DailyInterestPercent * float64(daysLate))
+	l, ok := leases[p.LeaseID]
+	if !ok {
+		var err error
+		l, err = s.leaseReader.GetByID(ctx, p.LeaseID, p.OrganizationID)
+		if err != nil {
+			return p
+		}
+		leases[p.LeaseID] = l
+	}
+	// late_fee_percent e daily_interest_percent são percentuais (2 = 2%), como validam os inputs do contrato.
+	p.LateFeeAmount = round2(p.GrossAmount * l.LateFeePercent / 100)
+	p.InterestAmount = round2(p.GrossAmount * l.DailyInterestPercent / 100 * float64(daysLate))
 	p.Status = "LATE"
 	return p
 }
@@ -117,8 +205,8 @@ func (s *Service) markPaid(ctx context.Context, id, orgID uuid.UUID, paidDate ti
 	if paidDate.After(current.DueDate) {
 		daysLate := int(paidDate.Sub(current.DueDate).Hours() / 24)
 		if daysLate > 0 {
-			lateFee = round2(current.GrossAmount * l.LateFeePercent)
-			interest = round2(current.GrossAmount * l.DailyInterestPercent * float64(daysLate))
+			lateFee = round2(current.GrossAmount * l.LateFeePercent / 100)
+			interest = round2(current.GrossAmount * l.DailyInterestPercent / 100 * float64(daysLate))
 		}
 	}
 
@@ -154,7 +242,7 @@ func (s *Service) getProvider(fc *FinancialConfig) (provider.PaymentProvider, er
 	if fc == nil {
 		return nil, errors.New("financial config is missing")
 	}
-	
+
 	// Convert map[string]any to map[string]string for provider config
 	stringConfig := make(map[string]string)
 	for k, v := range fc.Config {
@@ -164,8 +252,18 @@ func (s *Service) getProvider(fc *FinancialConfig) (provider.PaymentProvider, er
 			stringConfig[k] = fmt.Sprintf("%v", v)
 		}
 	}
-	
+
 	return provider.NewProvider(fc.Provider, stringConfig)
+}
+
+// CancelFuturePending retira as cobranças pendentes futuras de um contrato encerrado.
+// Cobranças já emitidas no provedor (charge_id) são mantidas e contadas em NeedsReview.
+func (s *Service) CancelFuturePending(ctx context.Context, leaseID, orgID uuid.UUID, after time.Time) (DeactivateResult, error) {
+	res, err := s.repo.DeactivateFuturePending(ctx, leaseID, orgID, after)
+	if err != nil {
+		return res, fmt.Errorf("payment.svc: cancelar futuras pendentes: %w", err)
+	}
+	return res, nil
 }
 
 func (s *Service) GenerateMonth(ctx context.Context, userID, leaseID, orgID uuid.UUID, month string) ([]Payment, error) {
@@ -193,7 +291,11 @@ func (s *Service) GenerateMonth(ctx context.Context, userID, leaseID, orgID uuid
 		}
 	}
 
-	dueDate := dueDateForMonth(l.StartDate, monthStart)
+	dueDay := l.PaymentDay
+	if dueDay < 1 {
+		dueDay = l.StartDate.Day()
+	}
+	dueDate := dueDateForMonth(dueDay, monthStart)
 
 	results := make([]Payment, 0, 2)
 
@@ -231,17 +333,20 @@ func (s *Service) GenerateMonth(ctx context.Context, userID, leaseID, orgID uuid
 	return results, nil
 }
 
-func dueDateForMonth(leaseStart time.Time, monthStart time.Time) time.Time {
+// dueDateForMonth devolve o vencimento no dia dueDay do mês, ajustado ao último dia quando o mês é menor.
+func dueDateForMonth(dueDay int, monthStart time.Time) time.Time {
 	y, m, _ := monthStart.Date()
 	lastDayOfMonth := time.Date(y, m+1, 0, 0, 0, 0, 0, time.UTC).Day()
-	day := leaseStart.Day()
+	day := dueDay
 	if day > lastDayOfMonth {
 		day = lastDayOfMonth
 	}
 	return time.Date(y, m, day, 0, 0, 0, 0, time.UTC)
 }
 
-func (s *Service) BuildReceipt(ctx context.Context, id, orgID uuid.UUID) (*Receipt, error) {
+// BuildReceipt monta o recibo de uma cobrança paga. orgID escopa os dados; userID é o usuário
+// autenticado, exibido como locador (o ownerReader busca usuários, não organizações).
+func (s *Service) BuildReceipt(ctx context.Context, id, orgID, userID uuid.UUID) (*Receipt, error) {
 	p, err := s.repo.GetByID(ctx, id, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: %w", err)
@@ -257,7 +362,7 @@ func (s *Service) BuildReceipt(ctx context.Context, id, orgID uuid.UUID) (*Recei
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: load tenant: %w", err)
 	}
-	ow, err := s.ownerReader.GetByID(ctx, orgID)
+	ow, err := s.ownerReader.GetByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: load owner: %w", err)
 	}
@@ -297,9 +402,9 @@ func round2(x float64) float64 {
 
 var (
 	errNoFinancialConfig = fmt.Errorf("no financial config found")
-	errNoChargeCreated  = fmt.Errorf("no charge created")
-	errPaymentNotPaid   = fmt.Errorf("payment not paid")
-	errInvalidMethod   = fmt.Errorf("invalid method")
+	errNoChargeCreated   = fmt.Errorf("no charge created")
+	errPaymentNotPaid    = fmt.Errorf("payment not paid")
+	errInvalidMethod     = fmt.Errorf("invalid method")
 )
 
 func (s *Service) CreateCharge(ctx context.Context, paymentID, orgID uuid.UUID, method string) (*provider.ChargeResponse, error) {
@@ -345,11 +450,11 @@ func (s *Service) CreateCharge(ctx context.Context, paymentID, orgID uuid.UUID, 
 	}
 
 	req := provider.ChargeRequest{
-		Amount:       payment.GrossAmount,
+		Amount:      payment.GrossAmount,
 		Currency:    "BRL",
 		DueDate:     &payment.DueDate,
-		Customer:   customer,
-		Reference:  paymentID.String(),
+		Customer:    customer,
+		Reference:   paymentID.String(),
 		Description: fmt.Sprintf("Pagamento %s", payment.Type),
 	}
 
@@ -370,9 +475,9 @@ func (s *Service) CreateCharge(ctx context.Context, paymentID, orgID uuid.UUID, 
 	err = s.repo.UpdateChargeInfo(ctx, paymentID, orgID, UpdateChargeInfoInput{
 		ChargeID:     resp.ChargeID,
 		ChargeMethod: method,
-		QRCode:      resp.QRCode,
-		Link:        resp.QRLink,
-		BarCode:     resp.BarCode,
+		QRCode:       resp.QRCode,
+		Link:         resp.QRLink,
+		BarCode:      resp.BarCode,
 	})
 
 	if err != nil {
@@ -430,10 +535,10 @@ func (s *Service) CreatePayout(ctx context.Context, paymentID, orgID uuid.UUID, 
 	}
 
 	req := provider.PayoutRequest{
-		Amount:     *payment.NetAmount,
-		Currency:   "BRL",
+		Amount:      *payment.NetAmount,
+		Currency:    "BRL",
 		Destination: dest,
-		Reference: paymentID.String(),
+		Reference:   paymentID.String(),
 	}
 
 	resp, err := prov.CreatePayout(ctx, req)
@@ -475,7 +580,7 @@ func (s *Service) ProcessWebhook(ctx context.Context, providerName string, event
 
 	now := time.Now()
 	_, err = s.repo.Update(ctx, payment.ID, payment.OrganizationID, UpdatePaymentInput{
-		Status:    "PAID",
+		Status:   "PAID",
 		PaidDate: &now,
 	})
 	if err != nil {

@@ -2,7 +2,9 @@ package lease_test
 
 import (
 	"context"
+	"errors"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -23,7 +25,7 @@ func testDB(t *testing.T) *db.DB {
 	require.NoError(t, err)
 	require.NoError(t, db.RunMigrations(url, "../../migrations"))
 	t.Cleanup(func() {
-		d.Pool.Exec(context.Background(), "TRUNCATE organization_members, properties, units, leases, tenants, organizations, users RESTART IDENTITY CASCADE")
+		d.Pool.Exec(context.Background(), "TRUNCATE organization_members, lease_readjustments, properties, units, leases, tenants, organizations, users RESTART IDENTITY CASCADE")
 		d.Close()
 	})
 	return d
@@ -31,27 +33,27 @@ func testDB(t *testing.T) *db.DB {
 
 func seedOrgAndUser(t *testing.T, database *db.DB) (orgID, ownerID uuid.UUID) {
 	t.Helper()
-	
+
 	var newOrgID uuid.UUID
 	err := database.Pool.QueryRow(context.Background(),
 		`INSERT INTO organizations (name) VALUES ($1) RETURNING id`,
 		"Test Org",
 	).Scan(&newOrgID)
 	require.NoError(t, err)
-	
+
 	var newOwnerID uuid.UUID
 	err = database.Pool.QueryRow(context.Background(),
 		`INSERT INTO users (email, password_hash, organization_id) VALUES ($1, $2, $3) RETURNING id`,
 		"owner-lease@test.com", "hash", newOrgID,
 	).Scan(&newOwnerID)
 	require.NoError(t, err)
-	
+
 	_, err = database.Pool.Exec(context.Background(),
 		`INSERT INTO organization_members (organization_id, user_id, role) VALUES ($1, $2, 'owner')`,
 		newOrgID, newOwnerID,
 	)
 	require.NoError(t, err)
-	
+
 	return newOrgID, newOwnerID
 }
 
@@ -156,4 +158,174 @@ func TestLeaseRepository_Update(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1200.00, updated.RentAmount)
 	assert.Equal(t, "ENDED", updated.Status)
+}
+
+func newLeaseFixture(t *testing.T) (repo lease.Repository, orgID, ownerID, unitID, tenantID uuid.UUID) {
+	t.Helper()
+	database := testDB(t)
+	orgID, ownerID = seedOrgAndUser(t, database)
+	propertyID := seedProperty(t, database, orgID, ownerID)
+	unitID = seedUnit(t, database, propertyID)
+	tenantID = seedTenant(t, database, orgID, ownerID)
+	return lease.NewRepository(database), orgID, ownerID, unitID, tenantID
+}
+
+func leaseIn(unitID, tenantID uuid.UUID, start time.Time, end *time.Time) lease.CreateLeaseInput {
+	return lease.CreateLeaseInput{UnitID: unitID, TenantID: tenantID, StartDate: start, EndDate: end, RentAmount: 1000, PaymentDay: 5}
+}
+
+func TestLeaseRepository_Notes(t *testing.T) {
+	ctx := context.Background()
+	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
+	notes := "animais permitidos"
+	in := leaseIn(unitID, tenantID, day(2026, 1, 1), nil)
+	in.Notes = &notes
+
+	l, err := repo.Create(ctx, orgID, ownerID, in)
+	require.NoError(t, err)
+	require.NotNil(t, l.Notes)
+	assert.Equal(t, notes, *l.Notes)
+
+	novo := "sem animais"
+	up, err := repo.Update(ctx, l.ID, orgID, lease.UpdateLeaseInput{RentAmount: 1000, Status: "ACTIVE", Notes: &novo})
+	require.NoError(t, err)
+	assert.Equal(t, novo, *up.Notes)
+}
+
+func TestLeaseRepository_Constraint_SobreposiçãoNaCriação(t *testing.T) {
+	ctx := context.Background()
+	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
+	_, err := repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), dayp(2026, 12, 31)))
+	require.NoError(t, err)
+
+	_, err = repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 6, 1), nil))
+	assert.ErrorIs(t, err, lease.ErrLeaseOverlap)
+
+	_, err = repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2027, 1, 1), dayp(2027, 12, 31)))
+	assert.NoError(t, err, "período sequencial é aceito")
+}
+
+func TestLeaseRepository_Constraint_ContratoEncerradoLiberaUnidade(t *testing.T) {
+	ctx := context.Background()
+	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
+	first, err := repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
+	require.NoError(t, err)
+	_, err = repo.End(ctx, first.ID, orgID)
+	require.NoError(t, err)
+
+	_, err = repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
+	assert.NoError(t, err)
+}
+
+func TestLeaseRepository_Constraint_CriaçõesSimultâneas(t *testing.T) {
+	ctx := context.Background()
+	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
+
+	const n = 6
+	errs := make(chan error, n)
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			_, err := repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
+			errs <- err
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(errs)
+
+	ok, overlap := 0, 0
+	for err := range errs {
+		switch {
+		case err == nil:
+			ok++
+		case errors.Is(err, lease.ErrLeaseOverlap):
+			overlap++
+		default:
+			t.Fatalf("erro inesperado: %v", err)
+		}
+	}
+	assert.Equal(t, 1, ok, "apenas uma criação é aceita")
+	assert.Equal(t, n-1, overlap)
+}
+
+func TestLeaseRepository_HasOverlap(t *testing.T) {
+	ctx := context.Background()
+	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
+	l, err := repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 3, 1), dayp(2026, 8, 31)))
+	require.NoError(t, err)
+
+	cases := []struct {
+		name       string
+		start      time.Time
+		end        *time.Time
+		except     uuid.UUID
+		org        uuid.UUID
+		wantOverlp bool
+	}{
+		{"cruza o meio", day(2026, 5, 1), dayp(2026, 6, 1), uuid.Nil, orgID, true},
+		{"aberto cruza", day(2026, 8, 31), nil, uuid.Nil, orgID, true},
+		{"toca o último dia", day(2026, 8, 31), dayp(2026, 12, 31), uuid.Nil, orgID, true},
+		{"começa no dia seguinte", day(2026, 9, 1), dayp(2026, 12, 31), uuid.Nil, orgID, false},
+		{"termina antes", day(2025, 1, 1), dayp(2026, 2, 28), uuid.Nil, orgID, false},
+		{"ignora o próprio", day(2026, 5, 1), dayp(2026, 6, 1), l.ID, orgID, false},
+		{"outra organização", day(2026, 5, 1), dayp(2026, 6, 1), uuid.Nil, uuid.New(), false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := repo.HasOverlap(ctx, unitID, c.org, c.start, c.end, c.except)
+			require.NoError(t, err)
+			assert.Equal(t, c.wantOverlp, got)
+		})
+	}
+}
+
+func TestLeaseRepository_End_SóContratoAtivoENãoEstendeFim(t *testing.T) {
+	ctx := context.Background()
+	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
+	passado := time.Now().AddDate(0, -2, 0)
+	l, err := repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, passado.AddDate(-1, 0, 0), &passado))
+	require.NoError(t, err)
+
+	ended, err := repo.End(ctx, l.ID, orgID)
+	require.NoError(t, err)
+	assert.Equal(t, "ENDED", ended.Status)
+	assert.True(t, ended.EndDate.Before(time.Now().AddDate(0, -1, 0)), "fim anterior a hoje não é esticado")
+
+	_, err = repo.End(ctx, l.ID, orgID)
+	assert.ErrorIs(t, err, lease.ErrLeaseNotActive)
+}
+
+func TestReadjustmentRepository_CriaELista(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, ownerID := seedOrgAndUser(t, database)
+	unitID := seedUnit(t, database, seedProperty(t, database, orgID, ownerID))
+	tenantID := seedTenant(t, database, orgID, ownerID)
+	leases := lease.NewRepository(database)
+	readj := lease.NewReadjustmentRepository(database)
+
+	l, err := leases.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
+	require.NoError(t, err)
+
+	idx := "IGPM"
+	created, err := readj.Create(ctx, &lease.Readjustment{
+		LeaseID: l.ID, OrganizationID: orgID, AppliedAt: day(2026, 6, 1),
+		OldAmount: 1000, NewAmount: 1050, Percentage: 0.05, IndexName: &idx,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, orgID, created.OrganizationID)
+
+	list, err := readj.ListByLease(ctx, l.ID, orgID)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, 1050.0, list[0].NewAmount)
+
+	other, err := readj.ListByLease(ctx, l.ID, uuid.New())
+	require.NoError(t, err)
+	assert.Empty(t, other, "outra organização não vê o histórico")
 }

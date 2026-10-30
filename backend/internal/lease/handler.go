@@ -68,6 +68,18 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, list)
 }
 
+// @Summary Cria contrato
+// @Description Valida datas, unidade/inquilino da organização e sobreposição; com generate_payments gera até 12 cobranças.
+// @Tags leases
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body CreateLeaseInput true "Dados do contrato"
+// @Success 201 {object} CreateOutput
+// @Failure 404 {object} map[string]interface{} "UNIT_NOT_FOUND | TENANT_NOT_FOUND"
+// @Failure 409 {object} map[string]interface{} "LEASE_OVERLAP"
+// @Failure 422 {object} map[string]interface{} "INVALID_DATES"
+// @Router /leases [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
 	ownerID := auth.OwnerIDFromCtx(r.Context())
@@ -90,6 +102,9 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	l, err := h.svc.Create(r.Context(), orgID, ownerID, in)
 	if err != nil {
+		if writeDomainErr(w, err) {
+			return
+		}
 		httputil.Err(w, http.StatusBadRequest, "CREATE_FAILED", err.Error())
 		return
 	}
@@ -133,6 +148,8 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 // @Param id path string true "ID do contrato"
 // @Param body body UpdateLeaseInput true "Dados do contrato"
 // @Success 200 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{} "LEASE_OVERLAP | STATUS_CHANGE_NOT_ALLOWED"
+// @Failure 422 {object} map[string]interface{} "INVALID_DATES"
 // @Router /leases/{id} [put]
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -161,6 +178,9 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	}
 	l, err := h.svc.Update(r.Context(), id, orgID, in)
 	if err != nil {
+		if writeDomainErr(w, err) {
+			return
+		}
 		httputil.Err(w, http.StatusBadRequest, "UPDATE_FAILED", err.Error())
 		return
 	}
@@ -194,6 +214,16 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, map[string]bool{"deleted": true})
 }
 
+// @Summary Encerra contrato
+// @Description Encerra um contrato ACTIVE e retira as cobranças futuras pendentes sem cobrança emitida.
+// @Tags leases
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do contrato"
+// @Success 200 {object} EndOutput
+// @Failure 404 {object} map[string]interface{} "NOT_FOUND"
+// @Failure 409 {object} map[string]interface{} "LEASE_NOT_ACTIVE"
+// @Router /leases/{id}/end [post]
 func (h *Handler) end(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
 	ownerID := auth.OwnerIDFromCtx(r.Context())
@@ -212,12 +242,27 @@ func (h *Handler) end(w http.ResponseWriter, r *http.Request) {
 	}
 	l, err := h.svc.End(r.Context(), id, orgID)
 	if err != nil {
+		if writeDomainErr(w, err) {
+			return
+		}
 		httputil.Err(w, http.StatusBadRequest, "END_FAILED", err.Error())
 		return
 	}
 	httputil.OK(w, l)
 }
 
+// @Summary Renova contrato
+// @Tags leases
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "ID do contrato"
+// @Param body body RenewLeaseInput true "Nova data final"
+// @Success 200 {object} Lease
+// @Failure 404 {object} map[string]interface{} "NOT_FOUND"
+// @Failure 409 {object} map[string]interface{} "LEASE_NOT_ACTIVE | LEASE_OVERLAP"
+// @Failure 422 {object} map[string]interface{} "INVALID_DATES"
+// @Router /leases/{id}/renew [post]
 func (h *Handler) renew(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
 	if orgID == uuid.Nil {
@@ -240,6 +285,9 @@ func (h *Handler) renew(w http.ResponseWriter, r *http.Request) {
 	}
 	l, err := h.svc.Renew(r.Context(), id, orgID, in)
 	if err != nil {
+		if writeDomainErr(w, err) {
+			return
+		}
 		httputil.Err(w, http.StatusBadRequest, "RENEW_FAILED", err.Error())
 		return
 	}
@@ -368,4 +416,27 @@ func (h *Handler) autoAdjust(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.OK(w, out)
+}
+
+// writeDomainErr traduz erros de regra do contrato em HTTP; devolve false se err não for um deles.
+func writeDomainErr(w http.ResponseWriter, err error) bool {
+	switch {
+	case errors.Is(err, ErrInvalidDates):
+		httputil.Err(w, http.StatusUnprocessableEntity, "INVALID_DATES", "a data final deve ser posterior à data inicial")
+	case errors.Is(err, ErrLeaseOverlap):
+		httputil.Err(w, http.StatusConflict, "LEASE_OVERLAP", "a unidade já tem contrato ativo no período")
+	case errors.Is(err, ErrLeaseNotActive):
+		httputil.Err(w, http.StatusConflict, "LEASE_NOT_ACTIVE", "contrato não ativo")
+	case errors.Is(err, ErrStatusChange):
+		httputil.Err(w, http.StatusConflict, "STATUS_CHANGE_NOT_ALLOWED", "o status só muda por encerrar ou renovar")
+	case errors.Is(err, ErrUnitNotFound):
+		httputil.Err(w, http.StatusNotFound, "UNIT_NOT_FOUND", "unidade não encontrada")
+	case errors.Is(err, ErrTenantNotFound):
+		httputil.Err(w, http.StatusNotFound, "TENANT_NOT_FOUND", "inquilino não encontrado")
+	case errors.Is(err, apierr.ErrNotFound):
+		httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "contrato não encontrado")
+	default:
+		return false
+	}
+	return true
 }

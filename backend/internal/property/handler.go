@@ -251,6 +251,7 @@ func (h *Handler) listUnits(w http.ResponseWriter, r *http.Request) {
 // @Param id path string true "ID do imóvel"
 // @Param body body CreateUnitInput true "Dados da unidade"
 // @Success 201 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{} "DUPLICATE_UNIT_LABEL"
 // @Router /properties/{id}/units [post]
 func (h *Handler) createUnit(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -274,6 +275,10 @@ func (h *Handler) createUnit(w http.ResponseWriter, r *http.Request) {
 	}
 	u, err := h.svc.CreateUnit(r.Context(), propertyID, orgID, in)
 	if err != nil {
+		if errors.Is(err, ErrDuplicateUnitLabel) {
+			httputil.Err(w, http.StatusConflict, "DUPLICATE_UNIT_LABEL", "já existe unidade com esse rótulo no imóvel")
+			return
+		}
 		httputil.Err(w, http.StatusBadRequest, "CREATE_UNIT_FAILED", err.Error())
 		return
 	}
@@ -318,6 +323,7 @@ func (h *Handler) getUnit(w http.ResponseWriter, r *http.Request) {
 // @Param id path string true "ID da unidade"
 // @Param body body CreateUnitInput true "Dados da unidade"
 // @Success 200 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{} "DUPLICATE_UNIT_LABEL"
 // @Router /units/{id} [put]
 func (h *Handler) updateUnit(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -341,6 +347,10 @@ func (h *Handler) updateUnit(w http.ResponseWriter, r *http.Request) {
 	}
 	u, err := h.svc.UpdateUnit(r.Context(), id, orgID, in)
 	if err != nil {
+		if errors.Is(err, ErrDuplicateUnitLabel) {
+			httputil.Err(w, http.StatusConflict, "DUPLICATE_UNIT_LABEL", "já existe unidade com esse rótulo no imóvel")
+			return
+		}
 		if errors.Is(err, apierr.ErrNotFound) {
 			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "unidade não encontrada")
 			return
