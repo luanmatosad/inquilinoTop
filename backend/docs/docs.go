@@ -817,6 +817,445 @@ const docTemplate = `{
                 }
             }
         },
+        "/inspections": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Lista laudos de vistoria",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "lease_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ENTRY ou EXIT",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "DRAFT ou COMPLETED",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/inspection.Inspection"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria em DRAFT. Em EXIT, copy_from_entry copia os itens do laudo de entrada do contrato.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Cria laudo de vistoria",
+                "parameters": [
+                    {
+                        "description": "Dados do laudo",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inspection.CreateInspectionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/inspection.Detail"
+                        }
+                    },
+                    "404": {
+                        "description": "LEASE_NOT_FOUND",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "INSPECTION_DUPLICATE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/inspections/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Busca laudo com itens",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do laudo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/inspection.Detail"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Atualiza data e observações do laudo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do laudo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados do laudo",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inspection.UpdateInspectionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/inspection.Inspection"
+                        }
+                    },
+                    "409": {
+                        "description": "INSPECTION_NOT_EDITABLE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Exclui laudo (soft-delete)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do laudo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/inspections/{id}/complete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Exige ao menos um item; depois disso o laudo fica somente leitura.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Conclui o laudo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do laudo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/inspection.Inspection"
+                        }
+                    },
+                    "409": {
+                        "description": "INSPECTION_NOT_EDITABLE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "INSPECTION_WITHOUT_ITEMS",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/inspections/{id}/items": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Adiciona item ao laudo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do laudo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados do item",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inspection.ItemInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/inspection.Item"
+                        }
+                    },
+                    "409": {
+                        "description": "INSPECTION_NOT_EDITABLE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/inspections/{id}/items/{itemId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Atualiza item do laudo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do laudo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do item",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados do item",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inspection.ItemInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/inspection.Item"
+                        }
+                    },
+                    "409": {
+                        "description": "INSPECTION_NOT_EDITABLE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Remove item do laudo (soft-delete)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do laudo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do item",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "INSPECTION_NOT_EDITABLE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/leases": {
             "get": {
                 "security": [
@@ -1046,6 +1485,54 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "LEASE_NOT_ACTIVE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/leases/{id}/inspections/compare": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Pareia itens por ambiente e item; worsened é true quando a saída é pior que a entrada.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Compara laudo de entrada e de saída do contrato",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/inspection.Comparison"
+                        }
+                    },
+                    "404": {
+                        "description": "LEASE_NOT_FOUND",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "COMPARISON_UNAVAILABLE",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2708,6 +3195,252 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "code": {
+                    "type": "string"
+                }
+            }
+        },
+        "inspection.Comparison": {
+            "type": "object",
+            "properties": {
+                "entry": {
+                    "$ref": "#/definitions/inspection.Inspection"
+                },
+                "exit": {
+                    "$ref": "#/definitions/inspection.Inspection"
+                },
+                "lease_id": {
+                    "type": "string"
+                },
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/inspection.ComparisonRow"
+                    }
+                }
+            }
+        },
+        "inspection.ComparisonRow": {
+            "type": "object",
+            "properties": {
+                "entry_condition": {
+                    "type": "string"
+                },
+                "entry_notes": {
+                    "type": "string"
+                },
+                "exit_condition": {
+                    "type": "string"
+                },
+                "exit_notes": {
+                    "type": "string"
+                },
+                "item": {
+                    "type": "string"
+                },
+                "room": {
+                    "type": "string"
+                },
+                "worsened": {
+                    "description": "Worsened é true quando a saída é pior que a entrada (GOOD \u003c FAIR \u003c POOR \u003c DAMAGED).",
+                    "type": "boolean"
+                }
+            }
+        },
+        "inspection.CreateInspectionInput": {
+            "type": "object",
+            "required": [
+                "inspected_at",
+                "lease_id",
+                "type"
+            ],
+            "properties": {
+                "copy_from_entry": {
+                    "description": "CopyFromEntry, num EXIT, copia os itens do ENTRY ativo do contrato para reavaliação.",
+                    "type": "boolean"
+                },
+                "general_notes": {
+                    "type": "string",
+                    "maxLength": 4000
+                },
+                "inspected_at": {
+                    "type": "string"
+                },
+                "lease_id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "ENTRY",
+                        "EXIT"
+                    ]
+                }
+            }
+        },
+        "inspection.Detail": {
+            "type": "object",
+            "properties": {
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "general_notes": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "inspected_at": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/inspection.Item"
+                    }
+                },
+                "lease_id": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "inspection.Inspection": {
+            "type": "object",
+            "properties": {
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "general_notes": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "inspected_at": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "lease_id": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "inspection.Item": {
+            "type": "object",
+            "properties": {
+                "condition": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "inspection_id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "item": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "integer"
+                },
+                "room": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "inspection.ItemInput": {
+            "type": "object",
+            "required": [
+                "condition",
+                "item",
+                "room"
+            ],
+            "properties": {
+                "condition": {
+                    "type": "string",
+                    "enum": [
+                        "GOOD",
+                        "FAIR",
+                        "POOR",
+                        "DAMAGED",
+                        "NOT_APPLICABLE"
+                    ]
+                },
+                "item": {
+                    "type": "string",
+                    "maxLength": 150
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "position": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "room": {
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
+        "inspection.UpdateInspectionInput": {
+            "type": "object",
+            "required": [
+                "inspected_at"
+            ],
+            "properties": {
+                "general_notes": {
+                    "type": "string",
+                    "maxLength": 4000
+                },
+                "inspected_at": {
                     "type": "string"
                 }
             }

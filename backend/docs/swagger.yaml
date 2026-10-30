@@ -216,6 +216,175 @@ definitions:
       code:
         type: string
     type: object
+  inspection.Comparison:
+    properties:
+      entry:
+        $ref: '#/definitions/inspection.Inspection'
+      exit:
+        $ref: '#/definitions/inspection.Inspection'
+      lease_id:
+        type: string
+      rows:
+        items:
+          $ref: '#/definitions/inspection.ComparisonRow'
+        type: array
+    type: object
+  inspection.ComparisonRow:
+    properties:
+      entry_condition:
+        type: string
+      entry_notes:
+        type: string
+      exit_condition:
+        type: string
+      exit_notes:
+        type: string
+      item:
+        type: string
+      room:
+        type: string
+      worsened:
+        description: Worsened é true quando a saída é pior que a entrada (GOOD < FAIR
+          < POOR < DAMAGED).
+        type: boolean
+    type: object
+  inspection.CreateInspectionInput:
+    properties:
+      copy_from_entry:
+        description: CopyFromEntry, num EXIT, copia os itens do ENTRY ativo do contrato
+          para reavaliação.
+        type: boolean
+      general_notes:
+        maxLength: 4000
+        type: string
+      inspected_at:
+        type: string
+      lease_id:
+        type: string
+      type:
+        enum:
+        - ENTRY
+        - EXIT
+        type: string
+    required:
+    - inspected_at
+    - lease_id
+    - type
+    type: object
+  inspection.Detail:
+    properties:
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      general_notes:
+        type: string
+      id:
+        type: string
+      inspected_at:
+        type: string
+      is_active:
+        type: boolean
+      items:
+        items:
+          $ref: '#/definitions/inspection.Item'
+        type: array
+      lease_id:
+        type: string
+      organization_id:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  inspection.Inspection:
+    properties:
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      general_notes:
+        type: string
+      id:
+        type: string
+      inspected_at:
+        type: string
+      is_active:
+        type: boolean
+      lease_id:
+        type: string
+      organization_id:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  inspection.Item:
+    properties:
+      condition:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      inspection_id:
+        type: string
+      is_active:
+        type: boolean
+      item:
+        type: string
+      notes:
+        type: string
+      position:
+        type: integer
+      room:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  inspection.ItemInput:
+    properties:
+      condition:
+        enum:
+        - GOOD
+        - FAIR
+        - POOR
+        - DAMAGED
+        - NOT_APPLICABLE
+        type: string
+      item:
+        maxLength: 150
+        type: string
+      notes:
+        maxLength: 2000
+        type: string
+      position:
+        minimum: 0
+        type: integer
+      room:
+        maxLength: 100
+        type: string
+    required:
+    - condition
+    - item
+    - room
+    type: object
+  inspection.UpdateInspectionInput:
+    properties:
+      general_notes:
+        maxLength: 4000
+        type: string
+      inspected_at:
+        type: string
+    required:
+    - inspected_at
+    type: object
   lease.AdjustLeaseInput:
     properties:
       index_type:
@@ -1220,6 +1389,288 @@ paths:
       summary: Lista histórico de um índice
       tags:
       - leases
+  /inspections:
+    get:
+      parameters:
+      - description: ID do contrato
+        in: query
+        name: lease_id
+        type: string
+      - description: ENTRY ou EXIT
+        in: query
+        name: type
+        type: string
+      - description: DRAFT ou COMPLETED
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inspection.Inspection'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista laudos de vistoria
+      tags:
+      - inspections
+    post:
+      consumes:
+      - application/json
+      description: Cria em DRAFT. Em EXIT, copy_from_entry copia os itens do laudo
+        de entrada do contrato.
+      parameters:
+      - description: Dados do laudo
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/inspection.CreateInspectionInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inspection.Detail'
+        "404":
+          description: LEASE_NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: INSPECTION_DUPLICATE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria laudo de vistoria
+      tags:
+      - inspections
+  /inspections/{id}:
+    delete:
+      parameters:
+      - description: ID do laudo
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Exclui laudo (soft-delete)
+      tags:
+      - inspections
+    get:
+      parameters:
+      - description: ID do laudo
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inspection.Detail'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Busca laudo com itens
+      tags:
+      - inspections
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do laudo
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados do laudo
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/inspection.UpdateInspectionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inspection.Inspection'
+        "409":
+          description: INSPECTION_NOT_EDITABLE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Atualiza data e observações do laudo
+      tags:
+      - inspections
+  /inspections/{id}/complete:
+    post:
+      description: Exige ao menos um item; depois disso o laudo fica somente leitura.
+      parameters:
+      - description: ID do laudo
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inspection.Inspection'
+        "409":
+          description: INSPECTION_NOT_EDITABLE
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: INSPECTION_WITHOUT_ITEMS
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Conclui o laudo
+      tags:
+      - inspections
+  /inspections/{id}/items:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do laudo
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados do item
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/inspection.ItemInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inspection.Item'
+        "409":
+          description: INSPECTION_NOT_EDITABLE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Adiciona item ao laudo
+      tags:
+      - inspections
+  /inspections/{id}/items/{itemId}:
+    delete:
+      parameters:
+      - description: ID do laudo
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: ID do item
+        in: path
+        name: itemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: INSPECTION_NOT_EDITABLE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove item do laudo (soft-delete)
+      tags:
+      - inspections
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do laudo
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: ID do item
+        in: path
+        name: itemId
+        required: true
+        type: string
+      - description: Dados do item
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/inspection.ItemInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inspection.Item'
+        "409":
+          description: INSPECTION_NOT_EDITABLE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Atualiza item do laudo
+      tags:
+      - inspections
   /leases:
     get:
       produces:
@@ -1374,6 +1825,38 @@ paths:
       summary: Encerra contrato
       tags:
       - leases
+  /leases/{id}/inspections/compare:
+    get:
+      description: Pareia itens por ambiente e item; worsened é true quando a saída
+        é pior que a entrada.
+      parameters:
+      - description: ID do contrato
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inspection.Comparison'
+        "404":
+          description: LEASE_NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: COMPARISON_UNAVAILABLE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Compara laudo de entrada e de saída do contrato
+      tags:
+      - inspections
   /leases/{id}/readjustments:
     get:
       parameters:
