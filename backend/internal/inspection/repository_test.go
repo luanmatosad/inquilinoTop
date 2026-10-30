@@ -25,7 +25,7 @@ func testDB(t *testing.T) *db.DB {
 	require.NoError(t, err)
 	require.NoError(t, db.RunMigrations(url, "../../migrations"))
 	t.Cleanup(func() {
-		d.Pool.Exec(context.Background(), "TRUNCATE inspection_items, inspections, organization_members, leases, tenants, units, properties, organizations, users RESTART IDENTITY CASCADE")
+		d.Pool.Exec(context.Background(), "TRUNCATE inspection_photos, inspection_items, inspections, organization_members, leases, tenants, units, properties, organizations, users RESTART IDENTITY CASCADE")
 		d.Close()
 	})
 	return d
@@ -296,4 +296,131 @@ func TestRepository_GetActiveByLeaseAndType(t *testing.T) {
 	assert.Equal(t, i.ID, got.ID)
 	_, err = r.GetActiveByLeaseAndType(ctx, lease, uuid.New(), inspection.TypeEntry)
 	assert.ErrorIs(t, err, apierr.ErrNotFound)
+}
+
+func photoIn(path string) inspection.NewPhoto {
+	return inspection.NewPhoto{Filename: "f.jpg", MimeType: "image/jpeg", SizeBytes: 1234, FilePath: path}
+}
+
+func TestRepository_Fotos_CRUDEIsolamento(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	org, lease := seed(t, d)
+	otherOrg, _ := seed(t, d)
+	r := inspection.NewRepository(d)
+	i := newInsp(t, r, org, lease, inspection.TypeEntry)
+	it, err := r.CreateItem(ctx, i.ID, org, inspection.ItemInput{Room: "Sala", Item: "Piso", Condition: inspection.ConditionGood})
+	require.NoError(t, err)
+	var userID uuid.UUID
+	require.NoError(t, d.Pool.QueryRow(ctx, `SELECT id FROM users LIMIT 1`).Scan(&userID))
+
+	p, err := r.CreatePhoto(ctx, i.ID, it.ID, org, userID, photoIn("org/a.jpg"))
+	require.NoError(t, err)
+	assert.Equal(t, it.ID, p.ItemID)
+
+	list, err := r.ListPhotos(ctx, i.ID, org)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+
+	pf, err := r.GetPhotoFile(ctx, p.ID, org)
+	require.NoError(t, err)
+	assert.Equal(t, "org/a.jpg", pf.FilePath)
+
+	// outra organização: nada vaza e nada escreve
+	_, err = r.CreatePhoto(ctx, i.ID, it.ID, otherOrg, userID, photoIn("x"))
+	assert.ErrorIs(t, err, apierr.ErrNotFound)
+	empty, err := r.ListPhotos(ctx, i.ID, otherOrg)
+	require.NoError(t, err)
+	assert.Empty(t, empty)
+	_, err = r.GetPhotoFile(ctx, p.ID, otherOrg)
+	assert.ErrorIs(t, err, apierr.ErrNotFound)
+	assert.ErrorIs(t, r.DeletePhoto(ctx, p.ID, it.ID, i.ID, otherOrg), apierr.ErrNotFound)
+
+	// o item precisa ser do laudo informado
+	assert.ErrorIs(t, r.DeletePhoto(ctx, p.ID, it.ID, uuid.New(), org), apierr.ErrNotFound)
+
+	require.NoError(t, r.DeletePhoto(ctx, p.ID, it.ID, i.ID, org))
+	list, _ = r.ListPhotos(ctx, i.ID, org)
+	assert.Empty(t, list)
+	_, err = r.GetPhotoFile(ctx, p.ID, org)
+	assert.ErrorIs(t, err, apierr.ErrNotFound)
+
+	var active bool
+	require.NoError(t, d.Pool.QueryRow(ctx, `SELECT is_active FROM inspection_photos WHERE id=$1`, p.ID).Scan(&active))
+	assert.False(t, active, "linha preservada, só inativa")
+}
+
+func TestRepository_Fotos_ItemRemovidoEsconde(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	org, lease := seed(t, d)
+	r := inspection.NewRepository(d)
+	i := newInsp(t, r, org, lease, inspection.TypeEntry)
+	it, _ := r.CreateItem(ctx, i.ID, org, inspection.ItemInput{Room: "Sala", Item: "Piso", Condition: inspection.ConditionGood})
+	var userID uuid.UUID
+	require.NoError(t, d.Pool.QueryRow(ctx, `SELECT id FROM users LIMIT 1`).Scan(&userID))
+	p, err := r.CreatePhoto(ctx, i.ID, it.ID, org, userID, photoIn("a"))
+	require.NoError(t, err)
+
+	require.NoError(t, r.DeleteItem(ctx, it.ID, i.ID, org))
+	list, _ := r.ListPhotos(ctx, i.ID, org)
+	assert.Empty(t, list)
+	_, err = r.GetPhotoFile(ctx, p.ID, org)
+	assert.ErrorIs(t, err, apierr.ErrNotFound)
+	_, err = r.CreatePhoto(ctx, i.ID, it.ID, org, userID, photoIn("b"))
+	assert.ErrorIs(t, err, apierr.ErrNotFound)
+}
+
+func TestRepository_Fotos_LimiteComUploadsSimultâneos(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	org, lease := seed(t, d)
+	r := inspection.NewRepository(d)
+	i := newInsp(t, r, org, lease, inspection.TypeEntry)
+	it, _ := r.CreateItem(ctx, i.ID, org, inspection.ItemInput{Room: "Sala", Item: "Piso", Condition: inspection.ConditionGood})
+	var userID uuid.UUID
+	require.NoError(t, d.Pool.QueryRow(ctx, `SELECT id FROM users LIMIT 1`).Scan(&userID))
+
+	const n = inspection.MaxPhotosPerItem + 6
+	results := make(chan error, n)
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for k := 0; k < n; k++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			_, err := r.CreatePhoto(ctx, i.ID, it.ID, org, userID, photoIn("p"))
+			results <- err
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+	ok, limit := 0, 0
+	for err := range results {
+		switch {
+		case err == nil:
+			ok++
+		case assert.ErrorIs(t, err, inspection.ErrPhotoLimit):
+			limit++
+		}
+	}
+	assert.Equal(t, inspection.MaxPhotosPerItem, ok, "o limite vale mesmo com uploads simultâneos")
+	assert.Equal(t, n-inspection.MaxPhotosPerItem, limit)
+}
+
+func TestRepository_Fotos_ConstraintDeTipo(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	org, lease := seed(t, d)
+	r := inspection.NewRepository(d)
+	i := newInsp(t, r, org, lease, inspection.TypeEntry)
+	it, _ := r.CreateItem(ctx, i.ID, org, inspection.ItemInput{Room: "Sala", Item: "Piso", Condition: inspection.ConditionGood})
+	var userID uuid.UUID
+	require.NoError(t, d.Pool.QueryRow(ctx, `SELECT id FROM users LIMIT 1`).Scan(&userID))
+	bad := photoIn("a")
+	bad.MimeType = "application/pdf"
+	_, err := r.CreatePhoto(ctx, i.ID, it.ID, org, userID, bad)
+	assert.Error(t, err, "o CHECK do banco barra tipo fora de JPEG/PNG/WebP")
 }

@@ -41,7 +41,8 @@ inspection_items
 
 - `organization_id` em `inspections`; itens herdam via `inspection_id` e toda query faz join com a organização (nunca confiar só no id do item).
 - Soft-delete em ambas (ADR cross-cutting-0001).
-- Fotos: reaproveitar `documents` com `entity_type='inspection_item'` e `entity_id` do item. Evita nova tabela e storage. Alternativa: tabela `inspection_photos`. Rejeitada por duplicar `document`.
+- Fotos: tabela própria `inspection_photos` (item, nome, mime, tamanho, caminho, `is_active`), escopada pela organização via item → laudo, com soft-delete. Reaproveita só a interface de armazenamento de arquivos do `document` (`Save`/`Load`/`Delete`), gravando em pasta por organização. Alternativa original: reusar `documents` com `entity_type='inspection_item'`. Rejeitada ao implementar: o módulo `document` escopa por `owner_id` (usuário), só aceita PDF/Word, não confere se a entidade existe e usa `DELETE` físico (contra o ADR cross-cutting-0001); reformá-lo mexeria em fluxos fora do escopo.
+- Fotos aceitam JPEG, PNG e WebP (tipo conferido pelos primeiros bytes, não só pelo cabeçalho), até 10 MB cada e no máximo 10 por item. A leitura passa por endpoint autenticado; o frontend serve via rota proxy porque o token é httpOnly.
 - Ambiente é só texto em `room`; sem tabela de ambientes. Mais simples; agrupamento na UI por `room`.
 
 ### D3. Regras
@@ -61,6 +62,9 @@ inspection_items
 | GET | `/api/v1/leases/{id}/inspections/compare` |
 | POST | `/api/v1/inspections/{id}/items` |
 | PUT/DELETE | `/api/v1/inspections/{id}/items/{itemId}` |
+| POST | `/api/v1/inspections/{id}/items/{itemId}/photos` (multipart `file`) |
+| DELETE | `/api/v1/inspections/{id}/items/{itemId}/photos/{photoId}` |
+| GET | `/api/v1/inspection-photos/{photoId}` (bytes da imagem) |
 
 Códigos de erro SNAKE_CASE. Listas nunca nil. Estado inválido → 409 `INSPECTION_NOT_EDITABLE`.
 
@@ -82,8 +86,8 @@ Reusar o middleware de permissão existente do `rbac`. Criar e concluir laudo ge
 
 ## Migration Plan
 
-1. Migrations `000043_create_inspections` e `000044_create_inspection_items`, com `down` reversível.
-2. Backend e testes; documento aceita `inspection_item`.
+1. Migrations `000043_create_inspections`, `000044_create_inspection_items` e `000045_create_inspection_photos`, com `down` reversível.
+2. Backend e testes; fotos pelo armazenamento de arquivos já configurado.
 3. Frontend por trás de rota nova, sem alterar telas existentes.
 4. Rollback: reverter migrations (tabelas novas, sem dados legados) e remover rotas.
 

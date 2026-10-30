@@ -3,6 +3,7 @@ package inspection
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -34,6 +35,9 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler,
 		r.With(writeMw).Post("/inspections/{id}/items", h.addItem)
 		r.With(writeMw).Put("/inspections/{id}/items/{itemId}", h.updateItem)
 		r.With(writeMw).Delete("/inspections/{id}/items/{itemId}", h.deleteItem)
+		r.With(writeMw).Post("/inspections/{id}/items/{itemId}/photos", h.uploadPhoto)
+		r.With(writeMw).Delete("/inspections/{id}/items/{itemId}/photos/{photoId}", h.deletePhoto)
+		r.With(readMw).Get("/inspection-photos/{photoId}", h.downloadPhoto)
 		r.With(readMw).Get("/leases/{id}/inspections/compare", h.compare)
 	})
 }
@@ -80,6 +84,12 @@ func writeErr(w http.ResponseWriter, err error) bool {
 		httputil.Err(w, http.StatusConflict, "COMPARISON_UNAVAILABLE", "a comparação exige laudos de entrada e de saída concluídos")
 	case errors.Is(err, ErrNoItems):
 		httputil.Err(w, http.StatusUnprocessableEntity, "INSPECTION_WITHOUT_ITEMS", "o laudo precisa de ao menos um item para ser concluído")
+	case errors.Is(err, ErrInvalidPhoto):
+		httputil.Err(w, http.StatusBadRequest, "INVALID_PHOTO", "a foto deve ser JPEG, PNG ou WebP")
+	case errors.Is(err, ErrPhotoTooLarge):
+		httputil.Err(w, http.StatusRequestEntityTooLarge, "PHOTO_TOO_LARGE", "a foto excede 10 MB")
+	case errors.Is(err, ErrPhotoLimit):
+		httputil.Err(w, http.StatusUnprocessableEntity, "PHOTO_LIMIT", "o item já tem o máximo de fotos")
 	case errors.Is(err, ErrInvalidFilter):
 		httputil.Err(w, http.StatusBadRequest, "INVALID_FILTER", "filtro inválido")
 	case errors.Is(err, ErrLeaseNotFound):
@@ -389,4 +399,119 @@ func (h *Handler) compare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.OK(w, c)
+}
+
+// @Summary Envia foto de um item do laudo
+// @Description JPEG, PNG ou WebP (tipo conferido pelo conteúdo), até 10 MB, no máximo 10 por item; só em laudo DRAFT.
+// @Tags inspections
+// @Security BearerAuth
+// @Accept mpfd
+// @Produce json
+// @Param id path string true "ID do laudo"
+// @Param itemId path string true "ID do item"
+// @Param file formData file true "Imagem"
+// @Success 201 {object} Photo
+// @Failure 400 {object} map[string]interface{} "INVALID_PHOTO"
+// @Failure 409 {object} map[string]interface{} "INSPECTION_NOT_EDITABLE"
+// @Failure 413 {object} map[string]interface{} "PHOTO_TOO_LARGE"
+// @Failure 422 {object} map[string]interface{} "PHOTO_LIMIT"
+// @Router /inspections/{id}/items/{itemId}/photos [post]
+func (h *Handler) uploadPhoto(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := org(w, r)
+	if !ok {
+		return
+	}
+	id, ok := pathID(w, r, "id")
+	if !ok {
+		return
+	}
+	itemID, ok := pathID(w, r, "itemId")
+	if !ok {
+		return
+	}
+	// Teto da requisição um pouco acima da foto (cabeçalhos multipart); o service confere o tamanho real.
+	r.Body = http.MaxBytesReader(w, r.Body, MaxPhotoBytes+(1<<20))
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			httputil.Err(w, http.StatusRequestEntityTooLarge, "PHOTO_TOO_LARGE", "a foto excede 10 MB")
+			return
+		}
+		httputil.Err(w, http.StatusBadRequest, "NO_FILE", "arquivo não encontrado")
+		return
+	}
+	defer file.Close()
+
+	photo, err := h.svc.UploadPhoto(r.Context(), id, itemID, orgID, auth.OwnerIDFromCtx(r.Context()), header.Filename, file)
+	if err != nil {
+		fail(w, err, "UPLOAD_FAILED")
+		return
+	}
+	httputil.Created(w, photo)
+}
+
+// @Summary Remove foto de um item do laudo (soft-delete)
+// @Tags inspections
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do laudo"
+// @Param itemId path string true "ID do item"
+// @Param photoId path string true "ID da foto"
+// @Success 200 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{} "INSPECTION_NOT_EDITABLE"
+// @Router /inspections/{id}/items/{itemId}/photos/{photoId} [delete]
+func (h *Handler) deletePhoto(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := org(w, r)
+	if !ok {
+		return
+	}
+	id, ok := pathID(w, r, "id")
+	if !ok {
+		return
+	}
+	itemID, ok := pathID(w, r, "itemId")
+	if !ok {
+		return
+	}
+	photoID, ok := pathID(w, r, "photoId")
+	if !ok {
+		return
+	}
+	if err := h.svc.DeletePhoto(r.Context(), photoID, itemID, id, orgID); err != nil {
+		fail(w, err, "DELETE_PHOTO_FAILED")
+		return
+	}
+	httputil.OK(w, map[string]bool{"deleted": true})
+}
+
+// @Summary Baixa a imagem de uma foto
+// @Description Devolve os bytes da imagem; só para usuários da organização dona do laudo.
+// @Tags inspections
+// @Security BearerAuth
+// @Produce image/jpeg,image/png,image/webp
+// @Param photoId path string true "ID da foto"
+// @Success 200 {file} binary
+// @Failure 404 {object} map[string]interface{}
+// @Router /inspection-photos/{photoId} [get]
+func (h *Handler) downloadPhoto(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := org(w, r)
+	if !ok {
+		return
+	}
+	photoID, ok := pathID(w, r, "photoId")
+	if !ok {
+		return
+	}
+	rc, photo, err := h.svc.OpenPhoto(r.Context(), photoID, orgID)
+	if err != nil {
+		fail(w, err, "DOWNLOAD_FAILED")
+		return
+	}
+	defer rc.Close()
+	w.Header().Set("Content-Type", photo.MimeType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cache-Control", "private, max-age=3600")
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, rc)
 }

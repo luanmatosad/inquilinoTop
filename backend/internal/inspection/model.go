@@ -3,6 +3,7 @@ package inspection
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/google/uuid"
@@ -37,6 +38,19 @@ var (
 	ErrComparisonUnavailable = fmt.Errorf("inspection: comparação exige laudos de entrada e de saída concluídos: %w", apierr.ErrConflict)
 	// ErrInvalidFilter: filtro de listagem desconhecido (HTTP 400).
 	ErrInvalidFilter = fmt.Errorf("inspection: filtro inválido")
+	// ErrInvalidPhoto: arquivo que não é JPEG, PNG ou WebP, ou cujo conteúdo não bate com o tipo (HTTP 400).
+	ErrInvalidPhoto = fmt.Errorf("inspection: a foto deve ser JPEG, PNG ou WebP")
+	// ErrPhotoTooLarge: foto acima de MaxPhotoBytes (HTTP 413).
+	ErrPhotoTooLarge = fmt.Errorf("inspection: a foto excede 10 MB")
+	// ErrPhotoLimit: o item já tem MaxPhotosPerItem fotos (HTTP 422).
+	ErrPhotoLimit = fmt.Errorf("inspection: o item já tem o máximo de fotos")
+)
+
+const (
+	// MaxPhotoBytes é o tamanho máximo de cada foto (10 MB).
+	MaxPhotoBytes = 10 << 20
+	// MaxPhotosPerItem limita as fotos ativas de cada item.
+	MaxPhotosPerItem = 10
 )
 
 type Inspection struct {
@@ -64,6 +78,32 @@ type Item struct {
 	IsActive     bool      `json:"is_active"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+	// Photos é preenchido só no detalhe do laudo; nunca nil.
+	Photos []Photo `json:"photos"`
+}
+
+// Photo é a foto de um item. O caminho do arquivo não é exposto: a leitura passa pela API.
+type Photo struct {
+	ID        uuid.UUID `json:"id"`
+	ItemID    uuid.UUID `json:"item_id"`
+	Filename  string    `json:"filename"`
+	MimeType  string    `json:"mime_type"`
+	SizeBytes int       `json:"size_bytes"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// NewPhoto reúne os dados de uma foto já armazenada, para gravar no banco.
+type NewPhoto struct {
+	Filename  string
+	MimeType  string
+	SizeBytes int
+	FilePath  string
+}
+
+// PhotoFile é a foto com o caminho no armazenamento (uso interno).
+type PhotoFile struct {
+	Photo
+	FilePath string
 }
 
 // Detail é o laudo com seus itens ativos.
@@ -138,6 +178,21 @@ type Repository interface {
 	DeleteItem(ctx context.Context, id, inspectionID, orgID uuid.UUID) error
 	// CopyItems copia os itens ativos de from para to e devolve quantos copiou.
 	CopyItems(ctx context.Context, fromID, toID, orgID uuid.UUID) (int, error)
+
+	// CreatePhoto grava a foto do item (que deve ser do laudo e da organização) respeitando MaxPhotosPerItem:
+	// ErrPhotoLimit se já houver o máximo, apierr.ErrNotFound se o item não for do laudo/organização.
+	CreatePhoto(ctx context.Context, inspectionID, itemID, orgID, userID uuid.UUID, p NewPhoto) (*Photo, error)
+	// ListPhotos devolve as fotos ativas dos itens ativos do laudo.
+	ListPhotos(ctx context.Context, inspectionID, orgID uuid.UUID) ([]Photo, error)
+	GetPhotoFile(ctx context.Context, photoID, orgID uuid.UUID) (*PhotoFile, error)
+	// DeletePhoto faz soft-delete da foto do item do laudo.
+	DeletePhoto(ctx context.Context, photoID, itemID, inspectionID, orgID uuid.UUID) error
+}
+
+// Storage guarda os arquivos das fotos; document.NewLocalStorage o satisfaz.
+type Storage interface {
+	Save(ctx context.Context, ownerID uuid.UUID, filename string, r io.Reader) (string, error)
+	Load(ctx context.Context, path string) (io.ReadCloser, error)
 }
 
 // LeaseReader valida o contrato na organização; lease.Repository o satisfaz.

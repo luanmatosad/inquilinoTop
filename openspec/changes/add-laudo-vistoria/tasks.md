@@ -19,9 +19,9 @@
 - [x] 3.2 Implementar `handler.go` com rotas de `/api/v1/inspections`, itens, `complete` e `GET /api/v1/leases/{id}/inspections/compare`, `authMW` por rota e permissão RBAC
 - [x] 3.3 Adicionar annotations Swagger completas e rodar `swag init`
 - [x] 3.4 Compor repositório, service e handler em `cmd/api/main.go`
-- [ ] 3.5 Estender `document` para aceitar `entity_type=inspection_item` (validação e checagem de propriedade pela organização) com testes
-- [ ] 3.6 Criar `backend/internal/inspection/CLAUDE.md`, ADR em `docs/decisions/inspection/` (unicidade por tipo, imutabilidade após conclusão) e linha na tabela de módulos do `CLAUDE.md` raiz
-- [ ] 3.7 Rodar `make test-backend` e `make test-backend-integration` sem falhas
+- [x] 3.5 Fotos: migration `000045_create_inspection_photos`, repositório e service (tipo conferido por bytes, 10 MB, 10 por item, só em `DRAFT`, armazenamento por organização), rotas de upload, remoção e leitura autenticada, com testes
+- [x] 3.6 Criar `backend/internal/inspection/CLAUDE.md`, ADR em `docs/decisions/inspection/` (unicidade por tipo, imutabilidade após conclusão, fotos em tabela própria) e linha na tabela de módulos do `CLAUDE.md` raiz
+- [x] 3.7 Rodar `make test-backend` e `make test-backend-integration` sem falhas
 
 ## 4. Frontend: base
 
@@ -35,7 +35,7 @@
 - [ ] 5.1 Lista de laudos com filtros por contrato, tipo e status, com estados de carregamento, vazio e erro
 - [ ] 5.2 Formulário de criação (contrato, tipo, data, observações, `copy_from_entry` para saída) com react-hook-form + Zod
 - [ ] 5.3 Detalhe e edição: itens agrupados por ambiente, sugestão de ambientes comuns, condição por `Select`/`Badge`
-- [ ] 5.4 Upload e exibição de fotos por item, com limite de 10 MB e mensagem de erro clara
+- [ ] 5.4 Upload e exibição de fotos por item (rota proxy autenticada para as imagens), com limites de 10 MB e 10 fotos e mensagem de erro clara
 - [ ] 5.5 Ação "Concluir" com confirmação (`alert-dialog`) e modo somente leitura após conclusão
 - [ ] 5.6 Tela de comparação entrada × saída com itens piorados em destaque
 - [ ] 5.7 Atalho para laudos a partir do contrato (`LeaseForm`/`ActiveLeaseCard`), lendo contratos pela fonte atual com `// TODO: migrar para Go API`

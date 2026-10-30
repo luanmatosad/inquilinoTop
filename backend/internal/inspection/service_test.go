@@ -1,7 +1,10 @@
 package inspection_test
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -18,12 +21,96 @@ import (
 // ---- mocks locais ----
 
 type mockRepo struct {
-	insp  map[uuid.UUID]*inspection.Inspection
-	items map[uuid.UUID]*inspection.Item
+	insp   map[uuid.UUID]*inspection.Inspection
+	items  map[uuid.UUID]*inspection.Item
+	photos map[uuid.UUID]*inspection.PhotoFile
+	active map[uuid.UUID]bool
 }
 
 func newMockRepo() *mockRepo {
-	return &mockRepo{insp: map[uuid.UUID]*inspection.Inspection{}, items: map[uuid.UUID]*inspection.Item{}}
+	return &mockRepo{
+		insp:   map[uuid.UUID]*inspection.Inspection{},
+		items:  map[uuid.UUID]*inspection.Item{},
+		photos: map[uuid.UUID]*inspection.PhotoFile{},
+		active: map[uuid.UUID]bool{},
+	}
+}
+
+func (m *mockRepo) CreatePhoto(_ context.Context, inspID, itemID, orgID, _ uuid.UUID, in inspection.NewPhoto) (*inspection.Photo, error) {
+	it, ok := m.items[itemID]
+	if !ok || !it.IsActive || it.InspectionID != inspID || !m.owns(inspID, orgID) {
+		return nil, apierr.ErrNotFound
+	}
+	n := 0
+	for _, p := range m.photos {
+		if p.ItemID == itemID && m.active[p.ID] {
+			n++
+		}
+	}
+	if n >= inspection.MaxPhotosPerItem {
+		return nil, inspection.ErrPhotoLimit
+	}
+	pf := &inspection.PhotoFile{Photo: inspection.Photo{ID: uuid.New(), ItemID: itemID, Filename: in.Filename, MimeType: in.MimeType, SizeBytes: in.SizeBytes}, FilePath: in.FilePath}
+	m.photos[pf.ID] = pf
+	m.active[pf.ID] = true
+	return &pf.Photo, nil
+}
+
+func (m *mockRepo) ListPhotos(_ context.Context, inspID, orgID uuid.UUID) ([]inspection.Photo, error) {
+	var out []inspection.Photo
+	if !m.owns(inspID, orgID) {
+		return out, nil
+	}
+	for _, p := range m.photos {
+		if m.active[p.ID] && m.items[p.ItemID].InspectionID == inspID {
+			out = append(out, p.Photo)
+		}
+	}
+	return out, nil
+}
+
+func (m *mockRepo) GetPhotoFile(_ context.Context, id, orgID uuid.UUID) (*inspection.PhotoFile, error) {
+	p, ok := m.photos[id]
+	if !ok || !m.active[id] || !m.owns(m.items[p.ItemID].InspectionID, orgID) {
+		return nil, apierr.ErrNotFound
+	}
+	return p, nil
+}
+
+func (m *mockRepo) DeletePhoto(_ context.Context, id, itemID, inspID, orgID uuid.UUID) error {
+	p, ok := m.photos[id]
+	if !ok || !m.active[id] || p.ItemID != itemID || m.items[itemID].InspectionID != inspID || !m.owns(inspID, orgID) {
+		return apierr.ErrNotFound
+	}
+	m.active[id] = false
+	return nil
+}
+
+// memStorage guarda os arquivos em memória.
+type memStorage struct {
+	files map[string][]byte
+	dirs  []uuid.UUID
+}
+
+func newMemStorage() *memStorage { return &memStorage{files: map[string][]byte{}} }
+
+func (m *memStorage) Save(_ context.Context, dir uuid.UUID, name string, r io.Reader) (string, error) {
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return "", err
+	}
+	path := dir.String() + "/" + uuid.New().String() + "-" + name
+	m.files[path] = b
+	m.dirs = append(m.dirs, dir)
+	return path, nil
+}
+
+func (m *memStorage) Load(_ context.Context, path string) (io.ReadCloser, error) {
+	b, ok := m.files[path]
+	if !ok {
+		return nil, errors.New("arquivo não encontrado")
+	}
+	return io.NopCloser(bytes.NewReader(b)), nil
 }
 
 func (m *mockRepo) Create(_ context.Context, orgID uuid.UUID, in inspection.CreateInspectionInput) (*inspection.Inspection, error) {
@@ -201,6 +288,7 @@ func (f *fakeAuditor) LogUpdate(_ context.Context, owner uuid.UUID, et string, _
 type env struct {
 	svc     *inspection.Service
 	repo    *mockRepo
+	storage *memStorage
 	auditor *fakeAuditor
 	org     uuid.UUID
 	user    uuid.UUID
@@ -208,8 +296,8 @@ type env struct {
 }
 
 func newEnv() *env {
-	e := &env{repo: newMockRepo(), auditor: &fakeAuditor{}, org: uuid.New(), user: uuid.New(), lease: uuid.New()}
-	e.svc = inspection.NewService(e.repo, &fakeLeases{known: map[uuid.UUID]uuid.UUID{e.lease: e.org}}).WithAuditor(e.auditor)
+	e := &env{repo: newMockRepo(), storage: newMemStorage(), auditor: &fakeAuditor{}, org: uuid.New(), user: uuid.New(), lease: uuid.New()}
+	e.svc = inspection.NewService(e.repo, &fakeLeases{known: map[uuid.UUID]uuid.UUID{e.lease: e.org}}).WithAuditor(e.auditor).WithStorage(e.storage)
 	return e
 }
 

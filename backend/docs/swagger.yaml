@@ -341,6 +341,11 @@ definitions:
         type: string
       notes:
         type: string
+      photos:
+        description: Photos é preenchido só no detalhe do laudo; nunca nil.
+        items:
+          $ref: '#/definitions/inspection.Photo'
+        type: array
       position:
         type: integer
       room:
@@ -374,6 +379,21 @@ definitions:
     - condition
     - item
     - room
+    type: object
+  inspection.Photo:
+    properties:
+      created_at:
+        type: string
+      filename:
+        type: string
+      id:
+        type: string
+      item_id:
+        type: string
+      mime_type:
+        type: string
+      size_bytes:
+        type: integer
     type: object
   inspection.UpdateInspectionInput:
     properties:
@@ -1389,6 +1409,35 @@ paths:
       summary: Lista histórico de um índice
       tags:
       - leases
+  /inspection-photos/{photoId}:
+    get:
+      description: Devolve os bytes da imagem; só para usuários da organização dona
+        do laudo.
+      parameters:
+      - description: ID da foto
+        in: path
+        name: photoId
+        required: true
+        type: string
+      produces:
+      - image/jpeg
+      - image/png
+      - image/webp
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Baixa a imagem de uma foto
+      tags:
+      - inspections
   /inspections:
     get:
       parameters:
@@ -1669,6 +1718,96 @@ paths:
       security:
       - BearerAuth: []
       summary: Atualiza item do laudo
+      tags:
+      - inspections
+  /inspections/{id}/items/{itemId}/photos:
+    post:
+      consumes:
+      - multipart/form-data
+      description: JPEG, PNG ou WebP (tipo conferido pelo conteúdo), até 10 MB, no
+        máximo 10 por item; só em laudo DRAFT.
+      parameters:
+      - description: ID do laudo
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: ID do item
+        in: path
+        name: itemId
+        required: true
+        type: string
+      - description: Imagem
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inspection.Photo'
+        "400":
+          description: INVALID_PHOTO
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: INSPECTION_NOT_EDITABLE
+          schema:
+            additionalProperties: true
+            type: object
+        "413":
+          description: PHOTO_TOO_LARGE
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: PHOTO_LIMIT
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Envia foto de um item do laudo
+      tags:
+      - inspections
+  /inspections/{id}/items/{itemId}/photos/{photoId}:
+    delete:
+      parameters:
+      - description: ID do laudo
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: ID do item
+        in: path
+        name: itemId
+        required: true
+        type: string
+      - description: ID da foto
+        in: path
+        name: photoId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: INSPECTION_NOT_EDITABLE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove foto de um item do laudo (soft-delete)
       tags:
       - inspections
   /leases:

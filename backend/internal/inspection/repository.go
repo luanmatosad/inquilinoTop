@@ -272,3 +272,115 @@ func (r *pgRepository) CopyItems(ctx context.Context, fromID, toID, orgID uuid.U
 	}
 	return int(tag.RowsAffected()), nil
 }
+
+const photoCols = `p.id, p.inspection_item_id, p.filename, p.mime_type, p.size_bytes, p.created_at`
+
+func scanPhoto(row pgx.Row, p *Photo) error {
+	return row.Scan(&p.ID, &p.ItemID, &p.Filename, &p.MimeType, &p.SizeBytes, &p.CreatedAt)
+}
+
+func (r *pgRepository) CreatePhoto(ctx context.Context, inspectionID, itemID, orgID, userID uuid.UUID, in NewPhoto) (*Photo, error) {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("inspection.repo: create photo begin: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Trava o item para o limite por item valer também com uploads simultâneos. O JOIN prende o item
+	// ao laudo e à organização: nunca confiar só no id do item.
+	var lockedID uuid.UUID
+	err = tx.QueryRow(ctx,
+		`SELECT it.id FROM inspection_items it
+		   JOIN inspections n ON n.id = it.inspection_id
+		  WHERE it.id=$1 AND it.is_active=true AND n.id=$2 AND n.organization_id=$3 AND n.is_active=true
+		    FOR UPDATE OF it`, itemID, inspectionID, orgID).Scan(&lockedID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
+		return nil, fmt.Errorf("inspection.repo: create photo lock: %w", err)
+	}
+
+	var count int
+	if err := tx.QueryRow(ctx,
+		`SELECT COUNT(*) FROM inspection_photos WHERE inspection_item_id=$1 AND is_active=true`, itemID).Scan(&count); err != nil {
+		return nil, fmt.Errorf("inspection.repo: create photo count: %w", err)
+	}
+	if count >= MaxPhotosPerItem {
+		return nil, ErrPhotoLimit
+	}
+
+	var p Photo
+	err = tx.QueryRow(ctx,
+		`INSERT INTO inspection_photos (inspection_item_id, filename, mime_type, size_bytes, file_path, uploaded_by)
+		 VALUES ($1,$2,$3,$4,$5,$6)
+		 RETURNING id, inspection_item_id, filename, mime_type, size_bytes, created_at`,
+		itemID, in.Filename, in.MimeType, in.SizeBytes, in.FilePath, userID,
+	).Scan(&p.ID, &p.ItemID, &p.Filename, &p.MimeType, &p.SizeBytes, &p.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("inspection.repo: create photo: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("inspection.repo: create photo commit: %w", err)
+	}
+	return &p, nil
+}
+
+func (r *pgRepository) ListPhotos(ctx context.Context, inspectionID, orgID uuid.UUID) ([]Photo, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT `+photoCols+` FROM inspection_photos p
+		   JOIN inspection_items it ON it.id = p.inspection_item_id
+		   JOIN inspections n ON n.id = it.inspection_id
+		  WHERE n.id=$1 AND n.organization_id=$2 AND n.is_active=true AND it.is_active=true AND p.is_active=true
+		  ORDER BY p.created_at`, inspectionID, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("inspection.repo: list photos: %w", err)
+	}
+	defer rows.Close()
+	var list []Photo
+	for rows.Next() {
+		var p Photo
+		if err := scanPhoto(rows, &p); err != nil {
+			return nil, fmt.Errorf("inspection.repo: list photos scan: %w", err)
+		}
+		list = append(list, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("inspection.repo: list photos rows: %w", err)
+	}
+	return list, nil
+}
+
+func (r *pgRepository) GetPhotoFile(ctx context.Context, photoID, orgID uuid.UUID) (*PhotoFile, error) {
+	var pf PhotoFile
+	err := r.db.Pool.QueryRow(ctx,
+		`SELECT `+photoCols+`, p.file_path FROM inspection_photos p
+		   JOIN inspection_items it ON it.id = p.inspection_item_id
+		   JOIN inspections n ON n.id = it.inspection_id
+		  WHERE p.id=$1 AND n.organization_id=$2 AND n.is_active=true AND it.is_active=true AND p.is_active=true`,
+		photoID, orgID,
+	).Scan(&pf.ID, &pf.ItemID, &pf.Filename, &pf.MimeType, &pf.SizeBytes, &pf.CreatedAt, &pf.FilePath)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierr.ErrNotFound
+		}
+		return nil, fmt.Errorf("inspection.repo: get photo: %w", err)
+	}
+	return &pf, nil
+}
+
+func (r *pgRepository) DeletePhoto(ctx context.Context, photoID, itemID, inspectionID, orgID uuid.UUID) error {
+	tag, err := r.db.Pool.Exec(ctx,
+		`UPDATE inspection_photos SET is_active=false
+		  WHERE id=$1 AND is_active=true AND inspection_item_id IN (
+		    SELECT it.id FROM inspection_items it JOIN inspections n ON n.id = it.inspection_id
+		     WHERE it.id=$2 AND it.is_active=true AND n.id=$3 AND n.organization_id=$4 AND n.is_active=true)`,
+		photoID, itemID, inspectionID, orgID)
+	if err != nil {
+		return fmt.Errorf("inspection.repo: delete photo: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apierr.ErrNotFound
+	}
+	return nil
+}

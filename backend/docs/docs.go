@@ -817,6 +817,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/inspection-photos/{photoId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Devolve os bytes da imagem; só para usuários da organização dona do laudo.",
+                "produces": [
+                    "image/jpeg",
+                    "image/png",
+                    "image/webp"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Baixa a imagem de uma foto",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da foto",
+                        "name": "photoId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/inspections": {
             "get": {
                 "security": [
@@ -1234,6 +1277,140 @@ const docTemplate = `{
                         "type": "string",
                         "description": "ID do item",
                         "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "INSPECTION_NOT_EDITABLE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/inspections/{id}/items/{itemId}/photos": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "JPEG, PNG ou WebP (tipo conferido pelo conteúdo), até 10 MB, no máximo 10 por item; só em laudo DRAFT.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Envia foto de um item do laudo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do laudo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do item",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Imagem",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/inspection.Photo"
+                        }
+                    },
+                    "400": {
+                        "description": "INVALID_PHOTO",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "INSPECTION_NOT_EDITABLE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "413": {
+                        "description": "PHOTO_TOO_LARGE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "PHOTO_LIMIT",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/inspections/{id}/items/{itemId}/photos/{photoId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspections"
+                ],
+                "summary": "Remove foto de um item do laudo (soft-delete)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do laudo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do item",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID da foto",
+                        "name": "photoId",
                         "in": "path",
                         "required": true
                     }
@@ -3383,6 +3560,13 @@ const docTemplate = `{
                 "notes": {
                     "type": "string"
                 },
+                "photos": {
+                    "description": "Photos é preenchido só no detalhe do laudo; nunca nil.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/inspection.Photo"
+                    }
+                },
                 "position": {
                     "type": "integer"
                 },
@@ -3427,6 +3611,29 @@ const docTemplate = `{
                 "room": {
                     "type": "string",
                     "maxLength": 100
+                }
+            }
+        },
+        "inspection.Photo": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "item_id": {
+                    "type": "string"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
                 }
             }
         },

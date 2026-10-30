@@ -18,6 +18,7 @@ Template para novas decisões: [`_template.md`](./_template.md).
 | payment-0003 | Cancelamento de cobranças futuras pendentes ao encerrar contrato | Accepted | payment | [0003-cancelamento-de-futuras-pendentes-ao-encerrar-contrato.md](./payment/0003-cancelamento-de-futuras-pendentes-ao-encerrar-contrato.md) |
 | audit-0001 | Logs de auditoria imutáveis, sem soft-delete | Accepted | audit | [0001-logs-imutaveis-sem-soft-delete.md](./audit/0001-logs-imutaveis-sem-soft-delete.md) |
 | notification-0001 | Separação ListPending / ListByOwner | Accepted | notification | [0001-separacao-listpending-listbyowner.md](./notification/0001-separacao-listpending-listbyowner.md) |
+| inspection-0001 | Laudo único por tipo, imutável após concluído, com fotos em tabela própria | Accepted | inspection | [0001-laudo-unico-por-tipo-imutavel-e-fotos-proprias.md](./inspection/0001-laudo-unico-por-tipo-imutavel-e-fotos-proprias.md) |
 | cross-cutting-0001 | Soft-delete obrigatório em toda entidade | Accepted | _cross-cutting | [0001-soft-delete-obrigatorio.md](./_cross-cutting/0001-soft-delete-obrigatorio.md) |
 | cross-cutting-0002 | shadcn/ui como única biblioteca de UI | Accepted | _cross-cutting | [0002-shadcn-ui-unica-biblioteca.md](./_cross-cutting/0002-shadcn-ui-unica-biblioteca.md) |
 

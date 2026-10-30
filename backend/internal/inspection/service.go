@@ -1,9 +1,13 @@
 package inspection
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -15,11 +19,18 @@ type Service struct {
 	repo    Repository
 	leases  LeaseReader
 	auditor Auditor
+	storage Storage
 	now     func() time.Time
 }
 
 func NewService(repo Repository, leases LeaseReader) *Service {
 	return &Service{repo: repo, leases: leases, now: time.Now}
+}
+
+// WithStorage habilita o upload e a leitura de fotos.
+func (s *Service) WithStorage(st Storage) *Service {
+	s.storage = st
+	return s
 }
 
 // WithAuditor habilita o registro de auditoria de criação e conclusão.
@@ -83,6 +94,20 @@ func (s *Service) Get(ctx context.Context, id, orgID uuid.UUID) (*Detail, error)
 	}
 	if items == nil {
 		items = []Item{}
+	}
+	photos, err := s.repo.ListPhotos(ctx, id, orgID)
+	if err != nil {
+		return nil, err
+	}
+	byItem := map[uuid.UUID][]Photo{}
+	for _, p := range photos {
+		byItem[p.ItemID] = append(byItem[p.ItemID], p)
+	}
+	for i := range items {
+		items[i].Photos = byItem[items[i].ID]
+		if items[i].Photos == nil {
+			items[i].Photos = []Photo{}
+		}
 	}
 	return &Detail{Inspection: *insp, Items: items}, nil
 }
@@ -244,4 +269,73 @@ func (s *Service) Compare(ctx context.Context, leaseID, orgID uuid.UUID) (*Compa
 		rows = append(rows, ComparisonRow{Room: it.Room, Item: it.Item, ExitCondition: &c, ExitNotes: n})
 	}
 	return &Comparison{LeaseID: leaseID, Entry: *entry, Exit: *exit, Rows: rows}, nil
+}
+
+var allowedPhotoTypes = map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true}
+
+// UploadPhoto anexa uma foto a um item de laudo DRAFT. O tipo vem dos primeiros bytes do arquivo
+// (não do cabeçalho enviado) e o tamanho é o lido, não o declarado.
+func (s *Service) UploadPhoto(ctx context.Context, inspectionID, itemID, orgID, userID uuid.UUID, filename string, file io.Reader) (*Photo, error) {
+	if s.storage == nil {
+		return nil, fmt.Errorf("inspection.svc: armazenamento de fotos não configurado")
+	}
+	if err := s.editableDraft(ctx, inspectionID, orgID); err != nil {
+		return nil, err
+	}
+	data, err := io.ReadAll(io.LimitReader(file, MaxPhotoBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("inspection.svc: ler foto: %w", err)
+	}
+	if len(data) > MaxPhotoBytes {
+		return nil, ErrPhotoTooLarge
+	}
+	if len(data) == 0 {
+		return nil, ErrInvalidPhoto
+	}
+	mime := http.DetectContentType(data)
+	if !allowedPhotoTypes[mime] {
+		return nil, ErrInvalidPhoto
+	}
+
+	name := filepath.Base(strings.ReplaceAll(filename, "\\", "/"))
+	if name == "." || name == "/" || name == "" {
+		name = "foto"
+	}
+	if len(name) > 255 {
+		name = name[len(name)-255:]
+	}
+
+	path, err := s.storage.Save(ctx, orgID, name, bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("inspection.svc: salvar foto: %w", err)
+	}
+	photo, err := s.repo.CreatePhoto(ctx, inspectionID, itemID, orgID, userID, NewPhoto{Filename: name, MimeType: mime, SizeBytes: len(data), FilePath: path})
+	if err != nil {
+		return nil, err
+	}
+	return photo, nil
+}
+
+// DeletePhoto remove (soft-delete) a foto de um item de laudo DRAFT.
+func (s *Service) DeletePhoto(ctx context.Context, photoID, itemID, inspectionID, orgID uuid.UUID) error {
+	if err := s.editableDraft(ctx, inspectionID, orgID); err != nil {
+		return err
+	}
+	return s.repo.DeletePhoto(ctx, photoID, itemID, inspectionID, orgID)
+}
+
+// OpenPhoto abre o arquivo da foto da organização, inclusive em laudos concluídos.
+func (s *Service) OpenPhoto(ctx context.Context, photoID, orgID uuid.UUID) (io.ReadCloser, *Photo, error) {
+	if s.storage == nil {
+		return nil, nil, fmt.Errorf("inspection.svc: armazenamento de fotos não configurado")
+	}
+	pf, err := s.repo.GetPhotoFile(ctx, photoID, orgID)
+	if err != nil {
+		return nil, nil, err
+	}
+	rc, err := s.storage.Load(ctx, pf.FilePath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("inspection.svc: abrir foto: %w", err)
+	}
+	return rc, &pf.Photo, nil
 }

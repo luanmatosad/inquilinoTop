@@ -61,15 +61,31 @@ O sistema SHALL permitir concluir um laudo `DRAFT` com pelo menos um item, torna
 - **THEN** o sistema retorna 409 `INSPECTION_NOT_EDITABLE`
 
 ### Requirement: Fotos dos itens
-O sistema SHALL permitir anexar fotos a um item de laudo usando o módulo de documentos com `entity_type` `inspection_item`.
+O sistema SHALL permitir anexar fotos (JPEG, PNG ou WebP, até 10 MB, no máximo 10 por item) a um item de laudo em `DRAFT`, armazenadas por organização, e servi-las somente a usuários da mesma organização.
 
 #### Scenario: Upload de foto
 - **WHEN** o usuário envia imagem de até 10 MB para um item do seu laudo `DRAFT`
 - **THEN** o sistema armazena o arquivo e o associa ao item
 
+#### Scenario: Tipo não permitido
+- **WHEN** o arquivo não é JPEG, PNG nem WebP, ou o conteúdo não corresponde ao tipo declarado
+- **THEN** o sistema retorna 400 e não armazena o arquivo
+
+#### Scenario: Limite por item
+- **WHEN** o item já tem 10 fotos
+- **THEN** o sistema retorna 422 `PHOTO_LIMIT` e não armazena a nova
+
 #### Scenario: Item de outra organização
 - **WHEN** o item pertence a laudo de outra organização
 - **THEN** o sistema retorna 404 e não armazena o arquivo
+
+#### Scenario: Laudo concluído
+- **WHEN** o usuário envia ou remove foto de laudo `COMPLETED`
+- **THEN** o sistema retorna 409 `INSPECTION_NOT_EDITABLE`, mas continua servindo as fotos existentes
+
+#### Scenario: Remoção por soft-delete
+- **WHEN** o usuário remove uma foto de laudo `DRAFT`
+- **THEN** a foto deixa de aparecer e de ser servida (`is_active=false`)
 
 ### Requirement: Comparar entrada e saída
 O sistema SHALL retornar a comparação entre o laudo `ENTRY` e o `EXIT` concluídos de um contrato, pareando itens por ambiente e item.

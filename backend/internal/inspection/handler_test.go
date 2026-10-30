@@ -1,7 +1,10 @@
 package inspection_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -220,4 +223,107 @@ func TestHandler_OrganizaçãoDistintaDoUsuário(t *testing.T) {
 	require.Len(t, list, 1)
 	assert.Equal(t, e.org, list[0].OrganizationID)
 	assert.NotEqual(t, e.user, e.org)
+}
+
+// ---- fotos ----
+
+func multipartBody(t *testing.T, field, filename string, data []byte) (*bytes.Buffer, string) {
+	t.Helper()
+	var buf bytes.Buffer
+	w := multipart.NewWriter(&buf)
+	if field != "" {
+		fw, err := w.CreateFormFile(field, filename)
+		require.NoError(t, err)
+		_, _ = fw.Write(data)
+	}
+	require.NoError(t, w.Close())
+	return &buf, w.FormDataContentType()
+}
+
+func upload(h http.Handler, path, field, filename string, data []byte, t *testing.T) *httptest.ResponseRecorder {
+	body, ctype := multipartBody(t, field, filename, data)
+	req := httptest.NewRequest(http.MethodPost, path, body)
+	req.Header.Set("Content-Type", ctype)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	return rr
+}
+
+func TestHandler_Foto_Fluxo(t *testing.T) {
+	e := newEnv()
+	r := e.router()
+	d, it := e.draftItem(t)
+	base := "/inspections/" + d.ID.String() + "/items/" + it.ID.String() + "/photos"
+
+	rr := upload(r, base, "file", "sala.jpg", jpegBytes, t)
+	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), `"mime_type":"image/jpeg"`)
+	assert.NotContains(t, rr.Body.String(), "file_path", "o caminho no disco não é exposto")
+
+	var created struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &created))
+
+	// leitura autenticada devolve os bytes com o tipo correto
+	get := call(r, http.MethodGet, "/inspection-photos/"+created.Data.ID, "")
+	require.Equal(t, http.StatusOK, get.Code)
+	assert.Equal(t, "image/jpeg", get.Header().Get("Content-Type"))
+	assert.Equal(t, "nosniff", get.Header().Get("X-Content-Type-Options"))
+	assert.Equal(t, jpegBytes, get.Body.Bytes())
+
+	// o detalhe lista a foto no item
+	detail := call(r, http.MethodGet, "/inspections/"+d.ID.String(), "")
+	assert.Contains(t, detail.Body.String(), created.Data.ID)
+
+	del := call(r, http.MethodDelete, base+"/"+created.Data.ID, "")
+	require.Equal(t, http.StatusOK, del.Code)
+	assert.Equal(t, http.StatusNotFound, call(r, http.MethodGet, "/inspection-photos/"+created.Data.ID, "").Code)
+	assert.Equal(t, http.StatusNotFound, call(r, http.MethodDelete, base+"/"+created.Data.ID, "").Code)
+}
+
+func TestHandler_Foto_Erros(t *testing.T) {
+	e := newEnv()
+	r := e.router()
+	d, it := e.draftItem(t)
+	base := "/inspections/" + d.ID.String() + "/items/" + it.ID.String() + "/photos"
+
+	rr := upload(r, base, "file", "x.jpg", []byte("<html>nao e imagem</html>"), t)
+	require.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "INVALID_PHOTO")
+
+	assert.Equal(t, http.StatusBadRequest, upload(r, base, "", "", nil, t).Code, "sem arquivo")
+	assert.Equal(t, http.StatusBadRequest, upload(r, "/inspections/nao-uuid/items/"+it.ID.String()+"/photos", "file", "a.jpg", jpegBytes, t).Code)
+	assert.Equal(t, http.StatusNotFound, upload(r, "/inspections/"+d.ID.String()+"/items/"+uuid.New().String()+"/photos", "file", "a.jpg", jpegBytes, t).Code)
+
+	big := append([]byte{0xFF, 0xD8, 0xFF}, make([]byte, inspection.MaxPhotoBytes)...)
+	rr = upload(r, base, "file", "grande.jpg", big, t)
+	require.Equal(t, http.StatusRequestEntityTooLarge, rr.Code)
+	assert.Contains(t, rr.Body.String(), "PHOTO_TOO_LARGE")
+
+	for i := 0; i < inspection.MaxPhotosPerItem; i++ {
+		require.Equal(t, http.StatusCreated, upload(r, base, "file", "f.jpg", jpegBytes, t).Code)
+	}
+	rr = upload(r, base, "file", "extra.jpg", jpegBytes, t)
+	require.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+	assert.Contains(t, rr.Body.String(), "PHOTO_LIMIT")
+
+	assert.Equal(t, http.StatusBadRequest, call(r, http.MethodGet, "/inspection-photos/nao-uuid", "").Code)
+	assert.Equal(t, http.StatusNotFound, call(r, http.MethodGet, "/inspection-photos/"+uuid.New().String(), "").Code)
+}
+
+func TestHandler_Foto_LaudoConcluído_409(t *testing.T) {
+	e := newEnv()
+	r := e.router()
+	d, it := e.draftItem(t)
+	base := "/inspections/" + d.ID.String() + "/items/" + it.ID.String() + "/photos"
+	rr := upload(r, base, "file", "a.jpg", jpegBytes, t)
+	require.Equal(t, http.StatusCreated, rr.Code)
+	require.Equal(t, http.StatusOK, call(r, http.MethodPost, "/inspections/"+d.ID.String()+"/complete", "").Code)
+
+	rr = upload(r, base, "file", "b.jpg", jpegBytes, t)
+	require.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "INSPECTION_NOT_EDITABLE")
 }

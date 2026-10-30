@@ -128,10 +128,6 @@ func main() {
 	dashboardSvc := dashboard.NewService(dashboardRepo, appLoc)
 	dashboardHandler := dashboard.NewHandler(dashboardSvc)
 
-	inspectionRepo := inspection.NewRepository(database)
-	inspectionSvc := inspection.NewService(inspectionRepo, leaseRepo).WithAuditor(auditSvc)
-	inspectionHandler := inspection.NewHandler(inspectionSvc)
-
 	expenseRepo := expense.NewRepository(database)
 	expenseSvc := expense.NewService(expenseRepo).WithAuditor(auditSvc).WithLocation(appLoc)
 	expenseHandler := expense.NewHandler(expenseSvc)
@@ -149,6 +145,10 @@ func main() {
 	documentRepo := document.NewRepository(database)
 	documentSvc := document.NewService(documentRepo, docStorage)
 	documentHandler := document.NewHandler(documentSvc)
+
+	inspectionRepo := inspection.NewRepository(database)
+	inspectionSvc := inspection.NewService(inspectionRepo, leaseRepo).WithAuditor(auditSvc).WithStorage(docStorage)
+	inspectionHandler := inspection.NewHandler(inspectionSvc)
 
 	smtpConfig := notification.SMTPConfig{
 		Host:     envOr("SMTP_HOST", "localhost"),
