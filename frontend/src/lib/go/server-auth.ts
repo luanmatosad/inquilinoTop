@@ -64,8 +64,9 @@ async function doFetch<T>(
 ): Promise<T> {
   const { skipAuth = false, ...fetchOptions } = options
 
+  // Corpo multipart (upload) precisa do Content-Type com boundary que o fetch gera sozinho.
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+    ...(fetchOptions.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     ...fetchOptions.headers,
   }
 

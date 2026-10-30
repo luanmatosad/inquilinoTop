@@ -9,10 +9,11 @@ Property (RESIDENTIAL | SINGLE)
   └── Unit
         └── Lease (Tenant ↔ Unit)
               ├── Payment
-              └── Expense
+              ├── Expense
+              └── Inspection (ENTRY | EXIT) ── Item ── Photo
 ```
 
-Toda entidade pertence a um `owner_id`. Nunca retornar ou modificar dados sem filtrar por `owner_id`.
+Toda entidade pertence a um `owner_id`. Nunca retornar ou modificar dados sem filtrar por `owner_id`. Domínios recentes (ex.: inspection) escopam por `organization_id` (ver [ADR rbac-0002](../../docs/decisions/rbac/0002-migracao-organization-id.md)); não confundir com o id do usuário.
 
 ## Enums
 
@@ -22,6 +23,9 @@ Toda entidade pertence a um `owner_id`. Nunca retornar ou modificar dados sem fi
 | Lease | status | `ACTIVE`, `ENDED`, `CANCELED` |
 | Payment | status | `PENDING`, `PAID`, `LATE` |
 | Payment | type | `RENT`, `DEPOSIT`, `EXPENSE`, `OTHER` |
+| Inspection | type | `ENTRY`, `EXIT` |
+| Inspection | status | `DRAFT`, `COMPLETED` |
+| Inspection item | condition | `GOOD`, `FAIR`, `POOR`, `DAMAGED`, `NOT_APPLICABLE` |
 | Expense | category | `ELECTRICITY`, `WATER`, `CONDO`, `TAX`, `MAINTENANCE`, `OTHER` |
 
 ## Invariantes

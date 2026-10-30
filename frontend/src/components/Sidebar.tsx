@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect, startTransition } from 'react'
 import { cn } from '@/lib/utils'
 
-import { LayoutDashboard, Building2, Users, Menu, X, Plus, Wallet, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Send, Percent, BarChart3, Headphones, Phone, FileText, Receipt, CreditCard, Upload, UserCircle, Settings, Bell } from 'lucide-react'
+import { LayoutDashboard, Building2, Users, Menu, X, Plus, Wallet, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Send, Percent, BarChart3, Headphones, Phone, FileText, Receipt, CreditCard, Upload, UserCircle, Settings, Bell, ClipboardCheck } from 'lucide-react'
 
 const publicRoutes = ['/login', '/auth/callback']
 
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/properties', label: 'Imóveis', icon: 'home_work' },
   { href: '/tenants', label: 'Inquilinos', icon: 'groups' },
   { href: '/leases', label: 'Contratos', icon: 'description' },
+  { href: '/inspections', label: 'Laudos', icon: 'inspection' },
   { href: '/import', label: 'Importar', icon: 'importar' },
 ]
 
@@ -43,6 +44,7 @@ function getIconComponent(icon: string) {
     case 'home_work': return Building2
     case 'groups': return Users
     case 'description': return FileText
+    case 'inspection': return ClipboardCheck
     case 'payments': return CreditCard
     case 'receipt': return Receipt
     case 'wallet': return Wallet

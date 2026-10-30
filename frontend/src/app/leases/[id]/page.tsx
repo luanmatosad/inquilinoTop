@@ -1,9 +1,10 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, ClipboardCheck } from "lucide-react"
 import { goFetch } from "@/lib/go/client"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -118,9 +119,14 @@ async function LeaseDetails({ id }: { id: string }) {
             {date(lease.start_date)} {lease.end_date ? `até ${date(lease.end_date)}` : "(prazo indeterminado)"}
           </p>
         </div>
-        {lease.status === "ACTIVE" && (
-          <LeaseActions leaseId={lease.id} unitId={lease.unit_id} currentEndDate={lease.end_date} />
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/inspections?lease_id=${lease.id}`}><ClipboardCheck className="mr-2 h-4 w-4" />Laudos de vistoria</Link>
+          </Button>
+          {lease.status === "ACTIVE" && (
+            <LeaseActions leaseId={lease.id} unitId={lease.unit_id} currentEndDate={lease.end_date} />
+          )}
+        </div>
       </div>
 
       <Tabs defaultValue="dados">

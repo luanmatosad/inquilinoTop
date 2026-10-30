@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Fotos de laudo chegam por multipart de até 10 MB (+ cabeçalhos); o padrão do middleware é 10 MB.
+  experimental: {
+    proxyClientMaxBodySize: "12mb",
+  },
   images: {
     qualities: [75, 90],
     dangerouslyAllowSVG: true,

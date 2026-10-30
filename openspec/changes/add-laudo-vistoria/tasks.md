@@ -25,24 +25,24 @@
 
 ## 4. Frontend: base
 
-- [ ] 4.1 Adicionar com a CLI do shadcn os componentes faltantes (`tabs`, `accordion`, `sheet`) em `src/components/ui/`
-- [ ] 4.2 Criar schemas Zod de laudo e item em `src/lib/schemas.ts`
-- [ ] 4.3 Criar cliente e server actions da Go API para laudos (`src/app/owner/inspections/actions.ts`), tratando token e erros 404/409/422
-- [ ] 4.4 Definir a rota (`/owner/inspections` ou `/inspections`) seguindo o padrão das telas migradas e incluir o item no `Sidebar`
+- [x] 4.1 Adicionar com a CLI do shadcn os componentes faltantes (`tabs`, `accordion`) em `src/components/ui/`
+- [x] 4.2 Criar schemas Zod de laudo e item em `src/lib/inspection-schemas.ts`
+- [x] 4.3 Criar cliente e server actions da Go API para laudos (`src/app/inspections/actions.ts`), tratando token e erros 404/409/422
+- [x] 4.4 Definir a rota (`/inspections`) seguindo o padrão das telas migradas e incluir o item no `Sidebar`
 
 ## 5. Frontend: telas
 
-- [ ] 5.1 Lista de laudos com filtros por contrato, tipo e status, com estados de carregamento, vazio e erro
-- [ ] 5.2 Formulário de criação (contrato, tipo, data, observações, `copy_from_entry` para saída) com react-hook-form + Zod
-- [ ] 5.3 Detalhe e edição: itens agrupados por ambiente, sugestão de ambientes comuns, condição por `Select`/`Badge`
-- [ ] 5.4 Upload e exibição de fotos por item (rota proxy autenticada para as imagens), com limites de 10 MB e 10 fotos e mensagem de erro clara
-- [ ] 5.5 Ação "Concluir" com confirmação (`alert-dialog`) e modo somente leitura após conclusão
-- [ ] 5.6 Tela de comparação entrada × saída com itens piorados em destaque
-- [ ] 5.7 Atalho para laudos a partir do contrato (`LeaseForm`/`ActiveLeaseCard`), lendo contratos pela fonte atual com `// TODO: migrar para Go API`
+- [x] 5.1 Lista de laudos com filtros por contrato, tipo e status, com estados de carregamento, vazio e erro
+- [x] 5.2 Formulário de criação (contrato, tipo, data, observações, `copy_from_entry` para saída) com react-hook-form + Zod
+- [x] 5.3 Detalhe e edição: itens agrupados por ambiente, sugestão de ambientes comuns, condição por `Select`/`Badge`
+- [x] 5.4 Upload e exibição de fotos por item (rota proxy autenticada para as imagens), com limites de 10 MB e 10 fotos e mensagem de erro clara
+- [x] 5.5 Ação "Concluir" com confirmação (`alert-dialog`) e modo somente leitura após conclusão
+- [x] 5.6 Tela de comparação entrada × saída com itens piorados em destaque
+- [x] 5.7 Atalho para laudos no detalhe do contrato (`/leases/[id]`), lendo contratos pela Go API
 
 ## 6. Verificação
 
-- [ ] 6.1 `make frontend-lint` e build do frontend sem erros
+- [x] 6.1 `make frontend-lint` e build do frontend sem erros
 - [ ] 6.2 Percorrer o fluxo no navegador (criar entrada, concluir, criar saída copiando, comparar)
-- [ ] 6.3 Atualizar `.claude/rules/domain-model.md` (hierarquia com Inspection e filtro por `organization_id`, ref. ADR rbac-0002)
-- [ ] 6.4 `openspec validate add-laudo-vistoria` sem erros
+- [x] 6.3 Atualizar `.claude/rules/domain-model.md` (hierarquia com Inspection e filtro por `organization_id`, ref. ADR rbac-0002)
+- [x] 6.4 `openspec validate add-laudo-vistoria` sem erros
