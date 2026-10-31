@@ -5,6 +5,10 @@ paths:
 
 # Frontend — Next.js 16 + Migração Supabase → Go
 
+## Design System
+
+Componentes de UI (`src/components/ui/`) vêm do repo [`shadcnds`](https://github.com/luanmatosad/shadcnds), espelho em código do Figma UI Kit ImoviFlow. Fluxo completo de reuso fiel: ver [design-system.md](design-system.md).
+
 ## Arquitetura Atual
 
 **Next.js 16 App Router** com Supabase como backend provisório. O Go backend é o destino — não criar nova lógica Supabase em domínios já implementados no Go.

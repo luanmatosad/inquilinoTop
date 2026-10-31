@@ -50,6 +50,7 @@ Integração exige `-p 1` (um pacote por vez) para não paralelizar acesso ao DB
 @.claude/rules/backend-api-design.md
 @.claude/rules/backend-testing.md
 @.claude/rules/frontend.md
+@.claude/rules/design-system.md
 
 ## Módulos
 
