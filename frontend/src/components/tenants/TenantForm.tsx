@@ -7,26 +7,22 @@ import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { createTenant, updateTenant } from '@/app/tenants/actions'
+import { Input } from '@/components/ui/input'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Textarea } from '@/components/ui/textarea'
 import { tenantSchema, type TenantFormValues } from '@/lib/schemas'
-import { maskCep, maskCpfCnpj, maskPhone } from '@/lib/masks'
+import { maskCpfCnpj, maskPhone } from '@/lib/masks'
+import { preserveAddress } from '@/lib/tenant-form'
+import { createTenant, updateTenant } from '@/app/tenants/actions'
 
 export interface TenantFormData {
   id: string
@@ -55,14 +51,19 @@ function toDefaults(t?: TenantFormData): TenantFormValues {
     email: t?.email ?? '',
     phone: maskPhone(t?.phone),
     document: maskCpfCnpj(t?.document),
-    postal_code: maskCep(t?.postal_code),
-    address_line: t?.address_line ?? '',
-    city: t?.city ?? '',
-    state: t?.state ?? '',
     notes: t?.notes ?? '',
   }
 }
 
+const TYPE_OPTIONS = [
+  { value: 'PF', label: 'Pessoa física' },
+  { value: 'PJ', label: 'Empresa' },
+] as const
+
+/**
+ * Formulário rápido do canvas: nome e contato bastam. Não mostra endereço, mas a edição devolve o
+ * endereço já gravado, porque o backend trata o PUT como substituição total (ver preserveAddress).
+ */
 export function TenantForm({ initialData, onSuccess, onCancel }: TenantFormProps) {
   const [loading, setLoading] = useState(false)
 
@@ -71,13 +72,13 @@ export function TenantForm({ initialData, onSuccess, onCancel }: TenantFormProps
     defaultValues: toDefaults(initialData),
   })
 
-  const personType = form.watch('person_type')
+  const isCompany = form.watch('person_type') === 'PJ'
 
   async function onSubmit(values: TenantFormValues) {
     setLoading(true)
     try {
       const result = initialData
-        ? await updateTenant(initialData.id, values)
+        ? await updateTenant(initialData.id, preserveAddress(values, initialData))
         : await createTenant(values)
 
       if (result.error) {
@@ -98,61 +99,60 @@ export function TenantForm({ initialData, onSuccess, onCancel }: TenantFormProps
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <FormField
-            control={form.control}
-            name="person_type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tipo *</FormLabel>
-                <Select
-                  value={field.value}
-                  onValueChange={(v) => {
-                    field.onChange(v)
-                    form.setValue('document', '')
-                  }}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="PF">Pessoa Física</SelectItem>
-                    <SelectItem value="PJ">Pessoa Jurídica</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <FormField
+          control={form.control}
+          name="person_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tipo de inquilino</FormLabel>
+              <RadioGroup
+                value={field.value}
+                onValueChange={(v) => {
+                  field.onChange(v)
+                  form.setValue('document', '')
+                }}
+                className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
+              >
+                {TYPE_OPTIONS.map((o) => (
+                  <label
+                    key={o.value}
+                    className="flex h-7 cursor-pointer items-center justify-center rounded-md text-sm font-medium text-muted-foreground has-[[data-state=checked]]:bg-background has-[[data-state=checked]]:text-foreground has-[[data-state=checked]]:shadow-xs"
+                  >
+                    <RadioGroupItem value={o.value} className="sr-only" />
+                    {o.label}
+                  </label>
+                ))}
+              </RadioGroup>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem className="sm:col-span-2">
-                <FormLabel>{personType === 'PJ' ? 'Razão social *' : 'Nome completo *'}</FormLabel>
-                <FormControl>
-                  <Input placeholder={personType === 'PJ' ? 'Ex: Empresa LTDA' : 'Ex: João da Silva'} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{isCompany ? 'Razão social' : 'Nome completo'}</FormLabel>
+              <FormControl>
+                <Input placeholder={isCompany ? 'Empresa Ltda.' : 'Marina Souza'} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
           name="document"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{personType === 'PJ' ? 'CNPJ' : 'CPF'}</FormLabel>
+              <FormLabel>{isCompany ? 'CNPJ' : 'CPF'}</FormLabel>
               <FormControl>
                 <Input
                   inputMode="numeric"
-                  placeholder={personType === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'}
+                  placeholder={isCompany ? '00.000.000/0000-00' : '000.000.000-00'}
                   {...field}
                   value={field.value ?? ''}
                   onChange={(e) => field.onChange(maskCpfCnpj(e.target.value))}
@@ -163,110 +163,40 @@ export function TenantForm({ initialData, onSuccess, onCancel }: TenantFormProps
           )}
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input type="email" placeholder="joao@email.com" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Telefone</FormLabel>
-                <FormControl>
-                  <Input
-                    inputMode="tel"
-                    placeholder="(11) 99999-9999"
-                    {...field}
-                    value={field.value ?? ''}
-                    onChange={(e) => field.onChange(maskPhone(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>E-mail</FormLabel>
+              <FormControl>
+                <Input type="email" placeholder="marina@email.com" {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <FormField
-            control={form.control}
-            name="postal_code"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>CEP</FormLabel>
-                <FormControl>
-                  <Input
-                    inputMode="numeric"
-                    placeholder="00000-000"
-                    {...field}
-                    value={field.value ?? ''}
-                    onChange={(e) => field.onChange(maskCep(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="address_line"
-            render={({ field }) => (
-              <FormItem className="sm:col-span-2">
-                <FormLabel>Endereço</FormLabel>
-                <FormControl>
-                  <Input placeholder="Rua, número, complemento" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
-          <FormField
-            control={form.control}
-            name="city"
-            render={({ field }) => (
-              <FormItem className="col-span-2">
-                <FormLabel>Cidade</FormLabel>
-                <FormControl>
-                  <Input placeholder="Cidade" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="state"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>UF</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="UF"
-                    maxLength={2}
-                    {...field}
-                    value={field.value ?? ''}
-                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Celular (WhatsApp)</FormLabel>
+              <FormControl>
+                <Input
+                  inputMode="tel"
+                  placeholder="(11) 98888-1111"
+                  {...field}
+                  value={field.value ?? ''}
+                  onChange={(e) => field.onChange(maskPhone(e.target.value))}
+                />
+              </FormControl>
+              <FormDescription>É por aqui que você envia as cobranças.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
@@ -275,20 +205,20 @@ export function TenantForm({ initialData, onSuccess, onCancel }: TenantFormProps
             <FormItem>
               <FormLabel>Observações</FormLabel>
               <FormControl>
-                <Textarea placeholder="Detalhes adicionais..." {...field} value={field.value ?? ''} />
+                <Textarea placeholder="Algo que vale lembrar" {...field} value={field.value ?? ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="outline" onClick={() => onCancel?.()} disabled={loading}>
             Cancelar
           </Button>
           <Button type="submit" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {initialData ? 'Salvar Alterações' : 'Cadastrar Inquilino'}
+            {loading && <Loader2 className="animate-spin" aria-hidden="true" />}
+            {initialData ? 'Salvar alterações' : 'Cadastrar inquilino'}
           </Button>
         </div>
       </form>

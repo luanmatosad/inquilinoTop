@@ -31,3 +31,14 @@ export function maskPhone(value: string | null | undefined): string {
   if (d.length <= 10) return d.replace(/^(\d{2})(\d{4})(\d+)/, '($1) $2-$3')
   return d.replace(/^(\d{2})(\d{5})(\d+)/, '($1) $2-$3')
 }
+
+// Máscara parcial para exibição fora da edição (lista e detalhe): CPF 123.456.xxx-09 e CNPJ 12.345.xxx/0001-90,
+// com asteriscos no lugar dos "x".
+export function maskDocumentPartial(value: string | null | undefined): string {
+  const d = onlyDigits(value)
+  if (d.length === 0) return ''
+  if (d.length === 11) return `${d.slice(0, 3)}.${d.slice(3, 6)}.***-${d.slice(9)}`
+  if (d.length === 14) return `${d.slice(0, 2)}.${d.slice(2, 5)}.***/${d.slice(8, 12)}-${d.slice(12)}`
+  // Formato inesperado: esconder tudo é mais seguro do que adivinhar onde cortar.
+  return '***'
+}

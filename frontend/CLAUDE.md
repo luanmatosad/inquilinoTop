@@ -26,7 +26,7 @@ src/middleware.ts             # Auth: redireciona não-autenticados para /login
 | `/` | Dashboard |
 | `/login` | Login via Go API |
 | `/properties`, `/properties/[id]` | Imóveis (Go API): lista em tabela com indicadores; detalhe em abas (`?aba=unidades\|informacoes`). `/properties/new` e `/properties/[id]/edit` só redirecionam |
-| `/tenants` | Inquilinos (Supabase) |
+| `/tenants`, `/tenants/[id]` | Inquilinos (Go API): lista em tabela com cobrança do mês; detalhe sem abas (`?editar=1` abre a edição) |
 | `/units/[id]` | Detalhe de unidade (Supabase) |
 | `/financeiro/dashboard` | Dashboard financeiro (stub) |
 | `/financeiro/receber`, `/pagar`, `/repasses`, `/comissoes`, `/conciliacao` | Financeiro (stub) |
@@ -49,6 +49,14 @@ O canvas "ImoviFlow — Telas" é a fonte da verdade da navegação (change `red
 - **Tipos:** `RESIDENTIAL`, `COMMERCIAL` e `SINGLE` (rótulo "Casa"). "Terreno" do canvas mobile não existe no domínio.
 - **Endereço:** `number` e `complement` são colunas próprias; `formatPropertyAddress` compõe o texto de exibição.
 - Fora desta etapa: preenchimento do endereço pelo CEP, abas Despesas e Recebimento do detalhe, "Aluguel de referência" da unidade (entra com Contratos).
+
+## Inquilinos (redesign)
+
+- **Painéis por URL:** `/tenants?novo=1` abre o cadastro; no detalhe, `?editar=1` abre a edição, com "Excluir inquilino" no rodapé (`TenantFormSheet`). Quem tem contrato ativo não pode ser excluído (`TENANT_HAS_ACTIVE_LEASE`).
+- **`PUT /tenants/{id}` é substituição total:** o que o corpo omite vira `NULL`. O formulário rápido não mostra endereço, então a edição devolve o endereço gravado com `preserveAddress` (`lib/tenant-form.ts`). Nunca remova isso sem mudar o backend.
+- **Situação de cobrança** (Atrasado, Pago, Previsto, Sem contrato): `buildTenantOverview` (`lib/tenant-overview.ts`) junta inquilinos, contratos `ACTIVE`, imóveis e pagamentos no servidor Next. Busca o mês corrente (`/payments?from&to`, fuso `America/Sao_Paulo`) e os atrasados (`/payments?status=LATE`). Atraso de qualquer mês vence o resto; só `RENT` decide Pago/Previsto. Falha de contratos, imóveis ou pagamentos degrada para "—" com aviso. Nenhuma lista pagina: se a base crescer, mover para o backend.
+- **Documento:** CPF/CNPJ aparece mascarado (`maskDocumentPartial`) na lista e no detalhe, e a máscara é aplicada **no servidor**. O documento completo só chega ao navegador no formulário de edição aberto.
+- **Fora desta etapa:** Fiador (vai com Contratos), "Aguardando confirmação"/"Confirmar pagamento" (fluxo 04), abas Extrato e Documentos, próximo reajuste. O histórico de contratos do inquilino passou a viver em Contratos.
 
 ## Auth — MIGRADO para Go
 
