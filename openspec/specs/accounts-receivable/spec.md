@@ -53,17 +53,17 @@ O sistema SHALL emitir recibo para cobrança `PAID` com partes, unidade, valores
 - **THEN** o sistema retorna 409
 
 ### Requirement: Tela de contas a receber
-O frontend SHALL exibir em `/financial/receivables` as cobranças com filtros de período, status e imóvel, cartões de totais, indicador de atraso, ação de dar baixa e acesso ao recibo.
+O frontend SHALL exibir em `/financial/receivables` a tela Recebimentos, com navegação por mês, indicadores, chips de situação, ação de registrar pagamento e acesso ao recibo, conforme a capability `receivables-overview`, e SHALL NOT oferecer os filtros de período, contrato e status por formulário.
 
 #### Scenario: Dar baixa na tela
-- **WHEN** o usuário confirma a baixa de uma cobrança no diálogo
+- **WHEN** o usuário confirma o pagamento de uma cobrança no diálogo
 - **THEN** a linha passa a "Pago", o recibo fica disponível e os totais são atualizados
 
-#### Scenario: Atraso destacado
-- **WHEN** a cobrança está vencida
-- **THEN** a linha mostra o badge "Atrasado" e o total atualizado com multa e juros
+#### Scenario: Recibo
+- **WHEN** a cobrança está paga
+- **THEN** a linha oferece o link Recibo para `/financial/receivables/<id>/receipt`
 
-#### Scenario: Menu enxuto
-- **WHEN** o usuário abre o menu financeiro
-- **THEN** vê Contas a Receber e Contas a Pagar, sem itens que não têm backend (conciliação, repasses, comissões)
+#### Scenario: Filtros antigos
+- **WHEN** o usuário acessa a tela
+- **THEN** não há formulário de período nem de contrato; o mês e a situação vêm de `?mes=` e `?situacao=`
 
