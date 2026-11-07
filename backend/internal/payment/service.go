@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/lease"
 	"github.com/inquilinotop/api/internal/payment/provider"
 	"github.com/inquilinotop/api/internal/tenant"
+	"github.com/inquilinotop/api/pkg/pix"
 )
 
 type Service struct {
@@ -20,12 +23,19 @@ type Service struct {
 	unitReader   UnitReader
 	ownerReader  OwnerReader
 	irrf         IRRFCalculator
+	events       EventStore
 	loc          *time.Location
 	now          func() time.Time
 }
 
 func NewService(repo Repository, lr LeaseReader, tr TenantReader, ur UnitReader, ow OwnerReader, irrf IRRFCalculator) *Service {
 	return &Service{repo: repo, leaseReader: lr, tenantReader: tr, unitReader: ur, ownerReader: ow, irrf: irrf, loc: time.UTC, now: time.Now}
+}
+
+// WithEvents habilita a linha do tempo e o registro de envio da cobrança.
+func (s *Service) WithEvents(e EventStore) *Service {
+	s.events = e
+	return s
 }
 
 // WithLocation define o fuso usado para decidir o que é "hoje" (vencida ou a vencer).
@@ -174,20 +184,28 @@ func (s *Service) enrich(ctx context.Context, p Payment, leases map[uuid.UUID]*l
 }
 
 func (s *Service) Update(ctx context.Context, id, orgID uuid.UUID, in UpdatePaymentInput) (*Payment, error) {
+	return s.UpdateBy(ctx, id, orgID, uuid.Nil, in)
+}
+
+// UpdateBy é Update com o autor da mudança, usado no evento de pagamento.
+func (s *Service) UpdateBy(ctx context.Context, id, orgID, actorID uuid.UUID, in UpdatePaymentInput) (*Payment, error) {
 	validStatuses := map[string]bool{"PENDING": true, "PAID": true, "LATE": true}
 	if !validStatuses[in.Status] {
 		return nil, fmt.Errorf("payment.svc: status inválido")
 	}
 	if in.PaidDate != nil && in.Status == "PAID" {
-		return s.markPaid(ctx, id, orgID, *in.PaidDate)
+		return s.markPaid(ctx, id, orgID, actorID, *in.PaidDate, in)
 	}
 	return s.repo.Update(ctx, id, orgID, in)
 }
 
+// ErrInvalidDiscount: desconto negativo ou maior que o valor devido (HTTP 400).
+var ErrInvalidDiscount = errors.New("payment: desconto inválido")
+
 var errAlreadyPaid = errors.New("payment already paid")
 var errNotPaid = errors.New("payment not paid")
 
-func (s *Service) markPaid(ctx context.Context, id, orgID uuid.UUID, paidDate time.Time) (*Payment, error) {
+func (s *Service) markPaid(ctx context.Context, id, orgID, actorID uuid.UUID, paidDate time.Time, in UpdatePaymentInput) (*Payment, error) {
 	current, err := s.repo.GetByID(ctx, id, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: %w", err)
@@ -210,6 +228,13 @@ func (s *Service) markPaid(ctx context.Context, id, orgID uuid.UUID, paidDate ti
 		}
 	}
 
+	// O desconto abate do que o inquilino de fato paga; o IRRF incide sobre esse valor.
+	due := current.GrossAmount + lateFee + interest
+	discount := round2(in.DiscountAmount)
+	if discount < 0 || discount > round2(due) {
+		return nil, fmt.Errorf("payment.svc: %w", ErrInvalidDiscount)
+	}
+
 	var irrf float64
 	if current.Type == "RENT" {
 		tn, err := s.tenantReader.GetByID(ctx, l.TenantID, orgID)
@@ -217,7 +242,7 @@ func (s *Service) markPaid(ctx context.Context, id, orgID uuid.UUID, paidDate ti
 			return nil, fmt.Errorf("payment.svc: load tenant: %w", err)
 		}
 		if tn.PersonType == "PJ" {
-			base := current.GrossAmount + lateFee + interest
+			base := due - discount
 			v, err := s.irrf.Calculate(ctx, base, paidDate)
 			if err != nil {
 				return nil, fmt.Errorf("payment.svc: irrf: %w", err)
@@ -226,8 +251,15 @@ func (s *Service) markPaid(ctx context.Context, id, orgID uuid.UUID, paidDate ti
 		}
 	}
 
-	net := round2(current.GrossAmount + lateFee + interest - irrf)
-	return s.repo.MarkPaid(ctx, id, orgID, paidDate, lateFee, interest, irrf, net)
+	net := round2(due - discount - irrf)
+	var actor *uuid.UUID
+	if actorID != uuid.Nil {
+		actor = &actorID
+	}
+	return s.repo.MarkPaid(ctx, id, orgID, PaidInput{
+		PaidDate: paidDate, LateFee: lateFee, Interest: interest, IRRF: irrf, Net: net,
+		Discount: discount, Method: in.PaymentMethod, Note: in.PaymentNote, ActorID: actor,
+	})
 }
 
 func (s *Service) IsAlreadyPaid(err error) bool {
@@ -367,6 +399,12 @@ func (s *Service) BuildReceipt(ctx context.Context, id, orgID, userID uuid.UUID)
 	if p.Status != "PAID" || p.PaidDate == nil {
 		return nil, errNotPaid
 	}
+	// Cobranças pagas antes da numeração recebem o número na primeira emissão.
+	if p.ReceiptNumber == nil {
+		if p, err = s.repo.EnsureReceiptNumber(ctx, id, orgID); err != nil {
+			return nil, fmt.Errorf("payment.svc: %w", err)
+		}
+	}
 	l, err := s.leaseReader.GetByID(ctx, p.LeaseID, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: load lease: %w", err)
@@ -390,17 +428,26 @@ func (s *Service) BuildReceipt(ctx context.Context, id, orgID, userID uuid.UUID)
 		net = *p.NetAmount
 	}
 
+	number := ""
+	if p.ReceiptNumber != nil && p.ReceiptYear != nil {
+		number = fmt.Sprintf("%04d/%d", *p.ReceiptNumber, *p.ReceiptYear)
+	}
+
 	return &Receipt{
-		PaymentID:  p.ID,
-		Competency: p.Competency,
-		IssuedAt:   time.Now(),
-		Owner:      Party{Name: ow.Name, Document: ow.Document},
-		Tenant:     Party{Name: tn.Name, Document: tn.Document, PersonType: &pt},
-		Unit:       UnitRef{Label: un.Label, PropertyAddress: un.PropertyAddress},
+		PaymentID:     p.ID,
+		Number:        number,
+		PaymentMethod: p.PaymentMethod,
+		Note:          p.PaymentNote,
+		Competency:    p.Competency,
+		IssuedAt:      time.Now(),
+		Owner:         Party{Name: ow.Name, Document: ow.Document},
+		Tenant:        Party{Name: tn.Name, Document: tn.Document, PersonType: &pt},
+		Unit:          UnitRef{Label: un.Label, PropertyAddress: un.PropertyAddress},
 		Amounts: Amounts{
 			Gross:        p.GrossAmount,
 			LateFee:      p.LateFeeAmount,
 			Interest:     p.InterestAmount,
+			Discount:     p.DiscountAmount,
 			IRRFWithheld: p.IRRFAmount,
 			NetPaid:      net,
 		},
@@ -618,3 +665,141 @@ func (s *Service) getActiveFinancialConfig(ctx context.Context, orgID uuid.UUID)
 
 var _ = lease.Lease{}
 var _ = tenant.Tenant{}
+
+// ErrInvalidEvent: tipo ou canal de evento não permitido na API (HTTP 400).
+var ErrInvalidEvent = errors.New("payment: evento inválido")
+
+// Timeline devolve a linha do tempo: marco Criada, eventos gravados e, se vencida e não paga, o marco Venceu em.
+func (s *Service) Timeline(ctx context.Context, id, orgID uuid.UUID) ([]TimelineItem, error) {
+	p, err := s.repo.GetByID(ctx, id, orgID)
+	if err != nil {
+		return nil, err
+	}
+	items := []TimelineItem{{Kind: TimelineCreated, At: p.CreatedAt, Synthetic: true}}
+	if s.events != nil {
+		evs, err := s.events.ListEvents(ctx, id, orgID)
+		if err != nil {
+			return nil, fmt.Errorf("payment.svc: eventos: %w", err)
+		}
+		for _, e := range evs {
+			items = append(items, TimelineItem{Kind: e.Kind, At: e.OccurredAt, Channel: e.Channel, Data: e.Data, ActorID: e.ActorID})
+		}
+	}
+	if p.Status != "PAID" && p.DueDate.Before(s.today()) {
+		items = append(items, TimelineItem{Kind: TimelineOverdue, At: p.DueDate, Synthetic: true})
+	}
+	sort.SliceStable(items, func(i, j int) bool { return items[i].At.Before(items[j].At) })
+	return items, nil
+}
+
+// RecordEvent registra o envio (SENT) ou o lembrete (REMINDER) de uma cobrança ainda aberta.
+func (s *Service) RecordEvent(ctx context.Context, id, orgID, actorID uuid.UUID, in RecordEventInput) (*Event, error) {
+	if (in.Kind != EventSent && in.Kind != EventReminder) ||
+		(in.Channel != "WHATSAPP" && in.Channel != "EMAIL" && in.Channel != "COPY") {
+		return nil, fmt.Errorf("payment.svc: %w", ErrInvalidEvent)
+	}
+	p, err := s.repo.GetByID(ctx, id, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if p.Status == "PAID" {
+		return nil, errAlreadyPaid
+	}
+	if s.events == nil {
+		return nil, fmt.Errorf("payment.svc: eventos não configurados")
+	}
+	ch := in.Channel
+	var actor *uuid.UUID
+	if actorID != uuid.Nil {
+		actor = &actorID
+	}
+	return s.events.AddEvent(ctx, orgID, id, actor, in.Kind, &ch, nil)
+}
+
+// ErrPixKeyNotConfigured: a organização não cadastrou a chave Pix (HTTP 422).
+var ErrPixKeyNotConfigured = errors.New("payment: chave Pix não configurada")
+
+// PixPayload gera o Pix copia-e-cola da cobrança com o valor atualizado do dia (bruto + multa + juros se atrasada).
+func (s *Service) PixPayload(ctx context.Context, id, orgID, userID uuid.UUID) (*PixCode, error) {
+	p, err := s.repo.GetByID(ctx, id, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if p.Status == "PAID" {
+		return nil, errAlreadyPaid
+	}
+	fc, err := s.repo.GetActiveFinancialConfig(ctx, orgID)
+	if err != nil || fc == nil || fc.PixKey == nil || strings.TrimSpace(*fc.PixKey) == "" {
+		return nil, ErrPixKeyNotConfigured
+	}
+	enriched := s.Enrich(ctx, *p)
+	amount := round2(enriched.GrossAmount + enriched.LateFeeAmount + enriched.InterestAmount)
+
+	name := ""
+	if owner, err := s.ownerReader.GetByID(ctx, userID); err == nil && owner != nil {
+		name = owner.Name
+	}
+	city := ""
+	if l, err := s.leaseReader.GetByID(ctx, p.LeaseID, orgID); err == nil {
+		if u, err := s.unitReader.GetByID(ctx, l.UnitID, orgID); err == nil && u.PropertyCity != nil {
+			city = *u.PropertyCity
+		}
+	}
+	payload, err := pix.Build(pix.Params{Key: *fc.PixKey, Name: name, City: city, Amount: amount, TxID: pix.TxIDFromID(id.String())})
+	if err != nil {
+		return nil, fmt.Errorf("payment.svc: pix: %w", err)
+	}
+	return &PixCode{Payload: payload, Amount: amount}, nil
+}
+
+// Erros do acordo de atraso.
+var (
+	// ErrInvalidAgreementDate: a nova data não é posterior a hoje (HTTP 400).
+	ErrInvalidAgreementDate = errors.New("payment: nova data do acordo deve ser posterior a hoje")
+	// ErrInvalidAgreement: valor combinado inválido (HTTP 400).
+	ErrInvalidAgreement = errors.New("payment: acordo inválido")
+	// ErrPaymentHasCharge: cobrança emitida pelo provedor não aceita acordo (HTTP 409).
+	ErrPaymentHasCharge = errors.New("payment: cobrança já emitida pelo provedor")
+)
+
+// Agree registra um acordo de atraso: novo vencimento e valor combinado. O valor padrão é o total atualizado de hoje
+// (bruto, multa e juros). Se a nova data passar sem pagamento, a cobrança volta a atrasar a partir dela.
+func (s *Service) Agree(ctx context.Context, id, orgID, actorID uuid.UUID, in AgreementInput) (*Payment, error) {
+	p, err := s.repo.GetByID(ctx, id, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if p.Status == "PAID" {
+		return nil, errAlreadyPaid
+	}
+	if p.ChargeID != nil && *p.ChargeID != "" {
+		return nil, ErrPaymentHasCharge
+	}
+	y, m, d := in.NewDueDate.Date()
+	newDue := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+	if !newDue.After(s.today()) {
+		return nil, fmt.Errorf("payment.svc: %w", ErrInvalidAgreementDate)
+	}
+	amount := 0.0
+	if in.AgreedAmount != nil {
+		if *in.AgreedAmount <= 0 {
+			return nil, fmt.Errorf("payment.svc: %w", ErrInvalidAgreement)
+		}
+		amount = round2(*in.AgreedAmount)
+	} else {
+		e := s.Enrich(ctx, *p)
+		amount = round2(e.GrossAmount + e.LateFeeAmount + e.InterestAmount)
+	}
+	var actor *uuid.UUID
+	if actorID != uuid.Nil {
+		actor = &actorID
+	}
+	out, err := s.repo.ApplyAgreement(ctx, id, orgID, AgreementApply{
+		NewDueDate: newDue, NewGross: amount, OldDueDate: p.DueDate, OldGross: p.GrossAmount, Note: in.Note, ActorID: actor,
+	})
+	if err != nil {
+		return nil, err
+	}
+	enriched := s.Enrich(ctx, *out)
+	return &enriched, nil
+}

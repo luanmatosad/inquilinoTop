@@ -373,7 +373,7 @@ func TestHandler_Receipt_UsaOrganizaçãoNãoOUsuário(t *testing.T) {
 	p, _ := ts.mockRepo.Create(context.Background(), userID, orgID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
-	ts.mockRepo.MarkPaid(context.Background(), p.ID, orgID, time.Now(), 0, 0, 0, 2000)
+	ts.mockRepo.MarkPaid(context.Background(), p.ID, orgID, payment.PaidInput{PaidDate: time.Now(), Net: 2000})
 
 	r := chi.NewRouter()
 	payment.NewHandler(ts.Service).Register(r, distinctAuthMW(userID, orgID), noopWriteMw, noopWriteMw)

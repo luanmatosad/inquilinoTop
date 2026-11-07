@@ -37,6 +37,10 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler,
 		r.With(readMw).Get("/payments/{id}", h.get)
 		r.With(writeMw).Put("/payments/{id}", h.update)
 		r.With(readMw).Get("/payments/{id}/receipt", h.Receipt)
+		r.With(writeMw).Post("/payments/{id}/agreement", h.agreement)
+		r.With(readMw).Get("/payments/{id}/pix", h.pixCode)
+		r.With(readMw).Get("/payments/{id}/events", h.listEvents)
+		r.With(writeMw).Post("/payments/{id}/events", h.recordEvent)
 		r.With(writeMw).Post("/payments/{id}/charge", h.handleCreateCharge)
 		r.With(readMw).Get("/payments/{id}/charge", h.handleGetChargeStatus)
 		r.With(writeMw).Post("/payments/{id}/payout", h.handleCreatePayout)
@@ -281,8 +285,12 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		httputil.ValidationErr(w, err)
 		return
 	}
-	p, err := h.svc.Update(r.Context(), id, orgID, in)
+	p, err := h.svc.UpdateBy(r.Context(), id, orgID, auth.OwnerIDFromCtx(r.Context()), in)
 	if err != nil {
+		if errors.Is(err, ErrInvalidDiscount) {
+			httputil.Err(w, http.StatusBadRequest, "INVALID_DISCOUNT", "o desconto não pode passar do valor devido")
+			return
+		}
 		if h.svc.IsAlreadyPaid(err) {
 			httputil.Err(w, http.StatusConflict, "ALREADY_PAID", "pagamento já foi registrado")
 			return
@@ -508,4 +516,176 @@ func (h *Handler) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.OK(w, map[string]string{"status": "ok"})
+}
+
+// @Summary Linha do tempo da cobrança
+// @Tags payments
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do pagamento"
+// @Success 200 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Router /payments/{id}/events [get]
+func (h *Handler) listEvents(w http.ResponseWriter, r *http.Request) {
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+	items, err := h.svc.Timeline(r.Context(), id, orgID)
+	if err != nil {
+		if errors.Is(err, apierr.ErrNotFound) {
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "pagamento não encontrado")
+			return
+		}
+		slog.Error("payment: timeline failed", "payment_id", id, "error", err)
+		httputil.Err(w, http.StatusInternalServerError, "EVENTS_FAILED", err.Error())
+		return
+	}
+	httputil.OK(w, items)
+}
+
+// @Summary Registra o envio da cobrança (SENT ou REMINDER)
+// @Tags payments
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "ID do pagamento"
+// @Param body body RecordEventInput true "Tipo e canal do envio"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{} "cobrança já paga"
+// @Router /payments/{id}/events [post]
+func (h *Handler) recordEvent(w http.ResponseWriter, r *http.Request) {
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+	var in RecordEventInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+	if err := validator.Validate(in); err != nil {
+		httputil.ValidationErr(w, err)
+		return
+	}
+	e, err := h.svc.RecordEvent(r.Context(), id, orgID, auth.OwnerIDFromCtx(r.Context()), in)
+	if err != nil {
+		switch {
+		case errors.Is(err, apierr.ErrNotFound):
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "pagamento não encontrado")
+		case errors.Is(err, ErrInvalidEvent):
+			httputil.Err(w, http.StatusBadRequest, "INVALID_EVENT", "tipo ou canal inválido")
+		case h.svc.IsAlreadyPaid(err):
+			httputil.Err(w, http.StatusConflict, "ALREADY_PAID", "a cobrança já está paga")
+		default:
+			slog.Error("payment: record event failed", "payment_id", id, "error", err)
+			httputil.Err(w, http.StatusInternalServerError, "EVENT_FAILED", err.Error())
+		}
+		return
+	}
+	httputil.Created(w, e)
+}
+
+// @Summary Pix copia-e-cola da cobrança (valor atualizado do dia)
+// @Tags payments
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do pagamento"
+// @Success 200 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{} "cobrança já paga"
+// @Failure 422 {object} map[string]interface{} "PIX_KEY_NOT_CONFIGURED"
+// @Router /payments/{id}/pix [get]
+func (h *Handler) pixCode(w http.ResponseWriter, r *http.Request) {
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+	code, err := h.svc.PixPayload(r.Context(), id, orgID, auth.OwnerIDFromCtx(r.Context()))
+	if err != nil {
+		switch {
+		case errors.Is(err, apierr.ErrNotFound):
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "pagamento não encontrado")
+		case errors.Is(err, ErrPixKeyNotConfigured):
+			httputil.Err(w, http.StatusUnprocessableEntity, "PIX_KEY_NOT_CONFIGURED", "cadastre a chave Pix em Configurações")
+		case h.svc.IsAlreadyPaid(err):
+			httputil.Err(w, http.StatusConflict, "ALREADY_PAID", "a cobrança já está paga")
+		default:
+			slog.Error("payment: pix failed", "payment_id", id, "error", err)
+			httputil.Err(w, http.StatusInternalServerError, "PIX_FAILED", err.Error())
+		}
+		return
+	}
+	httputil.OK(w, code)
+}
+
+// @Summary Acordo de atraso (nova data e valor combinado)
+// @Tags payments
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "ID do pagamento"
+// @Param body body AgreementInput true "Nova data, valor combinado e observação"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{} "INVALID_AGREEMENT_DATE"
+// @Failure 409 {object} map[string]interface{} "ALREADY_PAID ou PAYMENT_HAS_CHARGE"
+// @Router /payments/{id}/agreement [post]
+func (h *Handler) agreement(w http.ResponseWriter, r *http.Request) {
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
+		return
+	}
+	var in AgreementInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+	if err := validator.Validate(in); err != nil {
+		httputil.ValidationErr(w, err)
+		return
+	}
+	p, err := h.svc.Agree(r.Context(), id, orgID, auth.OwnerIDFromCtx(r.Context()), in)
+	if err != nil {
+		switch {
+		case errors.Is(err, apierr.ErrNotFound):
+			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "pagamento não encontrado")
+		case errors.Is(err, ErrInvalidAgreementDate):
+			httputil.Err(w, http.StatusBadRequest, "INVALID_AGREEMENT_DATE", "a nova data deve ser posterior a hoje")
+		case errors.Is(err, ErrInvalidAgreement):
+			httputil.Err(w, http.StatusBadRequest, "INVALID_AGREEMENT", "valor combinado inválido")
+		case errors.Is(err, ErrPaymentHasCharge):
+			httputil.Err(w, http.StatusConflict, "PAYMENT_HAS_CHARGE", "a cobrança já foi emitida pelo provedor")
+		case h.svc.IsAlreadyPaid(err):
+			httputil.Err(w, http.StatusConflict, "ALREADY_PAID", "a cobrança já está paga")
+		default:
+			slog.Error("payment: agreement failed", "payment_id", id, "error", err)
+			httputil.Err(w, http.StatusInternalServerError, "AGREEMENT_FAILED", err.Error())
+		}
+		return
+	}
+	httputil.OK(w, p)
 }

@@ -2,6 +2,7 @@ package payment
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -20,20 +21,28 @@ func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
 }
 
+// NewEventStore devolve o armazenamento dos eventos da cobrança.
+func NewEventStore(database *db.DB) EventStore {
+	return &pgRepository{db: database}
+}
+
 const paymentCols = `id, organization_id, lease_id, due_date, paid_date,
   gross_amount, late_fee_amount, interest_amount, irrf_amount, net_amount,
-  competency, description, status, type, created_at, updated_at`
+  competency, description, status, type, created_at, updated_at,
+  payment_method, discount_amount, payment_note, original_due_date, receipt_number, receipt_year`
 
 func scanPayment(row pgx.Row, p *Payment) error {
 	return row.Scan(&p.ID, &p.OrganizationID, &p.LeaseID, &p.DueDate, &p.PaidDate,
 		&p.GrossAmount, &p.LateFeeAmount, &p.InterestAmount, &p.IRRFAmount, &p.NetAmount,
-		&p.Competency, &p.Description, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt)
+		&p.Competency, &p.Description, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt,
+		&p.PaymentMethod, &p.DiscountAmount, &p.PaymentNote, &p.OriginalDueDate, &p.ReceiptNumber, &p.ReceiptYear)
 }
 
 func scanPaymentRows(rows pgx.Rows, p *Payment) error {
 	return rows.Scan(&p.ID, &p.OrganizationID, &p.LeaseID, &p.DueDate, &p.PaidDate,
 		&p.GrossAmount, &p.LateFeeAmount, &p.InterestAmount, &p.IRRFAmount, &p.NetAmount,
-		&p.Competency, &p.Description, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt)
+		&p.Competency, &p.Description, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt,
+		&p.PaymentMethod, &p.DiscountAmount, &p.PaymentNote, &p.OriginalDueDate, &p.ReceiptNumber, &p.ReceiptYear)
 }
 
 func (r *pgRepository) Create(ctx context.Context, userID, orgID uuid.UUID, in CreatePaymentInput) (*Payment, error) {
@@ -180,20 +189,100 @@ func (r *pgRepository) Update(ctx context.Context, id, orgID uuid.UUID, in Updat
 	return &p, nil
 }
 
-func (r *pgRepository) MarkPaid(ctx context.Context, id, orgID uuid.UUID, paidDate time.Time,
-	lateFee, interest, irrf, netAmount float64) (*Payment, error) {
+func (r *pgRepository) MarkPaid(ctx context.Context, id, orgID uuid.UUID, in PaidInput) (*Payment, error) {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("payment.repo: mark paid: begin: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
 	var p Payment
-	err := scanPayment(r.db.Pool.QueryRow(ctx,
+	err = scanPayment(tx.QueryRow(ctx,
 		`UPDATE payments
 		 SET paid_date=$1, status='PAID',
 		     late_fee_amount=$2, interest_amount=$3, irrf_amount=$4, net_amount=$5,
+		     discount_amount=$6, payment_method=$7, payment_note=$8,
 		     updated_at=NOW()
-		 WHERE id=$6 AND organization_id=$7
+		 WHERE id=$9 AND organization_id=$10
 		 RETURNING `+paymentCols,
-		paidDate, lateFee, interest, irrf, netAmount, id, orgID,
+		in.PaidDate, in.LateFee, in.Interest, in.IRRF, in.Net, in.Discount, in.Method, in.Note, id, orgID,
 	), &p)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, fmt.Errorf("payment.repo: mark paid: %w", err)
+	}
+
+	if err := assignReceiptNumber(ctx, tx, &p); err != nil {
+		return nil, err
+	}
+
+	data := map[string]any{"amount": in.Net, "discount": in.Discount, "paid_date": in.PaidDate.Format("2006-01-02")}
+	if in.Method != nil {
+		data["method"] = *in.Method
+	}
+	raw, _ := json.Marshal(data)
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO payment_events (organization_id, payment_id, kind, data, actor_id) VALUES ($1,$2,'PAID',$3::jsonb,$4)`,
+		orgID, id, string(raw), in.ActorID,
+	); err != nil {
+		return nil, fmt.Errorf("payment.repo: mark paid: event: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("payment.repo: mark paid: commit: %w", err)
+	}
+	return &p, nil
+}
+
+// assignReceiptNumber tira o próximo número da organização para o ano do pagamento, de forma atômica, e o grava em p.
+func assignReceiptNumber(ctx context.Context, tx pgx.Tx, p *Payment) error {
+	if p.PaidDate == nil {
+		return nil
+	}
+	year := p.PaidDate.Year()
+	var n int
+	if err := tx.QueryRow(ctx,
+		`INSERT INTO receipt_counters (organization_id, year, last_number) VALUES ($1,$2,1)
+		 ON CONFLICT (organization_id, year) DO UPDATE SET last_number = receipt_counters.last_number + 1
+		 RETURNING last_number`, p.OrganizationID, year,
+	).Scan(&n); err != nil {
+		return fmt.Errorf("payment.repo: receipt counter: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE payments SET receipt_number=$1, receipt_year=$2 WHERE id=$3 AND organization_id=$4`,
+		n, year, p.ID, p.OrganizationID,
+	); err != nil {
+		return fmt.Errorf("payment.repo: receipt number: %w", err)
+	}
+	p.ReceiptNumber, p.ReceiptYear = &n, &year
+	return nil
+}
+
+func (r *pgRepository) EnsureReceiptNumber(ctx context.Context, id, orgID uuid.UUID) (*Payment, error) {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("payment.repo: ensure receipt: begin: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	var p Payment
+	err = scanPayment(tx.QueryRow(ctx,
+		`SELECT `+paymentCols+` FROM payments WHERE id=$1 AND organization_id=$2 FOR UPDATE`, id, orgID), &p)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("payment.repo: ensure receipt: %w", err)
+	}
+	if p.ReceiptNumber == nil && p.Status == "PAID" {
+		if err := assignReceiptNumber(ctx, tx, &p); err != nil {
+			return nil, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("payment.repo: ensure receipt: commit: %w", err)
 	}
 	return &p, nil
 }
@@ -277,4 +366,98 @@ func (r *pgRepository) DeactivateFuturePending(ctx context.Context, leaseID, org
 		return res, fmt.Errorf("payment.repo: count needs review: %w", err)
 	}
 	return res, nil
+}
+
+// AddEvent grava um evento imutável da cobrança.
+func (r *pgRepository) AddEvent(ctx context.Context, orgID, paymentID uuid.UUID, actorID *uuid.UUID, kind string, channel *string, data map[string]any) (*Event, error) {
+	if data == nil {
+		data = map[string]any{}
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("payment.repo: add event: marshal: %w", err)
+	}
+	var e Event
+	var rawOut []byte
+	err = r.db.Pool.QueryRow(ctx,
+		`INSERT INTO payment_events (organization_id, payment_id, kind, channel, data, actor_id)
+		 SELECT $1, p.id, $3, $4, $5::jsonb, $6 FROM payments p WHERE p.id=$2 AND p.organization_id=$1
+		 RETURNING id, payment_id, kind, channel, data, actor_id, occurred_at`,
+		orgID, paymentID, kind, channel, string(raw), actorID,
+	).Scan(&e.ID, &e.PaymentID, &e.Kind, &e.Channel, &rawOut, &e.ActorID, &e.OccurredAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("payment.repo: add event: %w", err)
+	}
+	_ = json.Unmarshal(rawOut, &e.Data)
+	return &e, nil
+}
+
+// ListEvents devolve os eventos da cobrança em ordem cronológica; outra organização recebe lista vazia.
+func (r *pgRepository) ListEvents(ctx context.Context, paymentID, orgID uuid.UUID) ([]Event, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT id, payment_id, kind, channel, data, actor_id, occurred_at
+		 FROM payment_events WHERE payment_id=$1 AND organization_id=$2
+		 ORDER BY occurred_at, id`, paymentID, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("payment.repo: list events: %w", err)
+	}
+	defer rows.Close()
+	out := []Event{}
+	for rows.Next() {
+		var e Event
+		var raw []byte
+		if err := rows.Scan(&e.ID, &e.PaymentID, &e.Kind, &e.Channel, &raw, &e.ActorID, &e.OccurredAt); err != nil {
+			return nil, fmt.Errorf("payment.repo: list events: scan: %w", err)
+		}
+		_ = json.Unmarshal(raw, &e.Data)
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+func (r *pgRepository) ApplyAgreement(ctx context.Context, id, orgID uuid.UUID, in AgreementApply) (*Payment, error) {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("payment.repo: agreement: begin: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	var p Payment
+	err = scanPayment(tx.QueryRow(ctx,
+		`UPDATE payments
+		 SET due_date=$1, gross_amount=$2, original_due_date=COALESCE(original_due_date, $3::date), updated_at=NOW()
+		 WHERE id=$4 AND organization_id=$5 AND status <> 'PAID' AND charge_id IS NULL AND is_active=true
+		 RETURNING `+paymentCols,
+		in.NewDueDate, in.NewGross, in.OldDueDate, id, orgID,
+	), &p)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("payment.repo: agreement: %w", err)
+	}
+
+	data := map[string]any{
+		"old_due_date": in.OldDueDate.Format("2006-01-02"),
+		"new_due_date": in.NewDueDate.Format("2006-01-02"),
+		"old_amount":   in.OldGross,
+		"new_amount":   in.NewGross,
+	}
+	if in.Note != nil && *in.Note != "" {
+		data["note"] = *in.Note
+	}
+	raw, _ := json.Marshal(data)
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO payment_events (organization_id, payment_id, kind, data, actor_id) VALUES ($1,$2,'AGREEMENT',$3::jsonb,$4)`,
+		orgID, id, string(raw), in.ActorID,
+	); err != nil {
+		return nil, fmt.Errorf("payment.repo: agreement: event: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("payment.repo: agreement: commit: %w", err)
+	}
+	return &p, nil
 }

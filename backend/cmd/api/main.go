@@ -120,7 +120,7 @@ func main() {
 	ownerReader := &payment.OwnerReaderAdapter{Repo: identityRepoForPayment}
 
 	paymentRepo := payment.NewRepository(database)
-	paymentSvc := payment.NewService(paymentRepo, leaseRepo, tenantRepo, unitReader, ownerReader, irrTable).WithLocation(appLoc)
+	paymentSvc := payment.NewService(paymentRepo, leaseRepo, tenantRepo, unitReader, ownerReader, irrTable).WithLocation(appLoc).WithEvents(payment.NewEventStore(database))
 	paymentHandler := payment.NewHandler(paymentSvc)
 	leaseSvc.WithPayments(payment.NewLeaseHooks(paymentSvc))
 

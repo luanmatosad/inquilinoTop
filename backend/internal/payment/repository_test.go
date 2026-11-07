@@ -204,8 +204,9 @@ func TestRepository_MarkPaid_PersisteCamposDerivados(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	paid, err := repo.MarkPaid(context.Background(), p.ID, orgID, time.Now(),
-		200, 30, 150, 2080)
+	paid, err := repo.MarkPaid(context.Background(), p.ID, orgID, payment.PaidInput{
+		PaidDate: time.Now(), LateFee: 200, Interest: 30, IRRF: 150, Net: 2080,
+	})
 	require.NoError(t, err)
 	assert.Equal(t, "PAID", paid.Status)
 	assert.InDelta(t, 200, paid.LateFeeAmount, 0.01)
@@ -391,12 +392,12 @@ func TestPaymentRepository_UpdateFuturePendingRent(t *testing.T) {
 		require.NoError(t, err)
 		return p
 	}
-	antes := mk(from.AddDate(0, -1, 0), "2026-05", "RENT")  // vencimento antes da vigência
+	antes := mk(from.AddDate(0, -1, 0), "2026-05", "RENT")   // vencimento antes da vigência
 	naData := mk(from, "2026-06", "RENT")                    // exatamente na vigência: entra
 	futura := mk(from.AddDate(0, 1, 0), "2026-07", "RENT")   // entra
-	emitida := mk(from.AddDate(0, 2, 0), "2026-08", "RENT") // com cobrança emitida: não muda, vira revisão
-	paga := mk(from.AddDate(0, 3, 0), "2026-09", "RENT")    // paga: não muda
-	iptu := mk(from.AddDate(0, 1, 0), "2026-07", "EXPENSE") // IPTU: não muda
+	emitida := mk(from.AddDate(0, 2, 0), "2026-08", "RENT")  // com cobrança emitida: não muda, vira revisão
+	paga := mk(from.AddDate(0, 3, 0), "2026-09", "RENT")     // paga: não muda
+	iptu := mk(from.AddDate(0, 1, 0), "2026-07", "EXPENSE")  // IPTU: não muda
 	retirada := mk(from.AddDate(0, 4, 0), "2026-10", "RENT") // desativada: não muda
 
 	require.NoError(t, repo.UpdateChargeInfo(ctx, emitida.ID, orgID, payment.UpdateChargeInfoInput{ChargeID: "ch_1", ChargeMethod: "PIX"}))
@@ -450,4 +451,229 @@ func TestPaymentRepository_UpdateFuturePendingRent_OutraOrganizacao(t *testing.T
 	var v float64
 	require.NoError(t, database.Pool.QueryRow(ctx, `SELECT gross_amount FROM payments WHERE id=$1`, p.ID).Scan(&v))
 	assert.Equal(t, 1000.0, v)
+}
+
+func TestRepository_Eventos_GravaEListaPorOrganização(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	store := payment.NewEventStore(d)
+	orgID, ownerID, leaseID := seedLease(t, d)
+	p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT"})
+	require.NoError(t, err)
+
+	ch := "WHATSAPP"
+	e1, err := store.AddEvent(ctx, orgID, p.ID, &ownerID, "SENT", &ch, map[string]any{"reminder": false})
+	require.NoError(t, err)
+	assert.Equal(t, "SENT", e1.Kind)
+	require.NotNil(t, e1.Channel)
+	_, err = store.AddEvent(ctx, orgID, p.ID, &ownerID, "REMINDER", &ch, nil)
+	require.NoError(t, err)
+
+	list, err := store.ListEvents(ctx, p.ID, orgID)
+	require.NoError(t, err)
+	require.Len(t, list, 2)
+	assert.Equal(t, "SENT", list[0].Kind)
+	assert.Equal(t, "REMINDER", list[1].Kind)
+	require.NotNil(t, list[0].ActorID)
+	assert.Equal(t, ownerID, *list[0].ActorID)
+
+	other, err := store.ListEvents(ctx, p.ID, uuid.New())
+	require.NoError(t, err)
+	assert.Empty(t, other, "outra organização não vê os eventos")
+}
+
+func TestRepository_Eventos_KindInválidoRecusadoPeloBanco(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	store := payment.NewEventStore(d)
+	orgID, ownerID, leaseID := seedLease(t, d)
+	p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT"})
+	require.NoError(t, err)
+	_, err = store.AddEvent(ctx, orgID, p.ID, &ownerID, "DELETED", nil, nil)
+	assert.Error(t, err)
+}
+
+func TestMigration049_ColunasETabelas(t *testing.T) {
+	d := testDB(t)
+	for _, q := range []string{
+		`SELECT 1 FROM payment_events LIMIT 0`,
+		`SELECT 1 FROM receipt_counters LIMIT 0`,
+		`SELECT payment_method, discount_amount, payment_note, original_due_date, receipt_number, receipt_year FROM payments LIMIT 0`,
+	} {
+		_, err := d.Pool.Exec(context.Background(), q)
+		assert.NoError(t, err, q)
+	}
+}
+
+func TestRepository_MarkPaid_GravaFormaDescontoNúmeroEEvento(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	store := payment.NewEventStore(d)
+	orgID, ownerID, leaseID := seedLease(t, d)
+	p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1850, Type: "RENT"})
+	require.NoError(t, err)
+
+	method, note := "CASH", "portaria"
+	paidDate := time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC)
+	paid, err := repo.MarkPaid(ctx, p.ID, orgID, payment.PaidInput{
+		PaidDate: paidDate, Net: 1800, Discount: 50, Method: &method, Note: &note, ActorID: &ownerID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "PAID", paid.Status)
+	assert.Equal(t, 50.0, paid.DiscountAmount)
+	assert.Equal(t, "CASH", *paid.PaymentMethod)
+	assert.Equal(t, "portaria", *paid.PaymentNote)
+	require.NotNil(t, paid.ReceiptNumber)
+	assert.Equal(t, 1, *paid.ReceiptNumber)
+	assert.Equal(t, 2026, *paid.ReceiptYear)
+
+	evs, err := store.ListEvents(ctx, p.ID, orgID)
+	require.NoError(t, err)
+	require.Len(t, evs, 1)
+	assert.Equal(t, "PAID", evs[0].Kind)
+	assert.Equal(t, 1800.0, evs[0].Data["amount"])
+	assert.Equal(t, "CASH", evs[0].Data["method"])
+}
+
+func TestRepository_MarkPaid_NumeraçãoPorAno(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	orgID, ownerID, leaseID := seedLease(t, d)
+	mk := func(comp string) *payment.Payment {
+		p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT", Competency: &comp})
+		require.NoError(t, err)
+		return p
+	}
+	a, b, c := mk("2026-11"), mk("2026-12"), mk("2027-01")
+	pa, err := repo.MarkPaid(ctx, a.ID, orgID, payment.PaidInput{PaidDate: time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC), Net: 1000})
+	require.NoError(t, err)
+	pb, err := repo.MarkPaid(ctx, b.ID, orgID, payment.PaidInput{PaidDate: time.Date(2026, 12, 2, 0, 0, 0, 0, time.UTC), Net: 1000})
+	require.NoError(t, err)
+	pc, err := repo.MarkPaid(ctx, c.ID, orgID, payment.PaidInput{PaidDate: time.Date(2027, 1, 2, 0, 0, 0, 0, time.UTC), Net: 1000})
+	require.NoError(t, err)
+	assert.Equal(t, []int{1, 2, 1}, []int{*pa.ReceiptNumber, *pb.ReceiptNumber, *pc.ReceiptNumber})
+}
+
+func TestRepository_MarkPaid_CorridaGeraNúmerosDistintos(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	orgID, ownerID, leaseID := seedLease(t, d)
+	const n = 8
+	ids := make([]uuid.UUID, n)
+	for i := range ids {
+		comp := time.Date(2026, time.Month(i+1), 1, 0, 0, 0, 0, time.UTC).Format("2006-01")
+		p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT", Competency: &comp})
+		require.NoError(t, err)
+		ids[i] = p.ID
+	}
+	numbers := make(chan int, n)
+	errs := make(chan error, n)
+	for _, id := range ids {
+		go func(id uuid.UUID) {
+			p, err := repo.MarkPaid(ctx, id, orgID, payment.PaidInput{PaidDate: time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC), Net: 1000})
+			if err != nil {
+				errs <- err
+				return
+			}
+			numbers <- *p.ReceiptNumber
+		}(id)
+	}
+	seen := map[int]bool{}
+	for i := 0; i < n; i++ {
+		select {
+		case e := <-errs:
+			t.Fatal(e)
+		case v := <-numbers:
+			assert.False(t, seen[v], "número %d repetido", v)
+			seen[v] = true
+		}
+	}
+	assert.Len(t, seen, n)
+}
+
+func TestRepository_EnsureReceiptNumber_PagaAntigaEOutraOrganização(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	orgID, ownerID, leaseID := seedLease(t, d)
+	p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT"})
+	require.NoError(t, err)
+	paidDate := time.Date(2026, 3, 2, 0, 0, 0, 0, time.UTC)
+	// caminho antigo: status e data pelo Update, sem número
+	_, err = repo.Update(ctx, p.ID, orgID, payment.UpdatePaymentInput{Status: "PAID", PaidDate: &paidDate, GrossAmount: 1000})
+	require.NoError(t, err)
+
+	first, err := repo.EnsureReceiptNumber(ctx, p.ID, orgID)
+	require.NoError(t, err)
+	require.NotNil(t, first.ReceiptNumber)
+	assert.Equal(t, 1, *first.ReceiptNumber)
+	assert.Equal(t, 2026, *first.ReceiptYear)
+	again, err := repo.EnsureReceiptNumber(ctx, p.ID, orgID)
+	require.NoError(t, err)
+	assert.Equal(t, *first.ReceiptNumber, *again.ReceiptNumber)
+
+	_, err = repo.EnsureReceiptNumber(ctx, p.ID, uuid.New())
+	assert.ErrorIs(t, err, apierr.ErrNotFound)
+}
+
+func TestRepository_ApplyAgreement_AtualizaPreservaOriginalEGravaEvento(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	store := payment.NewEventStore(d)
+	orgID, ownerID, leaseID := seedLease(t, d)
+	due := time.Date(2026, 10, 30, 0, 0, 0, 0, time.UTC)
+	p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{LeaseID: leaseID, DueDate: due, GrossAmount: 1550, Type: "RENT"})
+	require.NoError(t, err)
+
+	note := "combinado"
+	nov12 := time.Date(2026, 11, 12, 0, 0, 0, 0, time.UTC)
+	out, err := repo.ApplyAgreement(ctx, p.ID, orgID, payment.AgreementApply{
+		NewDueDate: nov12, NewGross: 1585.13, OldDueDate: due, OldGross: 1550, Note: &note, ActorID: &ownerID,
+	})
+	require.NoError(t, err)
+	assert.True(t, out.DueDate.Equal(nov12))
+	assert.InDelta(t, 1585.13, out.GrossAmount, 0.001)
+	require.NotNil(t, out.OriginalDueDate)
+	assert.True(t, out.OriginalDueDate.Equal(due))
+
+	// segundo acordo: o vencimento original continua o primeiro
+	dec := time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)
+	out, err = repo.ApplyAgreement(ctx, p.ID, orgID, payment.AgreementApply{NewDueDate: dec, NewGross: 1585.13, OldDueDate: nov12, OldGross: 1585.13})
+	require.NoError(t, err)
+	assert.True(t, out.OriginalDueDate.Equal(due), "original preservado na primeira vez")
+
+	evs, err := store.ListEvents(ctx, p.ID, orgID)
+	require.NoError(t, err)
+	require.Len(t, evs, 2)
+	assert.Equal(t, "AGREEMENT", evs[0].Kind)
+	assert.Equal(t, "2026-10-30", evs[0].Data["old_due_date"])
+	assert.Equal(t, "2026-11-12", evs[0].Data["new_due_date"])
+	assert.Equal(t, 1550.0, evs[0].Data["old_amount"])
+	assert.Equal(t, 1585.13, evs[0].Data["new_amount"])
+	assert.Equal(t, "combinado", evs[0].Data["note"])
+}
+
+func TestRepository_ApplyAgreement_PagaEOutraOrganizaçãoNãoMudam(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	orgID, ownerID, leaseID := seedLease(t, d)
+	due := time.Date(2026, 10, 30, 0, 0, 0, 0, time.UTC)
+	p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{LeaseID: leaseID, DueDate: due, GrossAmount: 1550, Type: "RENT"})
+	require.NoError(t, err)
+	ap := payment.AgreementApply{NewDueDate: due.AddDate(0, 0, 14), NewGross: 1600, OldDueDate: due, OldGross: 1550}
+
+	_, err = repo.ApplyAgreement(ctx, p.ID, uuid.New(), ap)
+	assert.ErrorIs(t, err, apierr.ErrNotFound)
+
+	_, err = repo.MarkPaid(ctx, p.ID, orgID, payment.PaidInput{PaidDate: time.Now(), Net: 1550})
+	require.NoError(t, err)
+	_, err = repo.ApplyAgreement(ctx, p.ID, orgID, ap)
+	assert.ErrorIs(t, err, apierr.ErrNotFound, "paga não aceita acordo")
 }

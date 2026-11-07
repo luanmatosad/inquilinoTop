@@ -12,7 +12,7 @@ import (
 
 var (
 	// ErrInvalidFilter: status de filtro desconhecido (HTTP 400).
-	ErrInvalidFilter = errors.New("filtro inválido")
+	ErrInvalidFilter  = errors.New("filtro inválido")
 	ErrInvalidMonth   = errors.New("mês inválido")
 	ErrLeaseNotActive = errors.New("contrato não ativo")
 	ErrIPTUMissing    = errors.New("IPTU não configurado")
@@ -52,8 +52,15 @@ type Payment struct {
 	ChargeBarcode  *string    `json:"charge_barcode,omitempty"`
 	PayoutID       *string    `json:"payout_id,omitempty"`
 	PayoutStatus   *string    `json:"payout_status,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	// Dados do pagamento manual, do acordo e do recibo (migration 000049).
+	PaymentMethod   *string    `json:"payment_method,omitempty"`
+	DiscountAmount  float64    `json:"discount_amount"`
+	PaymentNote     *string    `json:"payment_note,omitempty"`
+	OriginalDueDate *time.Time `json:"original_due_date,omitempty"`
+	ReceiptNumber   *int       `json:"receipt_number,omitempty"`
+	ReceiptYear     *int       `json:"receipt_year,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 type CreatePaymentInput struct {
@@ -69,6 +76,40 @@ type UpdatePaymentInput struct {
 	PaidDate    *time.Time `json:"paid_date,omitempty"`
 	Status      string     `json:"status" validate:"required,oneof=PENDING PAID LATE"`
 	GrossAmount float64    `json:"gross_amount" validate:"required,min=0"`
+	// Dados do pagamento manual; só valem ao marcar PAID (migration 000049).
+	PaymentMethod  *string `json:"payment_method,omitempty" validate:"omitempty,oneof=PIX CASH TRANSFER BOLETO OTHER"`
+	DiscountAmount float64 `json:"discount_amount,omitempty" validate:"min=0"`
+	PaymentNote    *string `json:"payment_note,omitempty" validate:"omitempty,max=500"`
+}
+
+// AgreementInput é o acordo de atraso: nova data e valor combinado (padrão: total atualizado de hoje).
+type AgreementInput struct {
+	NewDueDate   time.Time `json:"new_due_date" validate:"required"`
+	AgreedAmount *float64  `json:"agreed_amount,omitempty" validate:"omitempty,gt=0"`
+	Note         *string   `json:"note,omitempty" validate:"omitempty,max=500"`
+}
+
+// AgreementApply é o que o repositório grava: novos valores e os anteriores (para o evento).
+type AgreementApply struct {
+	NewDueDate time.Time
+	NewGross   float64
+	OldDueDate time.Time
+	OldGross   float64
+	Note       *string
+	ActorID    *uuid.UUID
+}
+
+// PaidInput reúne tudo o que a baixa grava: valores calculados, forma, desconto, observação e autor.
+type PaidInput struct {
+	PaidDate time.Time
+	LateFee  float64
+	Interest float64
+	IRRF     float64
+	Net      float64
+	Discount float64
+	Method   *string
+	Note     *string
+	ActorID  *uuid.UUID
 }
 
 type UpdateChargeInfoInput struct {
@@ -117,6 +158,50 @@ type Summary struct {
 	Paid      Bucket `json:"paid"`
 }
 
+// Tipos de evento gravados na linha do tempo da cobrança.
+const (
+	EventSent      = "SENT"
+	EventReminder  = "REMINDER"
+	EventAgreement = "AGREEMENT"
+	EventPaid      = "PAID"
+	// Marcos calculados, nunca gravados.
+	TimelineCreated = "CREATED"
+	TimelineOverdue = "OVERDUE"
+)
+
+// Event é um fato imutável da cobrança (envio, lembrete, acordo, pagamento).
+type Event struct {
+	ID         uuid.UUID      `json:"id"`
+	PaymentID  uuid.UUID      `json:"payment_id"`
+	Kind       string         `json:"kind"`
+	Channel    *string        `json:"channel,omitempty"`
+	Data       map[string]any `json:"data,omitempty"`
+	ActorID    *uuid.UUID     `json:"actor_id,omitempty"`
+	OccurredAt time.Time      `json:"occurred_at"`
+}
+
+// TimelineItem é uma linha da linha do tempo: um evento gravado ou um marco calculado (Synthetic).
+type TimelineItem struct {
+	Kind      string         `json:"kind"`
+	At        time.Time      `json:"at"`
+	Channel   *string        `json:"channel,omitempty"`
+	Data      map[string]any `json:"data,omitempty"`
+	ActorID   *uuid.UUID     `json:"actor_id,omitempty"`
+	Synthetic bool           `json:"synthetic"`
+}
+
+// RecordEventInput registra o envio da cobrança; só SENT e REMINDER podem ser criados pela API.
+type RecordEventInput struct {
+	Kind    string `json:"kind" validate:"required,oneof=SENT REMINDER"`
+	Channel string `json:"channel" validate:"required,oneof=WHATSAPP EMAIL COPY"`
+}
+
+// EventStore guarda e lista os eventos da cobrança, sempre por organização.
+type EventStore interface {
+	AddEvent(ctx context.Context, orgID, paymentID uuid.UUID, actorID *uuid.UUID, kind string, channel *string, data map[string]any) (*Event, error)
+	ListEvents(ctx context.Context, paymentID, orgID uuid.UUID) ([]Event, error)
+}
+
 type Repository interface {
 	Create(ctx context.Context, userID, orgID uuid.UUID, in CreatePaymentInput) (*Payment, error)
 	CreateIfAbsent(ctx context.Context, userID, orgID uuid.UUID, in CreatePaymentInput) (*Payment, bool, error)
@@ -132,8 +217,13 @@ type Repository interface {
 	// com vencimento a partir de from (inclusive). É atualização, nunca remoção (ADR payment-0001).
 	UpdateFuturePendingRent(ctx context.Context, leaseID, orgID uuid.UUID, from time.Time, amount float64) (RentUpdateResult, error)
 	Update(ctx context.Context, id, orgID uuid.UUID, in UpdatePaymentInput) (*Payment, error)
-	MarkPaid(ctx context.Context, id, orgID uuid.UUID, paidDate time.Time,
-		lateFee, interest, irrf, netAmount float64) (*Payment, error)
+	// MarkPaid baixa a cobrança numa transação: grava os valores, tira o número do recibo e registra o evento PAID.
+	MarkPaid(ctx context.Context, id, orgID uuid.UUID, in PaidInput) (*Payment, error)
+	// ApplyAgreement troca vencimento e valor de uma cobrança aberta sem cobrança emitida, preserva o vencimento
+	// original e registra o evento AGREEMENT. É atualização, nunca remoção (ADR payment-0001).
+	ApplyAgreement(ctx context.Context, id, orgID uuid.UUID, in AgreementApply) (*Payment, error)
+	// EnsureReceiptNumber atribui o número do recibo a uma cobrança paga que ainda não o tem (pagas antes da numeração).
+	EnsureReceiptNumber(ctx context.Context, id, orgID uuid.UUID) (*Payment, error)
 	UpdateChargeInfo(ctx context.Context, id, orgID uuid.UUID, in UpdateChargeInfoInput) error
 	UpdatePayoutInfo(ctx context.Context, id, orgID uuid.UUID, payoutID, status string) error
 	GetActiveFinancialConfig(ctx context.Context, orgID uuid.UUID) (*FinancialConfig, error)
@@ -161,18 +251,29 @@ type UnitSummary struct {
 	ID              uuid.UUID
 	Label           *string
 	PropertyAddress *string
+	PropertyCity    *string
+}
+
+// PixCode é o Pix copia-e-cola estático da cobrança, com o valor atualizado do dia.
+type PixCode struct {
+	Payload string  `json:"payload"`
+	Amount  float64 `json:"amount"`
 }
 
 type Receipt struct {
-	PaymentID  uuid.UUID `json:"payment_id"`
-	Competency *string   `json:"competency,omitempty"`
-	IssuedAt   time.Time `json:"issued_at"`
-	Owner      Party     `json:"owner"`
-	Tenant     Party     `json:"tenant"`
-	Unit       UnitRef   `json:"unit"`
-	Amounts    Amounts   `json:"amounts"`
-	PaidDate   time.Time `json:"paid_date"`
-	LegalNote  string    `json:"legal_note"`
+	PaymentID uuid.UUID `json:"payment_id"`
+	// Number é o número sequencial por organização e ano, no formato 0001/2026.
+	Number        string    `json:"number"`
+	PaymentMethod *string   `json:"payment_method,omitempty"`
+	Note          *string   `json:"payment_note,omitempty"`
+	Competency    *string   `json:"competency,omitempty"`
+	IssuedAt      time.Time `json:"issued_at"`
+	Owner         Party     `json:"owner"`
+	Tenant        Party     `json:"tenant"`
+	Unit          UnitRef   `json:"unit"`
+	Amounts       Amounts   `json:"amounts"`
+	PaidDate      time.Time `json:"paid_date"`
+	LegalNote     string    `json:"legal_note"`
 }
 
 type Party struct {
@@ -190,6 +291,7 @@ type Amounts struct {
 	Gross        float64 `json:"gross"`
 	LateFee      float64 `json:"late_fee"`
 	Interest     float64 `json:"interest"`
+	Discount     float64 `json:"discount"`
 	IRRFWithheld float64 `json:"irrf_withheld"`
 	NetPaid      float64 `json:"net_paid"`
 }

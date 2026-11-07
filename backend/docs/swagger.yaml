@@ -792,6 +792,18 @@ definitions:
     required:
     - rent_amount
     type: object
+  payment.AgreementInput:
+    properties:
+      agreed_amount:
+        type: number
+      new_due_date:
+        type: string
+      note:
+        maxLength: 500
+        type: string
+    required:
+    - new_due_date
+    type: object
   payment.Bucket:
     properties:
       count:
@@ -824,6 +836,23 @@ definitions:
     - gross_amount
     - type
     type: object
+  payment.RecordEventInput:
+    properties:
+      channel:
+        enum:
+        - WHATSAPP
+        - EMAIL
+        - COPY
+        type: string
+      kind:
+        enum:
+        - SENT
+        - REMINDER
+        type: string
+    required:
+    - channel
+    - kind
+    type: object
   payment.Summary:
     properties:
       overdue:
@@ -835,10 +864,26 @@ definitions:
     type: object
   payment.UpdatePaymentInput:
     properties:
+      discount_amount:
+        minimum: 0
+        type: number
       gross_amount:
         minimum: 0
         type: number
       paid_date:
+        type: string
+      payment_method:
+        description: Dados do pagamento manual; só valem ao marcar PAID (migration
+          000049).
+        enum:
+        - PIX
+        - CASH
+        - TRANSFER
+        - BOLETO
+        - OTHER
+        type: string
+      payment_note:
+        maxLength: 500
         type: string
       status:
         enum:
@@ -2456,6 +2501,140 @@ paths:
       security:
       - BearerAuth: []
       summary: 'Atualiza pagamento (ex: marcar como pago)'
+      tags:
+      - payments
+  /payments/{id}/agreement:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do pagamento
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nova data, valor combinado e observação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/payment.AgreementInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: INVALID_AGREEMENT_DATE
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: ALREADY_PAID ou PAYMENT_HAS_CHARGE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Acordo de atraso (nova data e valor combinado)
+      tags:
+      - payments
+  /payments/{id}/events:
+    get:
+      parameters:
+      - description: ID do pagamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Linha do tempo da cobrança
+      tags:
+      - payments
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do pagamento
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tipo e canal do envio
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/payment.RecordEventInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: cobrança já paga
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Registra o envio da cobrança (SENT ou REMINDER)
+      tags:
+      - payments
+  /payments/{id}/pix:
+    get:
+      parameters:
+      - description: ID do pagamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: cobrança já paga
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: PIX_KEY_NOT_CONFIGURED
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Pix copia-e-cola da cobrança (valor atualizado do dia)
       tags:
       - payments
   /payments/{id}/receipt:

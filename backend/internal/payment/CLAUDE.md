@@ -17,7 +17,11 @@ Vinculado a Lease. Sem Delete (pagamentos são imutáveis); única exceção: `D
 | GET | /api/v1/payments/{id} | payment |
 | PUT | /api/v1/payments/{id} | payment atualizado |
 | POST | /api/v1/leases/{leaseId}/payments/generate?month=YYYY-MM | gera RENT + IPTU do mês |
-| GET | /api/v1/payments/{id}/receipt | recibo (só se PAID) |
+| GET | /api/v1/payments/{id}/receipt | recibo numerado (só se PAID): `number` 0001/2026, forma, desconto |
+| GET | /api/v1/payments/{id}/events | linha do tempo: Criada, eventos gravados (SENT, REMINDER, AGREEMENT, PAID) e Venceu em |
+| POST | /api/v1/payments/{id}/events | registra envio: `kind` SENT\|REMINDER, `channel` WHATSAPP\|EMAIL\|COPY (409 se paga) |
+| GET | /api/v1/payments/{id}/pix | Pix copia-e-cola estático com o valor atualizado do dia (422 `PIX_KEY_NOT_CONFIGURED`, 409 se paga) |
+| POST | /api/v1/payments/{id}/agreement | acordo de atraso: `new_due_date` (> hoje), `agreed_amount?`, `note?` |
 | POST | /api/v1/payments/{id}/charge | cria cobrança no provider (PIX/BOLETO) |
 | POST | /api/v1/payments/webhook | recebe webhook do provider |
 | GET | /api/v1/financial-config | configuração financeira do owner |
@@ -39,6 +43,12 @@ Factory: `provider.NewProvider(providerType, config)` — string `"asaas"|"sicoo
 - `IRRFCalculator` — consumida do pacote `fiscal`.
 
 ## Gotchas
+
+- **Baixa estendida (000049):** `PUT /payments/{id}` com `status=PAID` aceita `payment_method` (PIX, CASH, TRANSFER, BOLETO, OTHER), `discount_amount` e `payment_note`. Líquido = bruto + multa + juros − desconto − IRRF; a base do IRRF é o valor devido menos o desconto. Desconto maior que o devido → 400 `INVALID_DISCOUNT`. `Repository.MarkPaid(PaidInput)` roda numa transação: grava a baixa, tira o número do recibo e registra o evento `PAID`.
+- **Recibo numerado:** `receipt_counters (organization_id, year)` com `INSERT … ON CONFLICT … last_number+1` na mesma transação; índice único parcial `(organization_id, receipt_year, receipt_number)`. Cobranças pagas antes da numeração recebem o número na primeira emissão (`EnsureReceiptNumber`). O ano é o do `paid_date`.
+- **Eventos (`EventStore`):** interface separada, ligada com `WithEvents(payment.NewEventStore(db))`. Imutáveis (sem edição nem exclusão). `Timeline` soma os marcos calculados CREATED e OVERDUE aos gravados.
+- **Acordo:** troca `due_date` e `gross_amount` (padrão: total de hoje com multa e juros), preserva o vencimento original em `original_due_date` (só na primeira vez) e grava `AGREEMENT` com os valores anteriores. Recusa cobrança paga (409) e com `charge_id` (409 `PAYMENT_HAS_CHARGE`). Se a nova data passar sem pagamento, volta a `LATE` com multa e juros contados da nova data (o valor combinado já inclui a multa anterior).
+- **Pix estático:** `pkg/pix` gera o BR Code (campos 00, 26, 52, 53, 54, 58, 59, 60, 62, CRC16-CCITT). Nome do recebedor vem do perfil (`OwnerReaderAdapter` usa `full_name`, com e-mail como último recurso); cidade, do imóvel (`BRASIL` se faltar). Valide o código num app bancário antes de depender dele.
 
 - **Filtro `status`**: `PENDING` = a vencer, `LATE` = não paga e vencida, `PAID`; decidido em SQL pela data, não pelo status gravado. `from`/`to` filtram o vencimento, inclusive nas pontas.
 - **Resumo**: `overdue` soma o valor atualizado (bruto + multa + juros); `paid` soma o líquido quando existe, senão o bruto. É calculado no service sobre a lista filtrada (adequado ao porte do MVP; paginação futura exigirá agregar em SQL).

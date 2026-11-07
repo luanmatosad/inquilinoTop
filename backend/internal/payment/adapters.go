@@ -2,6 +2,7 @@ package payment
 
 import (
 	"context"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/identity"
@@ -26,7 +27,7 @@ func (a *UnitReaderAdapter) GetByID(ctx context.Context, id, orgID uuid.UUID) (*
 	if p.AddressLine != nil {
 		addr = *p.AddressLine
 	}
-	return &UnitSummary{ID: u.ID, Label: &label, PropertyAddress: &addr}, nil
+	return &UnitSummary{ID: u.ID, Label: &label, PropertyAddress: &addr, PropertyCity: p.City}, nil
 }
 
 type OwnerReaderAdapter struct {
@@ -38,5 +39,15 @@ func (a *OwnerReaderAdapter) GetByID(ctx context.Context, id uuid.UUID) (*OwnerS
 	if err != nil {
 		return nil, err
 	}
-	return &OwnerSummary{ID: u.ID, Name: u.Email}, nil
+	// O nome do perfil (quando preenchido) vale mais que o e-mail; é o que aparece no recibo e no Pix.
+	summary := &OwnerSummary{ID: u.ID, Name: u.Email}
+	if prof, err := a.Repo.GetProfile(ctx, id); err == nil && prof != nil {
+		if prof.FullName != nil && strings.TrimSpace(*prof.FullName) != "" {
+			summary.Name = strings.TrimSpace(*prof.FullName)
+		}
+		if prof.Document != nil && strings.TrimSpace(*prof.Document) != "" {
+			summary.Document = prof.Document
+		}
+	}
+	return summary, nil
 }

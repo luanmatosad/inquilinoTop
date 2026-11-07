@@ -2257,6 +2257,213 @@ const docTemplate = `{
                 }
             }
         },
+        "/payments/{id}/agreement": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Acordo de atraso (nova data e valor combinado)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Nova data, valor combinado e observação",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/payment.AgreementInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "INVALID_AGREEMENT_DATE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "ALREADY_PAID ou PAYMENT_HAS_CHARGE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/{id}/events": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Linha do tempo da cobrança",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Registra o envio da cobrança (SENT ou REMINDER)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Tipo e canal do envio",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/payment.RecordEventInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "cobrança já paga",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/{id}/pix": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Pix copia-e-cola da cobrança (valor atualizado do dia)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "cobrança já paga",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "PIX_KEY_NOT_CONFIGURED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/payments/{id}/receipt": {
             "get": {
                 "security": [
@@ -4289,6 +4496,24 @@ const docTemplate = `{
                 }
             }
         },
+        "payment.AgreementInput": {
+            "type": "object",
+            "required": [
+                "new_due_date"
+            ],
+            "properties": {
+                "agreed_amount": {
+                    "type": "number"
+                },
+                "new_due_date": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
         "payment.Bucket": {
             "type": "object",
             "properties": {
@@ -4334,6 +4559,30 @@ const docTemplate = `{
                 }
             }
         },
+        "payment.RecordEventInput": {
+            "type": "object",
+            "required": [
+                "channel",
+                "kind"
+            ],
+            "properties": {
+                "channel": {
+                    "type": "string",
+                    "enum": [
+                        "WHATSAPP",
+                        "EMAIL",
+                        "COPY"
+                    ]
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "SENT",
+                        "REMINDER"
+                    ]
+                }
+            }
+        },
         "payment.Summary": {
             "type": "object",
             "properties": {
@@ -4355,12 +4604,31 @@ const docTemplate = `{
                 "status"
             ],
             "properties": {
+                "discount_amount": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "gross_amount": {
                     "type": "number",
                     "minimum": 0
                 },
                 "paid_date": {
                     "type": "string"
+                },
+                "payment_method": {
+                    "description": "Dados do pagamento manual; só valem ao marcar PAID (migration 000049).",
+                    "type": "string",
+                    "enum": [
+                        "PIX",
+                        "CASH",
+                        "TRANSFER",
+                        "BOLETO",
+                        "OTHER"
+                    ]
+                },
+                "payment_note": {
+                    "type": "string",
+                    "maxLength": 500
                 },
                 "status": {
                     "type": "string",

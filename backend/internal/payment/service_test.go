@@ -3,6 +3,7 @@ package payment_test
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
@@ -10,12 +11,18 @@ import (
 	"github.com/inquilinotop/api/internal/lease"
 	"github.com/inquilinotop/api/internal/payment"
 	"github.com/inquilinotop/api/internal/tenant"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type mockPaymentRepo struct {
 	payments map[uuid.UUID]*payment.Payment
+	// fc, quando definido, é a configuração financeira ativa devolvida.
+	fc       *payment.FinancialConfig
+	counters map[string]int
+	// lastAgreement guarda o último acordo aplicado.
+	lastAgreement *payment.AgreementApply
 }
 
 func newMockPaymentRepo() *mockPaymentRepo {
@@ -32,6 +39,7 @@ func (m *mockPaymentRepo) Create(_ context.Context, userID, orgID uuid.UUID, in 
 		Type:           in.Type,
 		Status:         "PENDING",
 		Competency:     in.Competency,
+		CreatedAt:      time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC),
 	}
 	m.payments[p.ID] = p
 	return p, nil
@@ -53,7 +61,7 @@ func (m *mockPaymentRepo) CreateIfAbsent(_ context.Context, userID, orgID uuid.U
 func (m *mockPaymentRepo) GetByID(_ context.Context, id, ownerID uuid.UUID) (*payment.Payment, error) {
 	p, ok := m.payments[id]
 	if !ok || p.OrganizationID != ownerID {
-		return nil, errors.New("not found")
+		return nil, apierr.ErrNotFound
 	}
 	return p, nil
 }
@@ -79,18 +87,64 @@ func (m *mockPaymentRepo) Update(_ context.Context, id, ownerID uuid.UUID, in pa
 	return p, nil
 }
 
-func (m *mockPaymentRepo) MarkPaid(_ context.Context, id, ownerID uuid.UUID, paidDate time.Time,
-	lateFee, interest, irrf, netAmount float64) (*payment.Payment, error) {
+func (m *mockPaymentRepo) MarkPaid(_ context.Context, id, ownerID uuid.UUID, in payment.PaidInput) (*payment.Payment, error) {
 	p, err := m.GetByID(context.Background(), id, ownerID)
 	if err != nil {
 		return nil, err
 	}
+	paidDate := in.PaidDate
+	net := in.Net
 	p.Status = "PAID"
 	p.PaidDate = &paidDate
-	p.LateFeeAmount = lateFee
-	p.InterestAmount = interest
-	p.IRRFAmount = irrf
-	p.NetAmount = &netAmount
+	p.LateFeeAmount = in.LateFee
+	p.InterestAmount = in.Interest
+	p.IRRFAmount = in.IRRF
+	p.NetAmount = &net
+	p.DiscountAmount = in.Discount
+	p.PaymentMethod = in.Method
+	p.PaymentNote = in.Note
+	m.assignReceipt(p)
+	return p, nil
+}
+
+// assignReceipt imita o contador por organização e ano do repositório real.
+func (m *mockPaymentRepo) assignReceipt(p *payment.Payment) {
+	if p.ReceiptNumber != nil || p.PaidDate == nil {
+		return
+	}
+	if m.counters == nil {
+		m.counters = map[string]int{}
+	}
+	year := p.PaidDate.Year()
+	key := p.OrganizationID.String() + "/" + strconv.Itoa(year)
+	m.counters[key]++
+	n := m.counters[key]
+	p.ReceiptNumber, p.ReceiptYear = &n, &year
+}
+
+func (m *mockPaymentRepo) ApplyAgreement(_ context.Context, id, ownerID uuid.UUID, in payment.AgreementApply) (*payment.Payment, error) {
+	p, err := m.GetByID(context.Background(), id, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	if p.OriginalDueDate == nil {
+		orig := p.DueDate
+		p.OriginalDueDate = &orig
+	}
+	p.DueDate = in.NewDueDate
+	p.GrossAmount = in.NewGross
+	m.lastAgreement = &in
+	return p, nil
+}
+
+func (m *mockPaymentRepo) EnsureReceiptNumber(_ context.Context, id, ownerID uuid.UUID) (*payment.Payment, error) {
+	p, err := m.GetByID(context.Background(), id, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	if p.Status == "PAID" {
+		m.assignReceipt(p)
+	}
 	return p, nil
 }
 
@@ -118,6 +172,9 @@ func (m *mockPaymentRepo) UpdatePayoutInfo(_ context.Context, id, ownerID uuid.U
 }
 
 func (m *mockPaymentRepo) GetActiveFinancialConfig(_ context.Context, ownerID uuid.UUID) (*payment.FinancialConfig, error) {
+	if m.fc != nil {
+		return m.fc, nil
+	}
 	return nil, errors.New("not configured")
 }
 
@@ -627,7 +684,7 @@ func TestService_BuildReceipt_Pago(t *testing.T) {
 	p, _ := svc.mockRepo.Create(context.Background(), ownerID, ownerID, payment.CreatePaymentInput{
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
-	svc.mockRepo.MarkPaid(context.Background(), p.ID, ownerID, paidDate, 0, 0, 0, 2000)
+	svc.mockRepo.MarkPaid(context.Background(), p.ID, ownerID, payment.PaidInput{PaidDate: paidDate, Net: 2000})
 
 	rec, err := svc.BuildReceipt(context.Background(), p.ID, ownerID, ownerID)
 	require.NoError(t, err)
@@ -702,7 +759,7 @@ func TestService_MarkPaid_PagoAnteriormente(t *testing.T) {
 		LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 2000, Type: "RENT",
 	})
 
-	svc.mockRepo.MarkPaid(context.Background(), p.ID, ownerID, time.Now(), 0, 0, 0, 2000)
+	svc.mockRepo.MarkPaid(context.Background(), p.ID, ownerID, payment.PaidInput{PaidDate: time.Now(), Net: 2000})
 
 	_, err := svc.Update(context.Background(), p.ID, ownerID, payment.UpdatePaymentInput{
 		Status: "PAID", PaidDate: ptr(time.Now()),
@@ -812,7 +869,7 @@ func TestService_Enrich_PaymentPago(t *testing.T) {
 	})
 
 	paidDate := time.Now()
-	svc.mockRepo.MarkPaid(context.Background(), p.ID, ownerID, paidDate, 0, 0, 0, 2000)
+	svc.mockRepo.MarkPaid(context.Background(), p.ID, ownerID, payment.PaidInput{PaidDate: paidDate, Net: 2000})
 
 	enriched := svc.Enrich(context.Background(), *p)
 	assert.Equal(t, 0.0, enriched.LateFeeAmount)
@@ -986,7 +1043,7 @@ func TestService_Enrich_PercentuaisSãoEmPorcento(t *testing.T) {
 	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	svc, leaseID, orgID := listSvc(now)
 	l := svc.leaseReader.leases[leaseID]
-	l.LateFeePercent, l.DailyInterestPercent = 2, 0.033 // 2% de multa e 0,033% ao dia, como a tela envia
+	l.LateFeePercent, l.DailyInterestPercent = 2, 0.033                                                 // 2% de multa e 0,033% ao dia, como a tela envia
 	p := addPayment(svc, leaseID, orgID, time.Date(2026, 5, 16, 0, 0, 0, 0, time.UTC), 1500, "PENDING") // 30 dias
 
 	got := svc.Enrich(context.Background(), *p)
