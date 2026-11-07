@@ -115,6 +115,44 @@ func TestHandler_Create_Válido(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, rr.Code)
 }
 
+func TestHandler_Create_PagamentoNoFuturo_Retorna400(t *testing.T) {
+	svc := expense.NewService(newMockExpenseRepo())
+	h := expense.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"description": "Pintura", "amount": 800.0, "due_date": time.Now(), "category": "MAINTENANCE",
+		"paid_date": time.Now().AddDate(0, 0, 3),
+	})
+	req := httptest.NewRequest(http.MethodPost, "/units/"+uuid.New().String()+"/expenses", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "INVALID_PAID_DATE")
+}
+
+func TestHandler_Create_JáPaga_Retorna201Paga(t *testing.T) {
+	svc := expense.NewService(newMockExpenseRepo())
+	h := expense.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, noopAuthMW, noopWriteMw, noopWriteMw)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"description": "Pintura", "amount": 800.0, "due_date": time.Now(), "category": "MAINTENANCE",
+		"paid_date": time.Now().AddDate(0, 0, -2),
+	})
+	req := httptest.NewRequest(http.MethodPost, "/units/"+uuid.New().String()+"/expenses", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusCreated, rr.Code)
+	assert.Contains(t, rr.Body.String(), `"status":"PAID"`)
+}
+
 // mockExpenseRepoNotFound overrides Update to return apierr.ErrNotFound,
 // verifying the handler returns 404 (not 400) when the expense is not found.
 type mockExpenseRepoNotFound struct {

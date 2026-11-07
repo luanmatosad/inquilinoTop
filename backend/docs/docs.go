@@ -3139,6 +3139,13 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "400": {
+                        "description": "INVALID_PAID_DATE: paid_date no futuro",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             }
@@ -3312,6 +3319,10 @@ const docTemplate = `{
                     "maxLength": 500
                 },
                 "due_date": {
+                    "type": "string"
+                },
+                "paid_date": {
+                    "description": "PaidDate, quando informado na criação, cria a despesa já paga (paid_amount = amount). Ignorado no Update.",
                     "type": "string"
                 }
             }

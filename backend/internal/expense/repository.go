@@ -23,10 +23,13 @@ func NewRepository(database *db.DB) Repository {
 func (r *pgRepository) Create(ctx context.Context, userID, orgID uuid.UUID, in CreateExpenseInput) (*Expense, error) {
 	var e Expense
 	err := r.db.Pool.QueryRow(ctx,
-		`INSERT INTO expenses (organization_id, owner_id, unit_id, description, amount, due_date, category)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7)
+		`INSERT INTO expenses (organization_id, owner_id, unit_id, description, amount, due_date, category, status, paid_date, paid_amount)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,
+		   CASE WHEN $8::date IS NULL THEN 'PENDING' ELSE 'PAID' END,
+		   $8::date,
+		   CASE WHEN $8::date IS NULL THEN NULL ELSE $9::float8 END)
 		 RETURNING id, organization_id, unit_id, description, amount, due_date, category, status, paid_date, paid_amount, is_active, created_at, updated_at`,
-		orgID, userID, in.UnitID, in.Description, in.Amount, in.DueDate, in.Category,
+		orgID, userID, in.UnitID, in.Description, in.Amount, in.DueDate, in.Category, in.PaidDate, in.Amount,
 	).Scan(&e.ID, &e.OrganizationID, &e.UnitID, &e.Description, &e.Amount, &e.DueDate, &e.Category, &e.Status, &e.PaidDate, &e.PaidAmount, &e.IsActive, &e.CreatedAt, &e.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("expense.repo: create: %w", err)

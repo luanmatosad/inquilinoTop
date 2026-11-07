@@ -32,6 +32,12 @@ func (m *mockExpenseRepo) Create(_ context.Context, _, orgID uuid.UUID, in expen
 		Status:         expense.StatusPending,
 		IsActive:       true,
 	}
+	if in.PaidDate != nil {
+		e.Status = expense.StatusPaid
+		e.PaidDate = in.PaidDate
+		amount := in.Amount
+		e.PaidAmount = &amount
+	}
 	m.expenses[e.ID] = e
 	return e, nil
 }
@@ -167,6 +173,53 @@ func TestService_Create_Válido(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "WATER", e.Category)
 	assert.Equal(t, unitID, e.UnitID)
+}
+
+func TestService_Create_JáPaga(t *testing.T) {
+	now := time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC)
+	svc := expense.NewService(newMockExpenseRepo()).WithClock(func() time.Time { return now })
+	paid := time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC)
+
+	e, err := svc.Create(context.Background(), uuid.New(), uuid.New(), expense.CreateExpenseInput{
+		UnitID: uuid.New(), Description: "Pintura", Amount: 800, DueDate: now, Category: "MAINTENANCE", PaidDate: &paid,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, expense.StatusPaid, e.Status)
+	require.NotNil(t, e.PaidAmount)
+	assert.Equal(t, 800.0, *e.PaidAmount)
+}
+
+func TestService_Create_PagaHoje(t *testing.T) {
+	now := time.Date(2026, 11, 7, 23, 0, 0, 0, time.UTC)
+	svc := expense.NewService(newMockExpenseRepo()).WithClock(func() time.Time { return now })
+	paid := time.Date(2026, 11, 7, 0, 0, 0, 0, time.UTC)
+	_, err := svc.Create(context.Background(), uuid.New(), uuid.New(), expense.CreateExpenseInput{
+		UnitID: uuid.New(), Description: "x", Amount: 1, DueDate: now, Category: "OTHER", PaidDate: &paid,
+	})
+	require.NoError(t, err)
+}
+
+func TestService_Create_PagamentoNoFuturo(t *testing.T) {
+	now := time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC)
+	mock := newMockExpenseRepo()
+	svc := expense.NewService(mock).WithClock(func() time.Time { return now })
+	paid := time.Date(2026, 11, 8, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.Create(context.Background(), uuid.New(), uuid.New(), expense.CreateExpenseInput{
+		UnitID: uuid.New(), Description: "x", Amount: 1, DueDate: now, Category: "OTHER", PaidDate: &paid,
+	})
+	assert.ErrorIs(t, err, expense.ErrInvalidPaidDate)
+	assert.Empty(t, mock.expenses, "não cria a despesa")
+}
+
+func TestService_Create_SemPagamento_NasceuPendente(t *testing.T) {
+	svc := expense.NewService(newMockExpenseRepo())
+	e, err := svc.Create(context.Background(), uuid.New(), uuid.New(), expense.CreateExpenseInput{
+		UnitID: uuid.New(), Description: "x", Amount: 1, DueDate: time.Now().AddDate(0, 0, 5), Category: "OTHER",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, expense.StatusPending, e.Status)
+	assert.Nil(t, e.PaidDate)
 }
 
 func TestService_Get_Encontrado(t *testing.T) {

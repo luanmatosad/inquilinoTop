@@ -54,6 +54,9 @@ func (s *Service) withStatus(e *Expense) *Expense {
 }
 
 func (s *Service) Create(ctx context.Context, userID, orgID uuid.UUID, in CreateExpenseInput) (*Expense, error) {
+	if in.PaidDate != nil && in.PaidDate.After(s.today()) {
+		return nil, fmt.Errorf("expense.svc: %w", ErrInvalidPaidDate)
+	}
 	e, err := s.repo.Create(ctx, userID, orgID, in)
 	if err != nil {
 		return nil, err

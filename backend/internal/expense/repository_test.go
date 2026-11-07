@@ -88,6 +88,27 @@ func TestExpenseRepository_CreateAndList(t *testing.T) {
 	assert.Len(t, list, 1)
 }
 
+func TestExpenseRepository_Create_JáPaga(t *testing.T) {
+	database := testDB(t)
+	userID, orgID, unitID := seedUnit(t, database)
+	repo := expense.NewRepository(database)
+	paid := time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC)
+
+	e, err := repo.Create(context.Background(), userID, orgID, expense.CreateExpenseInput{
+		UnitID: unitID, Description: "Pintura", Amount: 800, DueDate: time.Now(), Category: "MAINTENANCE", PaidDate: &paid,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, expense.StatusPaid, e.Status)
+	require.NotNil(t, e.PaidDate)
+	assert.True(t, e.PaidDate.Equal(paid))
+	require.NotNil(t, e.PaidAmount)
+	assert.Equal(t, 800.0, *e.PaidAmount)
+
+	got, err := repo.GetByID(context.Background(), e.ID, orgID)
+	require.NoError(t, err)
+	assert.Equal(t, expense.StatusPaid, got.Status)
+}
+
 func TestExpenseRepository_Delete_SoftDelete(t *testing.T) {
 	database := testDB(t)
 	userID, orgID, unitID := seedUnit(t, database)

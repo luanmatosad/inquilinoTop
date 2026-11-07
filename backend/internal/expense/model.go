@@ -23,6 +23,8 @@ var (
 	ErrNotPaid = fmt.Errorf("expense: despesa não está paga: %w", apierr.ErrConflict)
 	// ErrLocked: despesa PAID não aceita mudança de valor nem de vencimento (HTTP 409).
 	ErrLocked = fmt.Errorf("expense: despesa paga não aceita alterar valor ou vencimento: %w", apierr.ErrConflict)
+	// ErrInvalidPaidDate: data de pagamento posterior a hoje (HTTP 400).
+	ErrInvalidPaidDate = fmt.Errorf("expense: data de pagamento no futuro")
 	// ErrInvalidFilter: status de filtro desconhecido (HTTP 400).
 	ErrInvalidFilter = fmt.Errorf("expense: filtro inválido")
 )
@@ -50,6 +52,8 @@ type CreateExpenseInput struct {
 	Amount      float64   `json:"amount" validate:"required,min=0"`
 	DueDate     time.Time `json:"due_date" validate:"required"`
 	Category    string    `json:"category" validate:"required,oneof=ELECTRICITY WATER CONDO TAX MAINTENANCE OTHER"`
+	// PaidDate, quando informado na criação, cria a despesa já paga (paid_amount = amount). Ignorado no Update.
+	PaidDate *time.Time `json:"paid_date,omitempty"`
 }
 
 // PayExpenseInput baixa a despesa; PaidAmount omitido assume o valor da despesa.

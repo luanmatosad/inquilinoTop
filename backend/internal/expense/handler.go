@@ -265,6 +265,7 @@ func (h *Handler) listByUnit(w http.ResponseWriter, r *http.Request) {
 // @Param unitId path string true "ID da unidade"
 // @Param body body CreateExpenseInput true "Dados da despesa"
 // @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{} "INVALID_PAID_DATE: paid_date no futuro"
 // @Router /units/{unitId}/expenses [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -289,6 +290,10 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	in.UnitID = unitID
 	e, err := h.svc.Create(r.Context(), auth.OwnerIDFromCtx(r.Context()), orgID, in)
 	if err != nil {
+		if errors.Is(err, ErrInvalidPaidDate) {
+			httputil.Err(w, http.StatusBadRequest, "INVALID_PAID_DATE", "a data de pagamento não pode ser futura")
+			return
+		}
 		httputil.Err(w, http.StatusBadRequest, "CREATE_FAILED", err.Error())
 		return
 	}

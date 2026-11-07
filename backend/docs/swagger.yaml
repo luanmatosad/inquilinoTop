@@ -110,6 +110,10 @@ definitions:
         type: string
       due_date:
         type: string
+      paid_date:
+        description: PaidDate, quando informado na criação, cria a despesa já paga
+          (paid_amount = amount). Ignorado no Update.
+        type: string
     required:
     - amount
     - category
@@ -3038,6 +3042,11 @@ paths:
       responses:
         "201":
           description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'INVALID_PAID_DATE: paid_date no futuro'
           schema:
             additionalProperties: true
             type: object
