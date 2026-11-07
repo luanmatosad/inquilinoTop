@@ -29,6 +29,7 @@ src/middleware.ts             # Auth: redireciona não-autenticados para /login
 | `/tenants`, `/tenants/[id]` | Inquilinos (Go API): lista em tabela com cobrança do mês; detalhe sem abas (`?editar=1` abre a edição) |
 | `/leases`, `/leases/[id]` | Contratos (Go API): lista com indicadores; detalhe sem abas (`?editar=1`, `?reajustar=1`, `?encerrar=1`). `/leases?novo=1` abre a criação |
 | `/units/[id]` | Detalhe de unidade (Go API): resumo do contrato ativo e "Criar contrato" |
+| `/financial/receivables`, `/financial/payables` | Recebimentos e Despesas (Go API): por mês (`?mes=AAAA-MM`), com indicadores e chips (`?situacao=`). `/financial/payables?novo=1` abre o lançamento de despesa |
 | `/financeiro/dashboard` | Dashboard financeiro (stub) |
 | `/financeiro/receber`, `/pagar`, `/repasses`, `/comissoes`, `/conciliacao` | Financeiro (stub) |
 | `/reports`, `/integrations` | Placeholders (`ComingSoon`), com item de menu no canvas e sem tela ainda |
@@ -69,6 +70,15 @@ O canvas "ImoviFlow — Telas" é a fonte da verdade da navegação (change `red
 - **Encerrar:** corpo `{end_date, reason}`; a data nunca estende o prazo e cobranças pendentes depois dela são canceladas.
 - **Contrato assinado:** upload por rota Next (`/api/leases/[id]/documents`, PDF/DOC/DOCX até 10 MB) e download por `/api/documents/[id]`, ambos repassando o token httpOnly.
 - **Aluguel de referência** da unidade (`reference_rent`) sugere o aluguel ao criar o contrato ("Sugerido pela unidade.").
+
+## Financeiro (redesign)
+
+- **Mês por URL:** `?mes=AAAA-MM` (padrão: mês corrente em `America/Sao_Paulo`, `parseMonth` em `lib/financial-overview.ts`); `MonthNav` mantém `?situacao=` ao trocar.
+- **Quais linhas:** cobranças `RENT` (ou despesas) com vencimento no mês **mais** as `LATE` de qualquer mês, unidas sem repetir (duas buscas por tela). Os indicadores somam as linhas exibidas, não o `/summary` do backend. Em Recebimentos o "Em atraso" é o valor bruto; o total com multa e juros só aparece no diálogo de pagamento.
+- **Situação:** Recebimentos tem Atrasado, Pago e Previsto; Despesas tem Atrasada, Paga e A pagar, e o chip "A pagar" inclui as atrasadas (`filterPayables`).
+- **Ações:** Registrar pagamento (`ReceivablesList`, `payReceivable`) e Recibo; Dar baixa e Desfazer pagamento (`PayablesList`, `payExpense`/`unpayExpense`); Lançar despesa em painel (`ExpenseFormSheet`, `createPayable`). "Já paguei" manda `paid_date` e o backend cria a despesa já `PAID` numa só operação.
+- **Fora desta etapa:** Aguardando confirmação, Confirmar, Cobrar e Enviar cobrança (fluxo 04), Exportar, repetir todo mês, comprovante, despesa de imóvel inteiro e categorias editáveis (a categoria "Limpeza" do canvas não existe no enum). A baixa em lote foi removida porque o canvas não a prevê.
+- `ExpenseDialog` e `ExpenseList` continuam em `/units/[id]` com a action antiga `createExpense`.
 
 ## Auth — MIGRADO para Go
 

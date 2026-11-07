@@ -4,11 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { goFetch } from '@/lib/go/client'
 import { goErrorInfo } from '@/lib/go/errors'
 import {
+  expenseFormSchema,
   payExpenseSchema,
   payReceivableSchema,
+  toExpensePayload,
   toPayExpensePayload,
-  toQuery,
-  type FinancialFilters,
+  type ExpenseFormValues,
   type PayExpenseFormValues,
   type PayReceivableFormValues,
 } from '@/lib/financial-schemas'
@@ -22,19 +23,8 @@ export type {
   BankRecord,
   TransactionStatus,
   LedgerStatus,
-  ReceivableRow,
-  PayableRow,
-  Bucket,
-  ReceivablesSummary,
-  PayablesSummary,
 } from '@/data/financial/dal'
 
-import type {
-  ReceivableRow,
-  PayableRow,
-  ReceivablesSummary,
-  PayablesSummary,
-} from '@/data/financial/dal'
 import type {
   DashboardMetrics,
   Receivable,
@@ -195,75 +185,6 @@ export async function getBankRecords(): Promise<BankRecord[]> {
 // Contas a receber e a pagar (telas /financial/receivables e /financial/payables)
 // ---------------------------------------------------------------------------
 
-export type FinancialResult<T> = { data: T; error?: undefined } | { data?: undefined; error: string }
-
-export async function listReceivables(filters: FinancialFilters): Promise<FinancialResult<ReceivableRow[]>> {
-  try {
-    const payments = (await goFetch<GoPayment[]>('/api/v1/payments' + toQuery(filters, 'lease_id'))) ?? []
-    return {
-      data: payments.map((p) => ({
-        id: p.id,
-        leaseId: p.lease_id,
-        dueDate: p.due_date,
-        paidDate: p.paid_date ?? null,
-        competency: p.competency ?? null,
-        description: p.description ?? null,
-        type: p.type,
-        status: p.status,
-        amount: p.gross_amount,
-        lateFee: p.late_fee_amount ?? 0,
-        interest: p.interest_amount ?? 0,
-        updatedTotal: p.gross_amount + (p.late_fee_amount ?? 0) + (p.interest_amount ?? 0),
-        netAmount: p.net_amount ?? null,
-        chargeMethod: p.charge_method ?? null,
-      })),
-    }
-  } catch (e) {
-    console.error('Erro ao listar recebíveis:', e)
-    return { error: 'Não foi possível carregar as contas a receber.' }
-  }
-}
-
-export async function getReceivablesSummary(filters: FinancialFilters): Promise<ReceivablesSummary | null> {
-  try {
-    return await goFetch<ReceivablesSummary>('/api/v1/payments/summary' + toQuery(filters, 'lease_id', { withStatus: false }))
-  } catch (e) {
-    console.error('Erro ao buscar resumo de recebíveis:', e)
-    return null
-  }
-}
-
-export async function listPayables(filters: FinancialFilters): Promise<FinancialResult<PayableRow[]>> {
-  try {
-    const expenses = (await goFetch<GoExpense[]>('/api/v1/expenses' + toQuery(filters, 'unit_id'))) ?? []
-    return {
-      data: expenses.map((e) => ({
-        id: e.id,
-        unitId: e.unit_id,
-        dueDate: e.due_date,
-        paidDate: e.paid_date ?? null,
-        description: e.description,
-        category: e.category,
-        status: e.status,
-        amount: e.amount,
-        paidAmount: e.paid_amount ?? null,
-      })),
-    }
-  } catch (e) {
-    console.error('Erro ao listar despesas:', e)
-    return { error: 'Não foi possível carregar as contas a pagar.' }
-  }
-}
-
-export async function getPayablesSummary(filters: FinancialFilters): Promise<PayablesSummary | null> {
-  try {
-    return await goFetch<PayablesSummary>('/api/v1/expenses/summary' + toQuery(filters, 'unit_id', { withStatus: false }))
-  } catch (e) {
-    console.error('Erro ao buscar resumo de despesas:', e)
-    return null
-  }
-}
-
 export type FinancialActionResponse = {
   success?: boolean
   error?: string
@@ -290,6 +211,31 @@ function revalidateFinancial() {
   revalidatePath('/financial/dashboard')
 }
 
+/** Lança uma despesa por unidade; com `paid` e `paid_date`, ela nasce paga (uma só chamada ao backend). */
+export async function createPayable(values: ExpenseFormValues): Promise<FinancialActionResponse> {
+  const validated = expenseFormSchema.safeParse(values)
+  if (!validated.success) {
+    return { error: 'Erro de validação. Verifique os campos.', fieldErrors: validated.error.flatten().fieldErrors }
+  }
+  try {
+    await goFetch(`/api/v1/units/${validated.data.unit_id}/expenses`, {
+      method: 'POST',
+      body: JSON.stringify(toExpensePayload(validated.data)),
+    })
+    revalidateFinancial()
+    revalidatePath(`/units/${validated.data.unit_id}`)
+    return { success: true }
+  } catch (error) {
+    const { code } = goErrorInfo(error)
+    if (code === 'INVALID_PAID_DATE') {
+      const message = 'A data do pagamento não pode ser futura.'
+      return { error: message, fieldErrors: { paid_date: [message] } }
+    }
+    console.error('Erro ao lançar despesa:', error)
+    return { error: 'Erro ao lançar a despesa.' }
+  }
+}
+
 export async function payExpense(id: string, values: PayExpenseFormValues): Promise<FinancialActionResponse> {
   const validated = payExpenseSchema.safeParse(values)
   if (!validated.success) {
@@ -312,32 +258,6 @@ export async function unpayExpense(id: string): Promise<FinancialActionResponse>
   } catch (error) {
     return expenseError(error, 'Erro ao estornar a baixa.')
   }
-}
-
-export type BatchPayResult = {
-  paid: number
-  failed: { id: string; error: string }[]
-  error?: string
-}
-
-/** Baixa várias despesas com a mesma data; devolve as que falharam, sem interromper as demais. */
-export async function payExpensesBatch(ids: string[], values: PayExpenseFormValues): Promise<BatchPayResult> {
-  const validated = payExpenseSchema.safeParse({ paid_date: values.paid_date })
-  if (!validated.success) return { paid: 0, failed: [], error: 'Informe a data do pagamento.' }
-  const body = JSON.stringify(toPayExpensePayload(validated.data))
-
-  const failed: BatchPayResult['failed'] = []
-  let paid = 0
-  for (const id of ids) {
-    try {
-      await goFetch('/api/v1/expenses/' + id + '/pay', { method: 'POST', body })
-      paid++
-    } catch (error) {
-      failed.push({ id, error: expenseError(error, 'Erro ao dar baixa.').error ?? 'Erro ao dar baixa.' })
-    }
-  }
-  revalidateFinancial()
-  return { paid, failed }
 }
 
 /** Dá baixa em uma cobrança; o backend recalcula multa, juros e IRRF pela data informada. */

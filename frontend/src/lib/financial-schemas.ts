@@ -23,6 +23,39 @@ export function toPayExpensePayload(v: PayExpenseFormValues) {
   })
 }
 
+// ---------- Lançar despesa ----------
+
+export const EXPENSE_CATEGORIES = ["ELECTRICITY", "WATER", "CONDO", "TAX", "MAINTENANCE", "OTHER"] as const
+
+export const expenseFormSchema = z
+  .object({
+    description: z.string().trim().min(3, "Descreva a despesa (mínimo 3 letras)").max(500, "No máximo 500 caracteres"),
+    unit_id: z.string().uuid("Escolha a unidade"),
+    category: z.enum(EXPENSE_CATEGORIES, { message: "Escolha a categoria" }),
+    amount: z.string().refine((v) => Number.isFinite(parseDecimal(v)) && parseDecimal(v) > 0, "Informe um valor maior que zero"),
+    due_date: z.string().regex(DATE, "Informe o vencimento"),
+    paid: z.boolean().optional(),
+    paid_date: z.string().optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.paid && !(v.paid_date && DATE.test(v.paid_date))) {
+      ctx.addIssue({ code: "custom", path: ["paid_date"], message: "Informe a data do pagamento" })
+    }
+  })
+
+export type ExpenseFormValues = z.infer<typeof expenseFormSchema>
+
+/** Corpo do `POST /units/{unitId}/expenses`; `unit_id` vai no caminho. */
+export function toExpensePayload(v: ExpenseFormValues) {
+  return compact({
+    description: v.description.trim(),
+    amount: parseDecimal(v.amount),
+    due_date: toRfc3339(v.due_date),
+    category: v.category,
+    paid_date: v.paid && v.paid_date ? toRfc3339(v.paid_date) : undefined,
+  })
+}
+
 // ---------- Baixa de recebível ----------
 
 export const payReceivableSchema = z.object({
