@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/inquilinotop/api/internal/identity"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -68,4 +69,16 @@ func TestRepository_RevokeRefreshToken(t *testing.T) {
 
 	rt, _ := repo.GetRefreshToken(context.Background(), "revokeMe")
 	assert.NotNil(t, rt.RevokedAt)
+}
+
+func TestRepository_CreateUser_EmailDuplicado(t *testing.T) {
+	d := testDB(t)
+	repo := identity.NewRepository(d)
+
+	_, err := repo.CreateUser(context.Background(), "dup-repo@test.com", "hash")
+	require.NoError(t, err)
+
+	_, err = repo.CreateUser(context.Background(), "dup-repo@test.com", "hash")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, apierr.ErrConflict)
 }

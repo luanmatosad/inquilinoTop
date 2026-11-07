@@ -5,11 +5,13 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/identity"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,7 +31,7 @@ func newMockRepo() *mockRepo {
 
 func (m *mockRepo) CreateUser(_ context.Context, email, passwordHash string) (*identity.User, error) {
 	if _, exists := m.users[email]; exists {
-		return nil, errors.New("email já cadastrado")
+		return nil, fmt.Errorf("mock: create user: %w", apierr.ErrConflict)
 	}
 	u := &identity.User{ID: uuid.New(), Email: email, PasswordHash: passwordHash, Plan: "FREE"}
 	m.users[email] = u
@@ -176,7 +178,7 @@ func TestService_Register_DuplicateEmail(t *testing.T) {
 	svc := newTestService(t)
 	svc.Register(context.Background(), "dup@test.com", "senha123")
 	_, err := svc.Register(context.Background(), "dup@test.com", "outrasenha")
-	assert.Error(t, err)
+	assert.ErrorIs(t, err, apierr.ErrConflict)
 }
 
 func TestService_Login(t *testing.T) {

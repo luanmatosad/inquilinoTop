@@ -7,9 +7,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/db"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
+
+// pgUniqueViolation é o SQLSTATE de violação de unicidade (ex.: e-mail já cadastrado).
+const pgUniqueViolation = "23505"
 
 type pgRepository struct {
 	db *db.DB
@@ -27,6 +32,10 @@ func (r *pgRepository) CreateUser(ctx context.Context, email, passwordHash strin
 		email, passwordHash,
 	).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Plan, &u.TotpSecret, &u.BackupCodes, &u.TwoFactorEnabled, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgUniqueViolation {
+			return nil, fmt.Errorf("identity.repo: create user: %w", apierr.ErrConflict)
+		}
 		return nil, fmt.Errorf("identity.repo: create user: %w", err)
 	}
 	return &u, nil

@@ -5,17 +5,23 @@ import { redirect } from 'next/navigation'
 import { login as goLogin, register as goRegister, logout as goLogout, setTokens } from '@/lib/go/client'
 import { z } from 'zod'
 
+import { authErrorMessage } from '@/lib/go/authErrors'
+
 import { isRedirectError } from 'next/dist/client/components/redirect-error'
 
+// Login só exige senha preenchida: quem decide se está certa é o backend (contas antigas podem
+// ter senha curta). O cadastro segue a regra do backend: no mínimo 8 caracteres.
 const authSchema = z.object({
-  email: z.string().email({ message: 'Email inválido' }),
-  password: z.string().min(6, { message: 'A senha deve ter no mínimo 6 caracteres' }),
+  email: z.string().email({ message: 'E-mail inválido' }),
+  password: z.string().min(1, { message: 'Informe a senha' }),
 })
+
+const MIN_PASSWORD = 8
 
 const registerSchema = z.object({
   fullName: z.string().min(3, { message: 'Nome completo é obrigatório' }),
-  email: z.string().email({ message: 'Email inválido' }),
-  password: z.string().min(6, { message: 'A senha deve ter no mínimo 6 caracteres' }),
+  email: z.string().email({ message: 'E-mail inválido' }),
+  password: z.string().min(MIN_PASSWORD, { message: `A senha deve ter no mínimo ${MIN_PASSWORD} caracteres` }),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'As senhas não conferem',
@@ -46,9 +52,7 @@ export async function login(prevState: ActionState, formData: FormData) {
     success = true
   } catch (error) {
     if (isRedirectError(error)) throw error;
-    return {
-      error: error instanceof Error ? error.message : 'Erro ao fazer login',
-    }
+    return { error: authErrorMessage(error, 'login') }
   }
 
   if (success) {
@@ -77,9 +81,7 @@ export async function signup(prevState: ActionState, formData: FormData) {
     success = true
   } catch (error) {
     if (isRedirectError(error)) throw error;
-    return {
-      error: error instanceof Error ? error.message : 'Erro ao criar conta',
-    }
+    return { error: authErrorMessage(error, 'signup') }
   }
 
   if (success) {

@@ -2,11 +2,14 @@ package identity
 
 import (
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/httputil"
 )
@@ -49,6 +52,7 @@ type credentialsInput struct {
 // @Param body body credentialsInput true "Email e senha"
 // @Success 201 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{}
 // @Router /auth/register [post]
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 	var in credentialsInput
@@ -70,7 +74,12 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.svc.Register(r.Context(), in.Email, in.Password)
 	if err != nil {
-		httputil.Err(w, http.StatusConflict, "REGISTER_FAILED", err.Error())
+		if errors.Is(err, apierr.ErrConflict) {
+			httputil.Err(w, http.StatusConflict, "EMAIL_TAKEN", "este e-mail já está cadastrado")
+			return
+		}
+		slog.ErrorContext(r.Context(), "identity: falha ao registrar usuário", "error", err)
+		httputil.Err(w, http.StatusInternalServerError, "REGISTER_FAILED", "não foi possível criar a conta")
 		return
 	}
 	httputil.Created(w, result)

@@ -86,7 +86,7 @@ export function LoginForm({ mode }: LoginFormProps) {
                 id="password"
                 name="password"
                 required
-                minLength={6}
+                minLength={isLogin ? undefined : 8}
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Sua senha"
               />
@@ -112,7 +112,7 @@ export function LoginForm({ mode }: LoginFormProps) {
                   id="confirmPassword"
                   name="confirmPassword"
                   required
-                  minLength={6}
+                  minLength={8}
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                 />
@@ -121,7 +121,7 @@ export function LoginForm({ mode }: LoginFormProps) {
           )}
 
           {state?.error && (
-            <div className="text-destructive text-sm font-medium">
+            <div role="alert" className="text-destructive text-sm font-medium">
               {state.error}
             </div>
           )}

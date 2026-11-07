@@ -48,6 +48,28 @@ func TestHandler_Register(t *testing.T) {
 	assert.NotEmpty(t, data["refresh_token"])
 }
 
+func TestHandler_Register_EmailDuplicado(t *testing.T) {
+	router, svc := newTestHandler(t)
+	_, err := svc.Register(context.Background(), "dup@test.com", "senha1234")
+	require.NoError(t, err)
+
+	body, _ := json.Marshal(map[string]string{"email": "dup@test.com", "password": "senha1234"})
+	req := httptest.NewRequest("POST", "/auth/register", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+	var resp struct {
+		Error struct{ Code, Message string } `json:"error"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "EMAIL_TAKEN", resp.Error.Code)
+	assert.Equal(t, "este e-mail já está cadastrado", resp.Error.Message)
+	assert.NotContains(t, w.Body.String(), "identity.")
+}
+
 func TestHandler_Login(t *testing.T) {
 	router, svc := newTestHandler(t)
 	svc.Register(context.Background(), "login@test.com", "senha1234")
