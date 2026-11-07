@@ -64,6 +64,7 @@ async function renderPage(params: Record<string, string> = {}) {
   return render(await ReceivablesPage({ searchParams: Promise.resolve(params) }))
 }
 const rowOf = (name: string) => within(screen.getByRole('table')).getByText(name).closest('tr')!
+const topButton = () => screen.getAllByRole('button', { name: 'Registrar pagamento' })[0]
 
 beforeEach(() => {
   goFetch.mockReset()
@@ -118,11 +119,19 @@ describe('Recebimentos', () => {
     expect(rowOf('Carla Dias')).toHaveTextContent('Pago')
   })
 
-  it('pago tem Recibo; aberto tem Registrar pagamento', async () => {
+  it('uma ação por linha: Recibo, Cobrar ou Enviar cobrança', async () => {
     mockApi()
     await renderPage()
     expect(within(rowOf('Carla Dias')).getByRole('link', { name: 'Recibo' })).toHaveAttribute('href', '/financial/receivables/p4/receipt')
-    expect(within(rowOf('Marina Souza')).getByRole('button', { name: 'Registrar pagamento' })).toBeInTheDocument()
+    expect(within(rowOf('Bruno Lima')).getByRole('link', { name: 'Cobrar' })).toHaveAttribute('href', '/financial/receivables/p3?enviar=1')
+    expect(within(rowOf('Marina Souza')).getByRole('link', { name: 'Enviar cobrança' })).toHaveAttribute('href', '/financial/receivables/p1?enviar=1')
+    expect(within(rowOf('Marina Souza')).queryByRole('button', { name: 'Registrar pagamento' })).toBeNull()
+  })
+
+  it('o nome do inquilino leva ao detalhe', async () => {
+    mockApi()
+    await renderPage()
+    expect(within(rowOf('Marina Souza')).getByRole('link', { name: 'Marina Souza' })).toHaveAttribute('href', '/financial/receivables/p1')
   })
 
   it('chips com contagem e sem "Aguardando confirmação"', async () => {
@@ -175,39 +184,40 @@ describe('Recebimentos', () => {
   })
 })
 
-describe('Registrar pagamento', () => {
-  it('pela linha: cobrança escolhida e data de hoje', async () => {
+describe('Registrar pagamento (botão do topo)', () => {
+  it('abre com a primeira cobrança aberta e a data de hoje', async () => {
     mockApi()
     await renderPage()
-    await userEvent.click(within(rowOf('Marina Souza')).getByRole('button', { name: 'Registrar pagamento' }))
+    await userEvent.click(topButton())
     const d = screen.getByRole('dialog', { name: 'Registrar pagamento' })
-    expect(within(d).getByLabelText('Cobrança')).toHaveTextContent('Marina Souza')
+    expect(within(d).getByLabelText('Cobrança')).toHaveTextContent('Bruno Lima')
     expect(within(d).getByLabelText('Data do pagamento')).toHaveValue('2026-11-07')
+    expect(within(d).getByLabelText('Forma de pagamento')).toHaveTextContent('Pix')
   })
 
   it('atrasada mostra o total com multa e juros', async () => {
     mockApi()
     await renderPage()
-    await userEvent.click(within(rowOf('Bruno Lima')).getByRole('button', { name: 'Registrar pagamento' }))
+    await userEvent.click(topButton())
     expect(screen.getByRole('status')).toHaveTextContent('R$ 1.591,33')
   })
 
-  it('pelo topo lista só as abertas', async () => {
+  it('lista só as abertas', async () => {
     mockApi()
     await renderPage()
-    await userEvent.click(screen.getAllByRole('button', { name: 'Registrar pagamento' })[0])
+    await userEvent.click(topButton())
     await userEvent.click(screen.getByLabelText('Cobrança'))
     const opts = await screen.findAllByRole('option')
     expect(opts).toHaveLength(4)
     expect(opts.map((o) => o.textContent).join()).not.toContain('Carla Dias')
   })
 
-  it('confirma: chama a action com o bruto e a data, avisa e recarrega', async () => {
+  it('confirma: chama a action com o bruto e os campos, avisa e recarrega', async () => {
     mockApi()
     await renderPage()
-    await userEvent.click(within(rowOf('Marina Souza')).getByRole('button', { name: 'Registrar pagamento' }))
+    await userEvent.click(topButton())
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar pagamento' }))
-    await waitFor(() => expect(payReceivable).toHaveBeenCalledWith('p1', 1850, { paid_date: '2026-11-07' }))
+    await waitFor(() => expect(payReceivable).toHaveBeenCalledWith('p3', 1550, { paid_date: '2026-11-07', payment_method: 'PIX', discount_amount: '', payment_note: '' }))
     expect(toast.success).toHaveBeenCalled()
     expect(refresh).toHaveBeenCalled()
   })
@@ -216,7 +226,7 @@ describe('Registrar pagamento', () => {
     payReceivable.mockResolvedValue({ error: 'Esta cobrança já foi baixada.' })
     mockApi()
     await renderPage()
-    await userEvent.click(within(rowOf('Marina Souza')).getByRole('button', { name: 'Registrar pagamento' }))
+    await userEvent.click(topButton())
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar pagamento' }))
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Esta cobrança já foi baixada.'))
     expect(screen.getByRole('dialog')).toBeInTheDocument()

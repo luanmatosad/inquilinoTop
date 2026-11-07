@@ -7,6 +7,10 @@ import {
   toQuery,
   expenseFormSchema,
   toExpensePayload,
+  registerPaymentSchemaFor,
+  toPaymentPayload,
+  agreementSchemaFor,
+  toAgreementPayload,
 } from '@/lib/financial-schemas'
 
 describe('payExpenseSchema', () => {
@@ -81,5 +85,66 @@ describe('expenseFormSchema', () => {
     const p = toExpensePayload({ ...base, paid: true, paid_date: '2026-11-02' } as never)
     expect(p).toMatchObject({ description: 'Pintura da sala', amount: 800, due_date: '2026-11-12T00:00:00Z', category: 'MAINTENANCE', paid_date: '2026-11-02T00:00:00Z' })
     expect(p).not.toHaveProperty('unit_id')
+  })
+})
+
+describe('registerPaymentSchemaFor', () => {
+  const base = { paid_date: '2026-11-02', payment_method: 'PIX' as const }
+  const schema = registerPaymentSchemaFor(1850)
+
+  it('aceita o mínimo e usa Pix por padrão no payload', () => {
+    const r = schema.safeParse({ paid_date: '2026-11-02' })
+    expect(r.success).toBe(true)
+    if (r.success) expect(toPaymentPayload(r.data, 1850).payment_method).toBe('PIX')
+  })
+  it('exige a data', () => expect(schema.safeParse({ ...base, paid_date: '' }).success).toBe(false))
+  it('forma só da lista', () => {
+    expect(schema.safeParse({ ...base, payment_method: 'BITCOIN' }).success).toBe(false)
+    for (const m of ['PIX', 'CASH', 'TRANSFER', 'BOLETO', 'OTHER']) expect(schema.safeParse({ ...base, payment_method: m }).success).toBe(true)
+  })
+  it('desconto: vazio ou zero ok, negativo, texto e acima do devido não', () => {
+    expect(schema.safeParse({ ...base, discount_amount: '' }).success).toBe(true)
+    expect(schema.safeParse({ ...base, discount_amount: '0' }).success).toBe(true)
+    expect(schema.safeParse({ ...base, discount_amount: '50,00' }).success).toBe(true)
+    expect(schema.safeParse({ ...base, discount_amount: '1850' }).success).toBe(true)
+    for (const v of ['-1', 'abc', '1850,01']) expect(schema.safeParse({ ...base, discount_amount: v }).success).toBe(false)
+  })
+  it('observação até 500 caracteres', () => {
+    expect(schema.safeParse({ ...base, payment_note: 'a'.repeat(500) }).success).toBe(true)
+    expect(schema.safeParse({ ...base, payment_note: 'a'.repeat(501) }).success).toBe(false)
+  })
+  it('payload leva forma, desconto numérico e observação; omite vazios', () => {
+    const r = schema.safeParse({ paid_date: '2026-11-02', payment_method: 'CASH', discount_amount: '50,00', payment_note: ' portaria ' })
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(toPaymentPayload(r.data, 1850)).toEqual({
+        status: 'PAID', paid_date: '2026-11-02T00:00:00Z', gross_amount: 1850,
+        payment_method: 'CASH', discount_amount: 50, payment_note: 'portaria',
+      })
+    }
+    const v = schema.safeParse({ paid_date: '2026-11-02', payment_method: 'PIX', discount_amount: '', payment_note: '' })
+    if (v.success) {
+      const p = toPaymentPayload(v.data, 1850)
+      expect(p).not.toHaveProperty('discount_amount')
+      expect(p).not.toHaveProperty('payment_note')
+    }
+  })
+})
+
+describe('agreementSchemaFor', () => {
+  const schema = agreementSchemaFor('2026-11-07')
+  it('exige data posterior a hoje', () => {
+    expect(schema.safeParse({ new_due_date: '2026-11-12', agreed_amount: '1585,13' }).success).toBe(true)
+    for (const d of ['2026-11-07', '2026-11-01', '', 'x']) expect(schema.safeParse({ new_due_date: d, agreed_amount: '100' }).success).toBe(false)
+  })
+  it('valor maior que zero', () => {
+    for (const v of ['', '0', '-5', 'abc']) expect(schema.safeParse({ new_due_date: '2026-11-12', agreed_amount: v }).success).toBe(false)
+  })
+  it('payload com data RFC3339, valor numérico e observação', () => {
+    const r = schema.safeParse({ new_due_date: '2026-11-12', agreed_amount: '1585,13', note: 'WhatsApp' })
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(toAgreementPayload(r.data)).toEqual({ new_due_date: '2026-11-12T00:00:00Z', agreed_amount: 1585.13, note: 'WhatsApp' })
+    }
   })
 })

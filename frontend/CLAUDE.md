@@ -30,6 +30,7 @@ src/middleware.ts             # Auth: redireciona não-autenticados para /login
 | `/leases`, `/leases/[id]` | Contratos (Go API): lista com indicadores; detalhe sem abas (`?editar=1`, `?reajustar=1`, `?encerrar=1`). `/leases?novo=1` abre a criação |
 | `/units/[id]` | Detalhe de unidade (Go API): resumo do contrato ativo e "Criar contrato" |
 | `/financial/receivables`, `/financial/payables` | Recebimentos e Despesas (Go API): por mês (`?mes=AAAA-MM`), com indicadores e chips (`?situacao=`). `/financial/payables?novo=1` abre o lançamento de despesa |
+| `/financial/receivables/[id]` | Detalhe da cobrança (Go API): linha do tempo, valor atualizado, enviar cobrança (`?enviar=1`), registrar pagamento (`?pagar=1`), negociar atraso (`?acordo=1`); `/receipt` é o recibo numerado |
 | `/financeiro/dashboard` | Dashboard financeiro (stub) |
 | `/financeiro/receber`, `/pagar`, `/repasses`, `/comissoes`, `/conciliacao` | Financeiro (stub) |
 | `/reports`, `/integrations` | Placeholders (`ComingSoon`), com item de menu no canvas e sem tela ainda |
@@ -79,6 +80,16 @@ O canvas "ImoviFlow — Telas" é a fonte da verdade da navegação (change `red
 - **Ações:** Registrar pagamento (`ReceivablesList`, `payReceivable`) e Recibo; Dar baixa e Desfazer pagamento (`PayablesList`, `payExpense`/`unpayExpense`); Lançar despesa em painel (`ExpenseFormSheet`, `createPayable`). "Já paguei" manda `paid_date` e o backend cria a despesa já `PAID` numa só operação.
 - **Fora desta etapa:** Aguardando confirmação, Confirmar, Cobrar e Enviar cobrança (fluxo 04), Exportar, repetir todo mês, comprovante, despesa de imóvel inteiro e categorias editáveis (a categoria "Limpeza" do canvas não existe no enum). A baixa em lote foi removida porque o canvas não a prevê.
 - `ExpenseDialog` e `ExpenseList` continuam em `/units/[id]` com a action antiga `createExpense`.
+
+## Ciclo de cobrança manual (cobranca-manual)
+
+- **Só o dono, sem página pública.** O link do inquilino, "já paguei", Aguardando confirmação e Confirmar são a onda B.
+- **Enviar cobrança** (`SendChargeDialog`): a mensagem é montada no cliente (`buildChargeMessage`) com o Pix copia-e-cola dentro do texto, editável; "Abrir WhatsApp" (`whatsappUrl(phone, texto)`) e "Abrir e-mail" (`mailtoUrl`) só abrem o app. O sistema não sabe se foi enviado: "Marcar como enviada" grava o evento (`SENT`, ou `REMINDER` se atrasada).
+- **Pix estático:** `GET /payments/{id}/pix` (backend, `pkg/pix`) com a chave de `/settings/financial`; 422 `PIX_KEY_NOT_CONFIGURED` vira mensagem sem o código. A chave deve estar como no banco (CPF/CNPJ só dígitos, telefone com `+55`); o backend só tira a pontuação de CPF/CNPJ.
+- **Linha do tempo** (`buildTimeline`): eventos do backend (`SENT`, `REMINDER`, `AGREEMENT`, `PAID`) mais os marcos calculados Criada e Venceu em. "por você" compara `actor_id` com o `owner_id` do JWT (`sessionUserId`, só para rotular).
+- **Registrar pagamento** (`RegisterPaymentDialog`): forma, desconto e observação; o valor é sempre o total devido (sem pagamento parcial). O limite do desconto é o total devido hoje; o backend confere de novo (`INVALID_DISCOUNT`).
+- **Negociar atraso** (`AgreementSheet`): nova data e valor combinado; troca `due_date` e `gross_amount` e preserva o original no evento. Sem Parcelar nem pausar lembretes.
+- **Recibo:** número `0001/2026` vem do backend; valor por extenso em `lib/valor-por-extenso.ts`; "Baixar PDF" é `window.print()` (o usuário escolhe "Salvar como PDF").
 
 ## Auth — MIGRADO para Go
 

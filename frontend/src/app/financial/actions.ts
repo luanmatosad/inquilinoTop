@@ -6,12 +6,16 @@ import { goErrorInfo } from '@/lib/go/errors'
 import {
   expenseFormSchema,
   payExpenseSchema,
-  payReceivableSchema,
+  registerPaymentSchemaFor,
+  toPaymentPayload,
+  agreementSchemaFor,
+  toAgreementPayload,
   toExpensePayload,
   toPayExpensePayload,
   type ExpenseFormValues,
   type PayExpenseFormValues,
-  type PayReceivableFormValues,
+  type RegisterPaymentValues,
+  type AgreementFormValues,
 } from '@/lib/financial-schemas'
 import { toRfc3339 } from '@/lib/form-utils'
 export type {
@@ -211,6 +215,24 @@ function revalidateFinancial() {
   revalidatePath('/financial/dashboard')
 }
 
+/** Registra o envio (SENT) ou o lembrete (REMINDER) da cobrança na linha do tempo. */
+export async function recordPaymentEvent(
+  id: string,
+  kind: 'SENT' | 'REMINDER',
+  channel: 'WHATSAPP' | 'EMAIL' | 'COPY',
+): Promise<FinancialActionResponse> {
+  try {
+    await goFetch(`/api/v1/payments/${id}/events`, { method: 'POST', body: JSON.stringify({ kind, channel }) })
+    revalidatePath(`/financial/receivables/${id}`)
+    return { success: true }
+  } catch (error) {
+    const { code } = goErrorInfo(error)
+    if (code === 'ALREADY_PAID') return { error: 'Esta cobrança já está paga.' }
+    console.error('Erro ao registrar envio da cobrança:', error)
+    return { error: 'Erro ao registrar o envio.' }
+  }
+}
+
 /** Lança uma despesa por unidade; com `paid` e `paid_date`, ela nasce paga (uma só chamada ao backend). */
 export async function createPayable(values: ExpenseFormValues): Promise<FinancialActionResponse> {
   const validated = expenseFormSchema.safeParse(values)
@@ -260,23 +282,55 @@ export async function unpayExpense(id: string): Promise<FinancialActionResponse>
   }
 }
 
-/** Dá baixa em uma cobrança; o backend recalcula multa, juros e IRRF pela data informada. */
-export async function payReceivable(id: string, grossAmount: number, values: PayReceivableFormValues): Promise<FinancialActionResponse> {
-  const validated = payReceivableSchema.safeParse(values)
+/** Registra o pagamento de uma cobrança; o backend recalcula multa, juros, desconto e IRRF pela data informada. */
+export async function payReceivable(id: string, grossAmount: number, values: RegisterPaymentValues): Promise<FinancialActionResponse> {
+  // O limite do desconto (valor devido hoje) é conferido pelo backend; aqui só o formato.
+  const validated = registerPaymentSchemaFor(Number.MAX_SAFE_INTEGER).safeParse(values)
   if (!validated.success) {
     return { error: 'Erro de validação. Verifique os campos.', fieldErrors: validated.error.flatten().fieldErrors }
   }
   try {
     await goFetch('/api/v1/payments/' + id, {
       method: 'PUT',
-      body: JSON.stringify({ status: 'PAID', paid_date: toRfc3339(validated.data.paid_date), gross_amount: grossAmount }),
+      body: JSON.stringify(toPaymentPayload(validated.data, grossAmount)),
     })
     revalidateFinancial()
+    revalidatePath(`/financial/receivables/${id}`)
     return { success: true }
   } catch (error) {
     const { code } = goErrorInfo(error)
     if (code === 'ALREADY_PAID') return { error: 'Esta cobrança já foi baixada.' }
+    if (code === 'INVALID_DISCOUNT') {
+      const message = 'O desconto não pode passar do valor devido.'
+      return { error: message, fieldErrors: { discount_amount: [message] } }
+    }
     console.error('Erro ao dar baixa na cobrança:', error)
     return { error: 'Erro ao dar baixa na cobrança.' }
+  }
+}
+
+/** Acordo de atraso: novo vencimento e valor combinado. */
+export async function createAgreement(id: string, values: AgreementFormValues, today: string): Promise<FinancialActionResponse> {
+  const validated = agreementSchemaFor(today).safeParse(values)
+  if (!validated.success) {
+    return { error: 'Erro de validação. Verifique os campos.', fieldErrors: validated.error.flatten().fieldErrors }
+  }
+  try {
+    await goFetch(`/api/v1/payments/${id}/agreement`, { method: 'POST', body: JSON.stringify(toAgreementPayload(validated.data)) })
+    revalidateFinancial()
+    revalidatePath(`/financial/receivables/${id}`)
+    return { success: true }
+  } catch (error) {
+    const { code } = goErrorInfo(error)
+    const rule: Record<string, { message: string; field?: string }> = {
+      INVALID_AGREEMENT_DATE: { message: 'O novo vencimento deve ser depois de hoje.', field: 'new_due_date' },
+      INVALID_AGREEMENT: { message: 'Valor combinado inválido.', field: 'agreed_amount' },
+      ALREADY_PAID: { message: 'Esta cobrança já está paga.' },
+      PAYMENT_HAS_CHARGE: { message: 'Esta cobrança já foi emitida pelo provedor e não aceita acordo.' },
+    }
+    const r = code ? rule[code] : undefined
+    if (r) return { error: r.message, fieldErrors: r.field ? { [r.field]: [r.message] } : undefined }
+    console.error('Erro ao salvar acordo:', error)
+    return { error: 'Erro ao salvar o acordo.' }
   }
 }

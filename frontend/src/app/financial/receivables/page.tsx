@@ -92,6 +92,7 @@ export default async function ReceivablesPage({ searchParams }: { searchParams: 
       due: dayMonth(p.due_date),
       amount: formatCurrency(p.gross_amount),
       grossAmount: p.gross_amount,
+      totalDue: Math.round((p.gross_amount + (r.situation === "LATE" ? (p.late_fee_amount ?? 0) + (p.interest_amount ?? 0) : 0)) * 100) / 100,
       updatedTotal:
         r.situation === 'LATE' ? formatCurrency(p.gross_amount + (p.late_fee_amount ?? 0) + (p.interest_amount ?? 0)) : undefined,
       situation: r.situation,

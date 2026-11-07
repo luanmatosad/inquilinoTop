@@ -64,6 +64,62 @@ export const payReceivableSchema = z.object({
 
 export type PayReceivableFormValues = z.infer<typeof payReceivableSchema>
 
+// ---------- Registrar pagamento (forma, desconto e observação) ----------
+
+export const PAYMENT_METHODS = ["PIX", "CASH", "TRANSFER", "BOLETO", "OTHER"] as const
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
+
+/** Schema do diálogo Registrar pagamento; `totalDue` é o valor devido hoje (limite do desconto). */
+export const registerPaymentSchemaFor = (totalDue: number) =>
+  z.object({
+    paid_date: z.string().regex(DATE, "Informe a data do pagamento"),
+    payment_method: z.enum(PAYMENT_METHODS, { message: "Escolha a forma de pagamento" }).default("PIX"),
+    discount_amount: z
+      .string()
+      .optional()
+      .refine((v) => !v || (Number.isFinite(parseDecimal(v)) && parseDecimal(v) >= 0), "Informe um valor válido")
+      .refine((v) => !v || !Number.isFinite(parseDecimal(v)) || parseDecimal(v) <= totalDue, "O desconto não pode passar do valor devido"),
+    payment_note: z.string().max(500, "No máximo 500 caracteres").optional(),
+  })
+
+export type RegisterPaymentValues = z.input<ReturnType<typeof registerPaymentSchemaFor>>
+type RegisterPaymentParsed = z.output<ReturnType<typeof registerPaymentSchemaFor>>
+
+/** Corpo do `PUT /payments/{id}` que marca a cobrança como paga. */
+export function toPaymentPayload(v: RegisterPaymentParsed, grossAmount: number) {
+  return compact({
+    status: "PAID",
+    paid_date: toRfc3339(v.paid_date),
+    gross_amount: grossAmount,
+    payment_method: v.payment_method ?? "PIX",
+    discount_amount: v.discount_amount ? parseDecimal(v.discount_amount) : undefined,
+    payment_note: v.payment_note?.trim() || undefined,
+  })
+}
+
+// ---------- Negociar atraso ----------
+
+/** `today` é a data de hoje em YYYY-MM-DD; a nova data precisa ser posterior. */
+export const agreementSchemaFor = (today: string) =>
+  z.object({
+    new_due_date: z
+      .string()
+      .regex(DATE, "Informe o novo vencimento")
+      .refine((d) => d > today, "O novo vencimento deve ser depois de hoje"),
+    agreed_amount: z.string().refine((v) => Number.isFinite(parseDecimal(v)) && parseDecimal(v) > 0, "Informe um valor maior que zero"),
+    note: z.string().max(500, "No máximo 500 caracteres").optional(),
+  })
+
+export type AgreementFormValues = z.input<ReturnType<typeof agreementSchemaFor>>
+
+export function toAgreementPayload(v: z.output<ReturnType<typeof agreementSchemaFor>>) {
+  return compact({
+    new_due_date: toRfc3339(v.new_due_date),
+    agreed_amount: parseDecimal(v.agreed_amount),
+    note: v.note?.trim() || undefined,
+  })
+}
+
 // ---------- Filtros das telas ----------
 
 export const EXPENSE_STATUSES = ["PENDING", "LATE", "PAID"] as const
