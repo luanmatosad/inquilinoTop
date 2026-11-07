@@ -27,7 +27,8 @@ src/middleware.ts             # Auth: redireciona não-autenticados para /login
 | `/login` | Login via Go API |
 | `/properties`, `/properties/[id]` | Imóveis (Go API): lista em tabela com indicadores; detalhe em abas (`?aba=unidades\|informacoes`). `/properties/new` e `/properties/[id]/edit` só redirecionam |
 | `/tenants`, `/tenants/[id]` | Inquilinos (Go API): lista em tabela com cobrança do mês; detalhe sem abas (`?editar=1` abre a edição) |
-| `/units/[id]` | Detalhe de unidade (Supabase) |
+| `/leases`, `/leases/[id]` | Contratos (Go API): lista com indicadores; detalhe sem abas (`?editar=1`, `?reajustar=1`, `?encerrar=1`). `/leases?novo=1` abre a criação |
+| `/units/[id]` | Detalhe de unidade (Go API): resumo do contrato ativo e "Criar contrato" |
 | `/financeiro/dashboard` | Dashboard financeiro (stub) |
 | `/financeiro/receber`, `/pagar`, `/repasses`, `/comissoes`, `/conciliacao` | Financeiro (stub) |
 | `/reports`, `/integrations` | Placeholders (`ComingSoon`), com item de menu no canvas e sem tela ainda |
@@ -48,7 +49,7 @@ O canvas "ImoviFlow — Telas" é a fonte da verdade da navegação (change `red
 - **Ocupação** (alugada/vaga, inquilino, "desde"): função pura `src/lib/property-occupancy.ts`, que junta imóveis + contratos `ACTIVE` + inquilinos no servidor Next. Contratos fora do ar degradam para "—" em vez de derrubar a tela. `/leases` e `/tenants` não paginam, então se a base crescer essa regra deve migrar para o backend.
 - **Tipos:** `RESIDENTIAL`, `COMMERCIAL` e `SINGLE` (rótulo "Casa"). "Terreno" do canvas mobile não existe no domínio.
 - **Endereço:** `number` e `complement` são colunas próprias; `formatPropertyAddress` compõe o texto de exibição.
-- Fora desta etapa: preenchimento do endereço pelo CEP, abas Despesas e Recebimento do detalhe, "Aluguel de referência" da unidade (entra com Contratos).
+- Fora desta etapa: preenchimento do endereço pelo CEP, abas Despesas e Recebimento do detalhe.
 
 ## Inquilinos (redesign)
 
@@ -57,6 +58,17 @@ O canvas "ImoviFlow — Telas" é a fonte da verdade da navegação (change `red
 - **Situação de cobrança** (Atrasado, Pago, Previsto, Sem contrato): `buildTenantOverview` (`lib/tenant-overview.ts`) junta inquilinos, contratos `ACTIVE`, imóveis e pagamentos no servidor Next. Busca o mês corrente (`/payments?from&to`, fuso `America/Sao_Paulo`) e os atrasados (`/payments?status=LATE`). Atraso de qualquer mês vence o resto; só `RENT` decide Pago/Previsto. Falha de contratos, imóveis ou pagamentos degrada para "—" com aviso. Nenhuma lista pagina: se a base crescer, mover para o backend.
 - **Documento:** CPF/CNPJ aparece mascarado (`maskDocumentPartial`) na lista e no detalhe, e a máscara é aplicada **no servidor**. O documento completo só chega ao navegador no formulário de edição aberto.
 - **Fora desta etapa:** Fiador (vai com Contratos), "Aguardando confirmação"/"Confirmar pagamento" (fluxo 04), abas Extrato e Documentos, próximo reajuste. O histórico de contratos do inquilino passou a viver em Contratos.
+
+## Contratos (redesign)
+
+- **Painéis por URL:** `/leases?novo=1` (aceita `&inquilino=<id>` e `&unidade=<id>`) abre a criação; no detalhe, `?editar=1` (`LeaseFormSheet`), `?reajustar=1` (`ReadjustSheet`) e `?encerrar=1` (`EndLeaseDialog`, modal). Fechar tira só o parâmetro. Não há Renovar nem aditivo (o aditivo é a change futura `contrato-aditivo`).
+- **`PUT /leases/{id}` é substituição total:** a action `updateLease` lê o contrato atual no servidor e devolve o que a tela não mostra (caução, ano do IPTU, status) com `preserveLeaseFields` (`lib/lease-form.ts`). Nunca remova isso sem mudar o backend.
+- **Juros:** a tela usa % ao mês; o backend guarda % ao dia. `monthlyToDaily`/`dailyToMonthly` (`lib/interest.ts`, ÷30 e ×30). Multa 2% e juros 1% ao mês são o padrão fixo do painel.
+- **Próx. reajuste:** vem calculado do backend (`next_readjustment`, dia 1). "Pendente" = mês anterior ao corrente; "Reajuste em 90 dias" = do início do mês corrente até hoje+90 (`lib/lease-overview.ts`, fuso `America/Sao_Paulo`).
+- **Reajuste atualiza as cobranças futuras** `PENDING` sem cobrança emitida (ADR payment-0004); o painel mostra quantas foram atualizadas e quantas precisam de revisão.
+- **Encerrar:** corpo `{end_date, reason}`; a data nunca estende o prazo e cobranças pendentes depois dela são canceladas.
+- **Contrato assinado:** upload por rota Next (`/api/leases/[id]/documents`, PDF/DOC/DOCX até 10 MB) e download por `/api/documents/[id]`, ambos repassando o token httpOnly.
+- **Aluguel de referência** da unidade (`reference_rent`) sugere o aluguel ao criar o contrato ("Sugerido pela unidade.").
 
 ## Auth — MIGRADO para Go
 
@@ -81,7 +93,7 @@ Todas as actions em `src/app/<módulo>/actions.ts`:
 | identity/auth | ✓ | **MIGRADO** — usa `src/lib/go/client.ts` |
 | property + unit | ✓ | ainda Supabase |
 | tenant | ✓ | ainda Supabase |
-| lease | ✓ | ainda Supabase |
+| lease | ✓ | **MIGRADO** — Go API |
 | payment | ✓ | ainda Supabase |
 | expense | ✓ | ainda Supabase |
 | support | ✓ | ainda Supabase (actions em `/support/actions.ts`) |

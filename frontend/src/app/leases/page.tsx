@@ -1,217 +1,190 @@
-import { redirect } from "next/navigation"
-import { Suspense } from "react"
 import Link from "next/link"
-import { cookies } from "next/headers"
-import { Search, Filter, Eye, Building2, CheckCircle, Archive, AlertCircle } from "lucide-react"
+import { Plus, Search } from "lucide-react"
+
 import { goFetch } from "@/lib/go/client"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { formatCurrency } from "@/lib/utils"
+import { formatDateBR, formatMonthYear } from "@/lib/date-format"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { getActiveTenants, getActivePropertiesWithUnits } from "./actions"
-import { CreateLeaseDialog } from "@/components/leases/CreateLeaseDialog"
+  buildLeaseIndicators,
+  buildLeaseRows,
+  isReadjustSoon,
+  isReadjustmentPending,
+  type OverviewLeaseItem,
+} from "@/lib/lease-overview"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { LeaseFilters } from "@/components/leases/LeaseFilters"
+import { LeaseFormSheet } from "@/components/leases/LeaseFormSheet"
+import { LeaseKpis } from "@/components/leases/LeaseKpis"
+import { LeaseTable, type LeaseTableRow } from "@/components/leases/LeaseTable"
+import { plural } from "@/lib/property-format"
 
-interface Lease {
-  id: string
-  unit_id: string
-  tenant_id: string
-  start_date: string
-  end_date?: string | null
-  rent_amount: number
-  status: "ACTIVE" | "ENDED" | "CANCELED"
-}
-
-interface Tenant {
+type ApiTenant = { id: string; name: string }
+type ApiProperty = {
   id: string
   name: string
-  document?: string
+  units?: { id: string; label: string; reference_rent?: number | null }[] | null
+}
+type SearchParams = { q?: string; situacao?: string; novo?: string; inquilino?: string; unidade?: string }
+
+const STATUS_LABEL: Record<string, string> = { ACTIVE: "Ativo", ENDED: "Encerrado", CANCELED: "Cancelado" }
+
+function Message({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-col items-center gap-2 rounded-xl bg-muted px-4 py-12 text-center">{children}</div>
 }
 
-interface PropertyWithUnits {
-  id: string
-  name: string
-  units: { id: string; label: string }[]
-}
+export default async function LeasesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const { q, situacao, novo, inquilino, unidade } = await searchParams
 
-const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
-  ACTIVE: { label: "Ativo", variant: "default" },
-  ENDED: { label: "Encerrado", variant: "secondary" },
-  CANCELED: { label: "Cancelado", variant: "destructive" },
-}
+  // Contratos é obrigatório; inquilinos e imóveis só enriquecem a lista.
+  const [leasesRes, tenantsRes, propertiesRes] = await Promise.allSettled([
+    goFetch<OverviewLeaseItem[]>("/api/v1/leases", {}),
+    goFetch<ApiTenant[]>("/api/v1/tenants", {}),
+    goFetch<ApiProperty[]>("/api/v1/properties", {}),
+  ])
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
-
-// Datas do backend são DATE (meia-noite UTC): formatar em UTC evita voltar um dia no fuso do Brasil.
-const formatDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" })
-
-async function LeasesList({
-  search,
-  status,
-  tenants,
-  properties,
-}: {
-  search?: string
-  status?: string
-  tenants: Tenant[]
-  properties: PropertyWithUnits[]
-}) {
-  let leases: Lease[]
-  try {
-    leases = (await goFetch<Lease[]>("/api/v1/leases", {})) ?? []
-  } catch (error) {
-    console.error("Erro ao buscar contratos:", error)
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3 border border-border rounded-xl bg-card">
-        <p className="text-muted-foreground">Não foi possível carregar os contratos.</p>
-        <Link href="/leases">
-          <Button variant="outline">Tentar novamente</Button>
-        </Link>
-      </div>
-    )
-  }
-
-  const unitLabel = new Map<string, string>()
-  for (const p of properties) for (const u of p.units ?? []) unitLabel.set(u.id, `${p.name} - ${u.label}`)
-  const tenantName = new Map(tenants.map((t) => [t.id, t.name]))
-
-  const total = leases.length
-  const active = leases.filter((l) => l.status === "ACTIVE").length
-  const ended = leases.filter((l) => l.status === "ENDED").length
-  const expiringSoon = leases.filter((l) => {
-    if (!l.end_date || l.status !== "ACTIVE") return false
-    const endDate = new Date(l.end_date)
-    const limit = new Date()
-    limit.setDate(limit.getDate() + 30)
-    return endDate <= limit && endDate > new Date()
-  }).length
-
-  let filtered = leases
-  if (search) {
-    const q = search.toLowerCase()
-    filtered = filtered.filter(
-      (l) => (unitLabel.get(l.unit_id) ?? "").toLowerCase().includes(q) || (tenantName.get(l.tenant_id) ?? "").toLowerCase().includes(q)
-    )
-  }
-  if (status && status !== "ALL") {
-    filtered = filtered.filter((l) => l.status === status)
-  }
-
-  if (!filtered.length) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4 border border-border rounded-xl bg-card">
-        <p className="text-muted-foreground">Nenhum contrato encontrado.</p>
-        <CreateLeaseDialog tenants={tenants} properties={properties} />
-      </div>
-    )
-  }
-
-  return (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3 mb-2"><Building2 className="w-5 h-5 text-primary" /><span className="text-sm text-muted-foreground">Total</span></div><div className="text-2xl font-bold">{total}</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3 mb-2"><CheckCircle className="w-5 h-5 text-green-600" /><span className="text-sm text-muted-foreground">Ativos</span></div><div className="text-2xl font-bold">{active}</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3 mb-2"><Archive className="w-5 h-5 text-muted-foreground" /><span className="text-sm text-muted-foreground">Encerrados</span></div><div className="text-2xl font-bold">{ended}</div></CardContent></Card>
-        <Card className="border-l-4 border-l-error"><CardContent className="p-4"><div className="flex items-center gap-3 mb-2"><AlertCircle className="w-5 h-5 text-red-600" /><span className="text-sm text-muted-foreground">Vencendo em 30 dias</span></div><div className="text-2xl font-bold">{expiringSoon}</div></CardContent></Card>
-      </div>
-
-      <Card className="overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Unidade</TableHead>
-              <TableHead>Inquilino</TableHead>
-              <TableHead>Início</TableHead>
-              <TableHead>Fim</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-center">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((lease) => (
-              <TableRow key={lease.id}>
-                <TableCell className="font-medium">{unitLabel.get(lease.unit_id) ?? "—"}</TableCell>
-                <TableCell>{tenantName.get(lease.tenant_id) ?? "—"}</TableCell>
-                <TableCell className="font-mono text-sm">{formatDate(lease.start_date)}</TableCell>
-                <TableCell className="font-mono text-sm">{lease.end_date ? formatDate(lease.end_date) : "—"}</TableCell>
-                <TableCell className="text-right font-bold text-primary">{formatCurrency(lease.rent_amount)}</TableCell>
-                <TableCell className="text-center">
-                  <Badge variant={STATUS_LABELS[lease.status]?.variant ?? "secondary"}>
-                    {STATUS_LABELS[lease.status]?.label ?? lease.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Button variant="ghost" size="icon" className="w-8 h-8" asChild>
-                    <Link href={`/leases/${lease.id}`} aria-label="Ver contrato">
-                      <Eye className="w-4 h-4" />
-                    </Link>
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
-    </>
+  const heading = (
+    <div className="flex flex-col gap-1">
+      <h1 className="text-2xl font-semibold leading-tight">Contratos</h1>
+      <p className="text-sm text-muted-foreground">Quem aluga o quê, por quanto e até quando.</p>
+    </div>
   )
-}
 
-export default async function LeasesPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
-  const cookieStore = await cookies()
-  if (!cookieStore.get("access_token")?.value) {
-    redirect("/login")
+  if (leasesRes.status === "rejected") {
+    console.error("Erro ao buscar contratos:", leasesRes.reason)
+    return (
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        {heading}
+        <Message>
+          <p className="text-muted-foreground">Não foi possível carregar os contratos.</p>
+          <Button asChild variant="outline">
+            <Link href="/leases">Tentar novamente</Link>
+          </Button>
+        </Message>
+      </div>
+    )
   }
 
-  const { q, status } = await searchParams
-  const tenants = await getActiveTenants()
-  const properties = await getActivePropertiesWithUnits()
+  const all = leasesRes.value ?? []
+  const tenantsOk = tenantsRes.status === "fulfilled"
+  const propertiesOk = propertiesRes.status === "fulfilled"
+  if (!tenantsOk) console.error("Erro ao buscar inquilinos:", tenantsRes.reason)
+  if (!propertiesOk) console.error("Erro ao buscar imóveis:", propertiesRes.reason)
+
+  const now = new Date()
+  const rowsAll = buildLeaseRows({
+    leases: all,
+    tenants: tenantsOk ? (tenantsRes.value ?? []) : [],
+    properties: propertiesOk ? (propertiesRes.value ?? []) : [],
+  })
+  const kpis = buildLeaseIndicators(all, now)
+  const readjustWhere = rowsAll
+    .filter((r) => isReadjustSoon(r.lease, now))
+    .map((r) => `${r.unitLabel} · ${r.propertyName}`)
+    .join(", ")
+
+  const term = q?.toLowerCase().trim() ?? ""
+  const shown = rowsAll.filter(
+    (r) =>
+      (!situacao || r.lease.status === situacao) &&
+      (!term || `${r.tenantName} ${r.unitLabel} ${r.propertyName}`.toLowerCase().includes(term)),
+  )
+
+  const tableRows: LeaseTableRow[] = shown.map((r) => ({
+    id: r.lease.id,
+    unit: r.unitLabel,
+    property: r.propertyName,
+    tenant: r.tenantName,
+    start: formatDateBR(r.lease.start_date),
+    end: r.lease.end_date ? formatDateBR(r.lease.end_date) : "Sem fim",
+    rent: formatCurrency(r.lease.rent_amount),
+    readjust: isReadjustmentPending(r.lease, now) ? "pendente" : formatMonthYear(r.lease.next_readjustment),
+    readjustPending: isReadjustmentPending(r.lease, now),
+    status: r.lease.status,
+    statusLabel: STATUS_LABEL[r.lease.status] ?? r.lease.status,
+  }))
+
+  let notice: string | null = null
+  if (!tenantsOk) notice = "Inquilinos indisponíveis no momento: o nome aparece como “—”."
+  else if (!propertiesOk) notice = "Imóveis indisponíveis no momento: unidade e imóvel aparecem como “—”."
+
+  const unitOptions = (propertiesOk ? (propertiesRes.value ?? []) : []).flatMap((p) =>
+    (p.units ?? []).map((u) => ({ id: u.id, label: u.label, propertyName: p.name, referenceRent: u.reference_rent })),
+  )
+  const tenantOptions = tenantsOk ? (tenantsRes.value ?? []) : []
+  const sheet = (
+    <LeaseFormSheet
+      open={novo === "1"}
+      units={unitOptions}
+      tenants={tenantOptions}
+      defaultUnitId={unidade}
+      defaultTenantId={inquilino}
+    />
+  )
+
+  const createLink = (
+    <Button asChild>
+      <Link href="/leases?novo=1">
+        <Plus aria-hidden="true" />
+        Criar contrato
+      </Link>
+    </Button>
+  )
 
   return (
-    <div className="container py-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Contratos</h1>
-          <p className="text-muted-foreground">Gerencie contratos de locação</p>
-        </div>
-        <CreateLeaseDialog tenants={tenants} properties={properties} />
-      </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 max-md:pb-20">
+      {heading}
 
-      <Card className="p-4">
-        <form action="/leases" method="GET" className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input name="q" placeholder="Buscar por unidade ou inquilino..." defaultValue={q} className="pl-10" />
+      {all.length > 0 && (
+        <>
+          <p className="text-sm text-muted-foreground md:hidden">{plural(kpis.activeCount, "ativo", "ativos")}</p>
+          <LeaseKpis k={{ ...kpis, readjustWhere }} />
+          {notice && (
+            <p role="status" className="text-sm text-muted-foreground">
+              {notice}
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <form action="/leases" method="get" role="search" className="relative w-full max-w-80">
+              {situacao && <input type="hidden" name="situacao" value={situacao} />}
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input name="q" defaultValue={q} placeholder="Buscar inquilino ou unidade" aria-label="Buscar inquilino ou unidade" className="pl-9" />
+            </form>
+            <LeaseFilters situacao={situacao} q={q} />
+            <div className="ml-auto hidden md:block">{createLink}</div>
           </div>
-          <select
-            name="status"
-            defaultValue={status || "ALL"}
-            aria-label="Filtrar por status"
-            className="h-10 px-4 rounded-md border border-input bg-background text-sm"
-          >
-            <option value="ALL">Todos</option>
-            <option value="ACTIVE">Ativo</option>
-            <option value="ENDED">Encerrado</option>
-            <option value="CANCELED">Cancelado</option>
-          </select>
-          <Button type="submit" variant="outline" aria-label="Filtrar">
-            <Filter className="w-4 h-4" />
-          </Button>
-        </form>
-      </Card>
+        </>
+      )}
 
-      <Suspense fallback={<div className="text-center py-10">Carregando...</div>}>
-        <LeasesList search={q} status={status} tenants={tenants} properties={properties} />
-      </Suspense>
+      {all.length === 0 ? (
+        <Message>
+          <div className="text-base font-semibold">Crie seu primeiro contrato</div>
+          <p className="max-w-md text-sm text-muted-foreground">
+            Escolha a unidade e o inquilino, defina o aluguel e as cobranças saem sozinhas.
+          </p>
+          <Button asChild variant="outline" className="mt-2">
+            <Link href="/leases?novo=1">Criar contrato</Link>
+          </Button>
+        </Message>
+      ) : shown.length === 0 ? (
+        <Message>
+          <p className="text-muted-foreground">Nenhum contrato encontrado.</p>
+        </Message>
+      ) : (
+        <LeaseTable rows={tableRows} />
+      )}
+
+      {all.length > 0 && (
+        <div className="fixed inset-x-0 bottom-[69px] z-20 border-t bg-background p-3 md:hidden">
+          <Button asChild className="h-11 w-full">
+            <Link href="/leases?novo=1">
+              <Plus aria-hidden="true" />
+              Criar contrato
+            </Link>
+          </Button>
+        </div>
+      )}
+      {sheet}
     </div>
   )
 }

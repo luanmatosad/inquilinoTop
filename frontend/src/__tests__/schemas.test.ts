@@ -47,6 +47,16 @@ describe('propertySchema', () => {
   })
 })
 
+describe('unitSchema: aluguel de referência', () => {
+  it('opcional, maior que zero, vira número no payload', () => {
+    expect(unitSchema.safeParse({ label: '101' }).success).toBe(true)
+    expect(unitSchema.safeParse({ label: '101', reference_rent: '0' }).success).toBe(false)
+    expect(unitSchema.safeParse({ label: '101', reference_rent: 'abc' }).success).toBe(false)
+    expect(toUnitPayload({ label: '101', reference_rent: '1550,50' }).reference_rent).toBe(1550.5)
+    expect(toUnitPayload({ label: '101', reference_rent: '' }).reference_rent).toBeUndefined()
+  })
+})
+
 describe('unitSchema', () => {
   it('aceita medidas válidas', () => {
     expect(unitSchema.safeParse({ label: '101', area_m2: '54,5', bedrooms: '2', bathrooms: '1' }).success).toBe(true)

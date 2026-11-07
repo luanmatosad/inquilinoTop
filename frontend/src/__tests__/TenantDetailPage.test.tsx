@@ -150,7 +150,7 @@ describe('sem contrato', () => {
     expect(screen.getByText('Para gerar cobranças, ligue este inquilino a uma unidade.')).toBeInTheDocument()
     const create = screen.getAllByRole('link', { name: 'Criar contrato' })
     expect(create.length).toBeGreaterThanOrEqual(1)
-    for (const l of create) expect(l).toHaveAttribute('href', '/leases')
+    for (const l of create) expect(l).toHaveAttribute('href', '/leases?novo=1&inquilino=t1')
     expect(screen.queryByRole('region', { name: 'Cobrança do mês' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Contrato atual' })).not.toBeInTheDocument()
   })

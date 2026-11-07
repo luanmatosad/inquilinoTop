@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -37,6 +38,7 @@ export function UnitForm({ propertyId, initialData, onSuccess, onCancel }: UnitF
       floor: "",
       notes: "",
       area_m2: "",
+      reference_rent: "",
       bedrooms: "",
       bathrooms: "",
     },
@@ -149,6 +151,21 @@ export function UnitForm({ propertyId, initialData, onSuccess, onCancel }: UnitF
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="reference_rent"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Aluguel de referência (opcional)</FormLabel>
+              <FormControl>
+                <Input placeholder="1550,00" inputMode="decimal" {...field} value={field.value ?? ""} />
+              </FormControl>
+              <FormDescription>Aparece como sugestão ao criar o contrato.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

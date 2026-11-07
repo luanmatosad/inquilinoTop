@@ -70,6 +70,7 @@ export const unitSchema = z.object({
   floor: optionalText,
   notes: optionalText,
   area_m2: positiveDecimal,
+  reference_rent: positiveDecimal,
   bedrooms: nonNegativeInt,
   bathrooms: nonNegativeInt,
 })
@@ -82,6 +83,7 @@ export function toUnitPayload(v: UnitFormValues) {
     floor: v.floor,
     notes: v.notes,
     area_m2: v.area_m2 ? parseDecimal(v.area_m2) : undefined,
+    reference_rent: v.reference_rent ? parseDecimal(v.reference_rent) : undefined,
     bedrooms: v.bedrooms ? Number(v.bedrooms) : undefined,
     bathrooms: v.bathrooms ? Number(v.bathrooms) : undefined,
   })

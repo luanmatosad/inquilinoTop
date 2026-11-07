@@ -6,6 +6,7 @@ type UnitLike = {
   floor?: string | null
   notes?: string | null
   area_m2?: number | null
+  reference_rent?: number | null
   bedrooms?: number | null
   bathrooms?: number | null
 }
@@ -18,6 +19,7 @@ export function unitToFormValues(unit: UnitLike): UnitFormValues & { id: string 
     floor: unit.floor ?? "",
     notes: unit.notes ?? "",
     area_m2: unit.area_m2 != null ? String(unit.area_m2).replace(".", ",") : "",
+    reference_rent: unit.reference_rent != null ? String(unit.reference_rent).replace(".", ",") : "",
     bedrooms: unit.bedrooms != null ? String(unit.bedrooms) : "",
     bathrooms: unit.bathrooms != null ? String(unit.bathrooms) : "",
   }

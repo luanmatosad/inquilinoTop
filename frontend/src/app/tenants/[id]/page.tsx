@@ -124,7 +124,7 @@ export default async function TenantPage({
           )}
           {noLease && (
             <Button asChild>
-              <Link href="/leases">Criar contrato</Link>
+              <Link href={`/leases?novo=1&inquilino=${tenant.id}`}>Criar contrato</Link>
             </Button>
           )}
         </div>
@@ -177,7 +177,7 @@ export default async function TenantPage({
           <Section title="Sem contrato">
             <p className="text-muted-foreground">Para gerar cobranças, ligue este inquilino a uma unidade.</p>
             <Button asChild className="self-start">
-              <Link href="/leases">Criar contrato</Link>
+              <Link href={`/leases?novo=1&inquilino=${tenant.id}`}>Criar contrato</Link>
             </Button>
           </Section>
         )}

@@ -207,7 +207,7 @@ describe('painel de unidade', () => {
     for (const l of ['Nome da unidade', 'Andar (opcional)', 'Área (m²)', 'Quartos', 'Banheiros', 'Observações']) {
       expect(within(dialog).getByLabelText(l)).toBeInTheDocument()
     }
-    expect(within(dialog).queryByLabelText(/aluguel de referência/i)).not.toBeInTheDocument()
+    expect(within(dialog).getByLabelText(/aluguel de referência/i)).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: 'Cadastrar unidade' })).toBeInTheDocument()
   })
 

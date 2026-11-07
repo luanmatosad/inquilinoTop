@@ -43,6 +43,7 @@ interface Unit {
   floor?: string
   notes?: string
   area_m2?: number
+  reference_rent?: number
   bedrooms?: number
   bathrooms?: number
   is_active: boolean

@@ -3,6 +3,8 @@ import {
   leaseSchema,
   renewSchema,
   readjustSchema,
+  endSchema,
+  toEndPayload,
   toLeasePayload,
   toRenewPayload,
   toReadjustPayload,
@@ -47,7 +49,6 @@ describe('leaseSchema', () => {
       ...base,
       end_date: '2026-12-31',
       rent_amount: '1500,50',
-      deposit_amount: '',
       generate_payments: true,
       iptu_reimbursable: false,
       notes: '',
@@ -56,9 +57,34 @@ describe('leaseSchema', () => {
     expect(p.end_date).toBe('2026-12-31T00:00:00Z')
     expect(p.rent_amount).toBe(1500.5)
     expect(p.payment_day).toBe(5)
-    expect(p.deposit_amount).toBeUndefined()
+    expect(p.adjustment_index).toBeUndefined()
     expect(p.notes).toBeUndefined()
     expect(p.generate_payments).toBe(true)
+  })
+})
+
+describe('leaseSchema: reajuste e juros', () => {
+  it('índice só IGP-M ou IPCA; mês 1 a 12', () => {
+    expect(leaseSchema.safeParse({ ...base, adjustment_index: 'IGP-M', adjustment_month: '3' }).success).toBe(true)
+    expect(leaseSchema.safeParse({ ...base, adjustment_index: 'XYZ' }).success).toBe(false)
+    for (const m of ['0', '13', 'a']) expect(leaseSchema.safeParse({ ...base, adjustment_month: m }).success).toBe(false)
+  })
+  it('juros ao mês viram diário no payload', () => {
+    const p = toLeasePayload({ ...base, adjustment_index: 'IPCA', adjustment_month: '3', monthly_interest_percent: '1', late_fee_percent: '2' })
+    expect(p.daily_interest_percent).toBe(0.033333)
+    expect(p.late_fee_percent).toBe(2)
+    expect(p.adjustment_index).toBe('IPCA')
+    expect(p.adjustment_month).toBe(3)
+  })
+})
+
+describe('endSchema', () => {
+  it('exige data e motivo válido', () => {
+    expect(endSchema.safeParse({ end_date: '2026-11-30' }).success).toBe(false)
+    expect(endSchema.safeParse({ end_date: '2026-11-30', reason: 'XX' }).success).toBe(false)
+    const ok = endSchema.safeParse({ end_date: '2026-11-30', reason: 'TENANT_REQUEST' })
+    expect(ok.success).toBe(true)
+    if (ok.success) expect(toEndPayload(ok.data)).toEqual({ end_date: '2026-11-30', reason: 'TENANT_REQUEST' })
   })
 })
 
@@ -75,16 +101,16 @@ describe('renewSchema', () => {
 
 describe('readjustSchema', () => {
   it('percentual em % entre 0 (exclusivo) e 100', () => {
-    for (const v of ['0', '-1', '100,01', 'x', '']) {
+    for (const v of ['0', '0,09', '-1', '100,01', 'x', '']) {
       expect(readjustSchema.safeParse({ percentage: v, applied_at: '2026-06-01' }).success).toBe(false)
     }
     expect(readjustSchema.safeParse({ percentage: '5,5', applied_at: '2026-06-01' }).success).toBe(true)
   })
   it('payload envia fração (5% -> 0.05)', () => {
-    const p = toReadjustPayload({ percentage: '5', applied_at: '2026-06-01', index_name: 'IGPM', notes: '' })
+    const p = toReadjustPayload({ percentage: '5', applied_at: '2026-06-01', index_name: 'IGP-M', notes: '' })
     expect(p.percentage).toBeCloseTo(0.05, 10)
     expect(p.applied_at).toBe('2026-06-01T00:00:00Z')
-    expect(p.index_name).toBe('IGPM')
+    expect(p.index_name).toBe('IGP-M')
     expect(p.notes).toBeUndefined()
   })
 })

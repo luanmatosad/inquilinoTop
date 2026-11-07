@@ -1,250 +1,258 @@
-import { Suspense } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft, ClipboardCheck } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
+
 import { goFetch } from "@/lib/go/client"
+import { formatCurrency } from "@/lib/utils"
+import { formatDateBR } from "@/lib/date-format"
+import { maskDocumentPartial, maskPhone } from "@/lib/masks"
+import {
+  buildReadjustmentHistory,
+  buildTerms,
+  END_REASON_LABEL,
+  paymentLabel,
+  paymentMonth,
+  recentRentPayments,
+  type DetailPayment,
+  type DetailReadjustment,
+  type TermsLease,
+} from "@/lib/lease-detail"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { LeaseActions } from "@/components/leases/LeaseActions"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { EndLeaseDialog } from "@/components/leases/EndLeaseDialog"
+import { LeaseFormSheet } from "@/components/leases/LeaseFormSheet"
+import { LeaseDocuments, type LeaseDocument } from "@/components/leases/LeaseDocuments"
+import { ReadjustSheet } from "@/components/leases/ReadjustSheet"
+import type { LeaseEditData } from "@/components/leases/LeaseForm"
 
-interface Lease {
+type ApiLease = TermsLease &
+  LeaseEditData & {
+    status: "ACTIVE" | "ENDED" | "CANCELED"
+    end_reason?: string | null
+  }
+type ApiTenant = { id: string; name: string; email?: string | null; phone?: string | null; document?: string | null }
+type ApiProperty = {
   id: string
-  unit_id: string
-  tenant_id: string
-  start_date: string
-  end_date?: string | null
-  rent_amount: number
-  deposit_amount?: number | null
-  payment_day: number
-  status: "ACTIVE" | "ENDED" | "CANCELED"
-  late_fee_percent: number
-  daily_interest_percent: number
-  iptu_reimbursable: boolean
-  annual_iptu_amount?: number | null
-  notes?: string | null
+  name: string
+  units?: { id: string; label: string; reference_rent?: number | null }[] | null
 }
+type SearchParams = { editar?: string; encerrar?: string; reajustar?: string }
 
-interface Payment {
-  id: string
-  competency?: string | null
-  due_date: string
-  paid_date?: string | null
-  gross_amount: number
-  status: "PENDING" | "PAID" | "LATE"
-  type: string
-}
-
-interface Readjustment {
-  id: string
-  applied_at: string
-  old_amount: number
-  new_amount: number
-  percentage: number
-  index_name?: string | null
-  notes?: string | null
-}
-
-const STATUS: Record<Lease["status"], { label: string; variant: "default" | "secondary" | "destructive" }> = {
+const STATUS = {
   ACTIVE: { label: "Ativo", variant: "default" },
   ENDED: { label: "Encerrado", variant: "secondary" },
   CANCELED: { label: "Cancelado", variant: "destructive" },
+} as const
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section aria-label={title}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 text-sm">{children}</CardContent>
+      </Card>
+    </section>
+  )
 }
 
-const PAYMENT_STATUS: Record<Payment["status"], { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  PENDING: { label: "Pendente", variant: "outline" },
-  PAID: { label: "Pago", variant: "default" },
-  LATE: { label: "Atrasado", variant: "destructive" },
+function Unavailable({ what }: { what: string }) {
+  return <p className="text-muted-foreground">Não foi possível carregar {what}.</p>
 }
 
-const money = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v)
-// Datas do backend são DATE (meia-noite UTC): formatar em UTC evita voltar um dia no fuso do Brasil.
-const date = (v: string) => new Date(v).toLocaleDateString("pt-BR", { timeZone: "UTC" })
+export default async function LeasePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<SearchParams>
+}) {
+  const { id } = await params
+  const { editar, encerrar, reajustar } = await searchParams
 
-async function safe<T>(path: string): Promise<{ data: T | null; failed: boolean }> {
+  let lease: ApiLease | undefined
   try {
-    return { data: (await goFetch<T>(path, {})) ?? null, failed: false }
-  } catch (error) {
-    console.error("Erro ao buscar", path, error)
-    return { data: null, failed: true }
-  }
-}
-
-async function LeaseDetails({ id }: { id: string }) {
-  let lease: Lease
-  try {
-    lease = await goFetch<Lease>("/api/v1/leases/" + id, {})
+    lease = await goFetch<ApiLease>("/api/v1/leases/" + id, {})
   } catch (error) {
     console.error("Erro ao buscar contrato:", error)
-    notFound()
   }
   if (!lease) notFound()
 
-  const [payments, readjustments, properties, tenants] = await Promise.all([
-    safe<Payment[]>(`/api/v1/leases/${id}/payments`),
-    safe<Readjustment[]>(`/api/v1/leases/${id}/readjustments`),
-    safe<{ name: string; units: { id: string; label: string }[] }[]>("/api/v1/properties"),
-    safe<{ id: string; name: string }[]>("/api/v1/tenants"),
+  const [paymentsRes, readjustRes, tenantsRes, propertiesRes, docsRes] = await Promise.allSettled([
+    goFetch<DetailPayment[]>(`/api/v1/leases/${id}/payments`, {}),
+    goFetch<DetailReadjustment[]>(`/api/v1/leases/${id}/readjustments`, {}),
+    goFetch<ApiTenant[]>("/api/v1/tenants", {}),
+    goFetch<ApiProperty[]>("/api/v1/properties", {}),
+    goFetch<{ id: string; filename: string; created_at: string }[]>(`/api/v1/documents?entity_type=lease&entity_id=${id}`, {}),
   ])
+  for (const [name, r] of [["cobranças", paymentsRes], ["reajustes", readjustRes], ["inquilinos", tenantsRes], ["imóveis", propertiesRes], ["documentos", docsRes]] as const) {
+    if (r.status === "rejected") console.error(`Erro ao buscar ${name}:`, r.reason)
+  }
 
-  const unit = properties.data
-    ?.flatMap((p) => (p.units ?? []).map((u) => ({ property: p.name, label: u.label, id: u.id })))
-    .find((u) => u.id === lease.unit_id)
-  const tenant = tenants.data?.find((t) => t.id === lease.tenant_id)
+  const tenants = tenantsRes.status === "fulfilled" ? (tenantsRes.value ?? []) : []
+  const properties = propertiesRes.status === "fulfilled" ? (propertiesRes.value ?? []) : []
+  const tenant = tenants.find((t) => t.id === lease.tenant_id)
+  const unitOptions = properties.flatMap((p) =>
+    (p.units ?? []).map((u) => ({ id: u.id, label: u.label, propertyName: p.name, referenceRent: u.reference_rent })),
+  )
+  const unit = unitOptions.find((u) => u.id === lease.unit_id)
+  const where = unit ? `${unit.label} · ${unit.propertyName}` : "—"
+  const active = lease.status === "ACTIVE"
+  const st = STATUS[lease.status] ?? { label: lease.status, variant: "secondary" as const }
+
+  const documents: LeaseDocument[] =
+    docsRes.status === "fulfilled" ? (docsRes.value ?? []).map((d) => ({ id: d.id, filename: d.filename, created: formatDateBR(d.created_at) })) : []
+
+  const recent = paymentsRes.status === "fulfilled" ? recentRentPayments(paymentsRes.value ?? []) : null
+  const history = readjustRes.status === "fulfilled" ? buildReadjustmentHistory(lease, readjustRes.value ?? []) : null
+  const now = new Date()
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            {unit ? `${unit.property} - ${unit.label}` : "Contrato"}
-            <Badge variant={STATUS[lease.status]?.variant ?? "secondary"}>{STATUS[lease.status]?.label ?? lease.status}</Badge>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+      <Link href="/leases" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="size-4" aria-hidden="true" /> Voltar para contratos
+      </Link>
+
+      <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold leading-tight">
+            {where}
+            <Badge variant={st.variant}>{st.label}</Badge>
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             {tenant ? (
-              <Link href={`/tenants/${tenant.id}`} className="hover:underline">{tenant.name}</Link>
+              <Link href={`/tenants/${tenant.id}`} className="hover:underline">
+                {tenant.name}
+              </Link>
             ) : (
-              "Inquilino"
+              "—"
             )}
-            {" · "}
-            {date(lease.start_date)} {lease.end_date ? `até ${date(lease.end_date)}` : "(prazo indeterminado)"}
+            {" · desde "}
+            {formatDateBR(lease.start_date)}
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" asChild>
-            <Link href={`/inspections?lease_id=${lease.id}`}><ClipboardCheck className="mr-2 h-4 w-4" />Laudos de vistoria</Link>
-          </Button>
-          {lease.status === "ACTIVE" && (
-            <LeaseActions leaseId={lease.id} unitId={lease.unit_id} currentEndDate={lease.end_date} />
+          {!active && lease.end_date && (
+            <p className="text-sm text-muted-foreground">
+              Saída em {formatDateBR(lease.end_date)}
+              {lease.end_reason ? ` · ${END_REASON_LABEL[lease.end_reason] ?? lease.end_reason}` : ""}
+            </p>
           )}
         </div>
-      </div>
+        {active && (
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href={`/leases/${id}?editar=1`}>Editar</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/leases/${id}?reajustar=1`}>Aplicar reajuste</Link>
+            </Button>
+            <Button asChild variant="destructive">
+              <Link href={`/leases/${id}?encerrar=1`}>Encerrar contrato</Link>
+            </Button>
+          </div>
+        )}
+      </header>
 
-      <Tabs defaultValue="dados">
-        <TabsList>
-          <TabsTrigger value="dados">Dados</TabsTrigger>
-          <TabsTrigger value="cobrancas">Cobranças ({payments.data?.length ?? 0})</TabsTrigger>
-          <TabsTrigger value="reajustes">Reajustes ({readjustments.data?.length ?? 0})</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dados">
-          <Card className="p-6">
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-              <Field label="Aluguel" value={money(lease.rent_amount)} />
-              <Field label="Caução" value={lease.deposit_amount != null ? money(lease.deposit_amount) : "—"} />
-              <Field label="Dia de vencimento" value={String(lease.payment_day)} />
-              <Field label="Multa por atraso" value={`${lease.late_fee_percent}%`} />
-              <Field label="Juros diários" value={`${lease.daily_interest_percent}%`} />
-              <Field
-                label="IPTU reembolsável"
-                value={lease.iptu_reimbursable ? `Sim${lease.annual_iptu_amount != null ? ` (${money(lease.annual_iptu_amount)}/ano)` : ""}` : "Não"}
-              />
-            </dl>
-            {lease.notes && <p className="mt-6 text-sm whitespace-pre-line border-t pt-4">{lease.notes}</p>}
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="cobrancas">
-          <Card>
-            {payments.failed ? (
-              <p className="p-6 text-muted-foreground">Não foi possível carregar as cobranças.</p>
-            ) : !payments.data?.length ? (
-              <p className="p-6 text-muted-foreground">Nenhuma cobrança gerada para este contrato.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Competência</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Status</TableHead>
+      <Section title="Cobranças">
+        {!recent ? (
+          <Unavailable what="as cobranças" />
+        ) : recent.total === 0 ? (
+          <p className="text-muted-foreground">Nenhuma cobrança gerada para este contrato.</p>
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Mês</TableHead>
+                  <TableHead>Vence em</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Situação</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recent.shown.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell>{paymentMonth(p)}</TableCell>
+                    <TableCell>{formatDateBR(p.due_date)}</TableCell>
+                    <TableCell>{formatCurrency(p.gross_amount)}</TableCell>
+                    <TableCell>{paymentLabel(p, now)}</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payments.data.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell>{p.competency ?? "—"}</TableCell>
-                      <TableCell>{date(p.due_date)}</TableCell>
-                      <TableCell>{p.type === "RENT" ? "Aluguel" : p.type === "EXPENSE" ? "IPTU/Despesa" : p.type}</TableCell>
-                      <TableCell className="text-right">{money(p.gross_amount)}</TableCell>
-                      <TableCell>
-                        <Badge variant={PAYMENT_STATUS[p.status]?.variant ?? "outline"}>{PAYMENT_STATUS[p.status]?.label ?? p.status}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </Card>
-        </TabsContent>
+                ))}
+              </TableBody>
+            </Table>
+            <p className="text-xs text-muted-foreground">
+              Mostrando as {recent.shown.length} mais recentes de {recent.total}.{" "}
+              <Link href="/financial/receivables" className="underline">
+                Ver todas
+              </Link>
+            </p>
+          </>
+        )}
+      </Section>
 
-        <TabsContent value="reajustes">
-          <Card>
-            {readjustments.failed ? (
-              <p className="p-6 text-muted-foreground">Não foi possível carregar os reajustes.</p>
-            ) : !readjustments.data?.length ? (
-              <p className="p-6 text-muted-foreground">Nenhum reajuste aplicado.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Aplicado em</TableHead>
-                    <TableHead>Índice</TableHead>
-                    <TableHead className="text-right">Percentual</TableHead>
-                    <TableHead className="text-right">De</TableHead>
-                    <TableHead className="text-right">Para</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {readjustments.data.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell>{date(r.applied_at)}</TableCell>
-                      <TableCell>{r.index_name ?? "—"}</TableCell>
-                      <TableCell className="text-right">{(r.percentage * 100).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}%</TableCell>
-                      <TableCell className="text-right">{money(r.old_amount)}</TableCell>
-                      <TableCell className="text-right">{money(r.new_amount)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
+      <Section title="Histórico de reajustes">
+        {!history ? (
+          <Unavailable what="os reajustes" />
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {history.map((r, i) => (
+              <li key={i}>
+                {r.when} · {r.label} · {r.percent} · {r.amount}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
 
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-medium">{value}</dd>
-    </div>
-  )
-}
+      <Section title="Termos">
+        <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+          {buildTerms(lease).map((t) => (
+            <div key={t.label} className="flex flex-col gap-0.5">
+              <dt className="text-xs text-muted-foreground">{t.label}</dt>
+              <dd>{t.value}</dd>
+            </div>
+          ))}
+        </dl>
+        {lease.notes && <p className="whitespace-pre-line border-t pt-3">{lease.notes}</p>}
+      </Section>
 
-export default async function LeasePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+      <Section title="Partes">
+        {tenant ? (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-muted-foreground">Inquilino</span>
+            <Link href={`/tenants/${tenant.id}`} className="font-medium hover:underline">
+              {tenant.name}
+            </Link>
+            <span className="text-muted-foreground">
+              {[maskDocumentPartial(tenant.document), tenant.email, maskPhone(tenant.phone)].filter(Boolean).join(" · ")}
+            </span>
+          </div>
+        ) : (
+          <Unavailable what="o inquilino" />
+        )}
+      </Section>
 
-  return (
-    <div className="container py-8 space-y-6">
-      <Link href="/leases" className="text-muted-foreground hover:text-foreground flex items-center gap-2">
-        <ArrowLeft className="h-4 w-4" /> Voltar para contratos
-      </Link>
-      <Suspense fallback={<div>Carregando contrato...</div>}>
-        <LeaseDetails id={id} />
-      </Suspense>
+      <Section title="Documentos">
+        {docsRes.status === "rejected" ? <Unavailable what="os documentos" /> : <LeaseDocuments leaseId={id} documents={documents} />}
+      </Section>
+
+      {active && (
+        <>
+          <LeaseFormSheet open={editar === "1"} units={unitOptions} tenants={tenants} lease={lease} />
+          <ReadjustSheet
+            open={reajustar === "1"}
+            leaseId={id}
+            currentRent={lease.rent_amount}
+            defaultIndex={lease.adjustment_index}
+            defaultDate={lease.next_readjustment?.slice(0, 10)}
+            tenantName={tenant?.name}
+            tenantPhone={tenant?.phone}
+          />
+          <EndLeaseDialog open={encerrar === "1"} leaseId={id} unitId={lease.unit_id} title={where} />
+        </>
+      )}
     </div>
   )
 }

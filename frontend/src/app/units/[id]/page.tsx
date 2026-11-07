@@ -2,29 +2,23 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Building2, MapPin } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { ActiveLeaseCard } from '@/components/leases/ActiveLeaseCard'
-import { CreateLeaseDialog } from '@/components/leases/CreateLeaseDialog'
-import { PaymentList } from '@/components/payments/PaymentList'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { formatCurrency } from '@/lib/utils'
+import { formatDateBR } from '@/lib/date-format'
 import { ExpenseDialog } from '@/components/expenses/ExpenseDialog'
 import { ExpenseList } from '@/components/expenses/ExpenseList'
-import { getActiveTenants } from '@/app/leases/actions'
 import { goFetch } from '@/lib/go/client'
-import { Unit, Property, Payment, Expense } from '@/types'
+import { Unit, Property, Expense } from '@/types'
 
 interface ActiveLease {
   id: string
   unit_id: string
+  tenant_id: string
   start_date: string
   end_date?: string | null
   rent_amount: number
-  payment_day: number
   status: string
-  notes?: string | null
-  tenant: {
-    name: string
-    email?: string | null
-    phone?: string | null
-  }
 }
 
 export default async function UnitPage({ 
@@ -36,8 +30,8 @@ export default async function UnitPage({
 
   let unit: Unit | null = null
   let property: Property | null = null
-  const activeLease = null as ActiveLease | null
-  const payments: Payment[] = []
+  let activeLease: ActiveLease | null = null
+  let tenantName = '—'
   const expenses: Expense[] = []
 
   try {
@@ -53,7 +47,17 @@ export default async function UnitPage({
     notFound()
   }
 
-  const tenants = !activeLease ? await getActiveTenants() : []
+  // Contrato ativo da unidade (e o nome do inquilino); se a busca falhar, a unidade aparece como vaga.
+  try {
+    const leases = await goFetch<ActiveLease[]>("/api/v1/leases", {})
+    activeLease = (leases ?? []).find((l) => l.unit_id === id && l.status === "ACTIVE") ?? null
+    if (activeLease) {
+      const tenants = await goFetch<{ id: string; name: string }[]>("/api/v1/tenants", {}).catch(() => [])
+      tenantName = tenants.find((t) => t.id === activeLease!.tenant_id)?.name ?? "—"
+    }
+  } catch (error) {
+    console.error("Erro ao buscar contratos da unidade:", error)
+  }
 
   return (
     <div className="container py-8 space-y-8">
@@ -94,21 +98,25 @@ export default async function UnitPage({
         
         {activeLease ? (
           <div className="space-y-6">
-            <ActiveLeaseCard lease={activeLease} />
-            
-            <div className="grid md:grid-cols-2 gap-8">
+            <Card className="flex flex-col gap-2 p-4 text-sm md:flex-row md:items-center md:justify-between">
               <div>
-                <h3 className="text-lg font-medium mb-4">Pagamentos do Aluguel</h3>
-                <PaymentList payments={payments} leaseId={activeLease?.id || ''} />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium">Despesas da Unidade</h3>
-                  <ExpenseDialog unitId={unit.id} />
+                <div className="font-medium">{tenantName}</div>
+                <div className="text-muted-foreground">
+                  {formatCurrency(activeLease.rent_amount)} por mês · desde {formatDateBR(activeLease.start_date)}
+                  {activeLease.end_date ? ` até ${formatDateBR(activeLease.end_date)}` : " · sem fim"}
                 </div>
-                <ExpenseList expenses={expenses || []} unitId={unit.id} />
               </div>
+              <Button asChild variant="outline">
+                <Link href={`/leases/${activeLease.id}`}>Ver contrato</Link>
+              </Button>
+            </Card>
+
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium">Despesas da Unidade</h3>
+                <ExpenseDialog unitId={unit.id} />
+              </div>
+              <ExpenseList expenses={expenses || []} unitId={unit.id} />
             </div>
           </div>
         ) : (
@@ -119,7 +127,9 @@ export default async function UnitPage({
                 <p className="text-lg font-medium">Esta unidade está vaga.</p>
                 <p className="text-sm">Não há contrato de locação ativo no momento.</p>
               </div>
-              <CreateLeaseDialog unitId={unit.id} tenants={tenants || []} />
+              <Button asChild>
+                <Link href={`/leases?novo=1&unidade=${unit.id}`}>Criar contrato</Link>
+              </Button>
             </div>
 
             <div>

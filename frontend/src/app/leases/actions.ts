@@ -3,8 +3,15 @@
 import { revalidatePath } from "next/cache"
 import { goFetch } from "@/lib/go/client"
 import { goErrorInfo } from "@/lib/go/errors"
+import { preserveLeaseFields } from "@/lib/lease-form"
 import {
   leaseSchema,
+  leaseEditSchema,
+  endSchema,
+  toEndPayload,
+  toLeaseUpdatePayload,
+  type LeaseEditValues,
+  type EndFormValues,
   renewSchema,
   readjustSchema,
   toLeasePayload,
@@ -81,9 +88,44 @@ export async function createLease(values: LeaseFormValues): Promise<LeaseActionR
   }
 }
 
-export async function endLease(id: string, unitId?: string): Promise<LeaseActionResponse<EndedLease>> {
+export async function updateLease(id: string, values: LeaseEditValues): Promise<LeaseActionResponse<Lease>> {
+  const validated = leaseEditSchema.safeParse(values)
+  if (!validated.success) {
+    return { error: "Erro de validação. Verifique os campos.", fieldErrors: validated.error.flatten().fieldErrors }
+  }
+
   try {
-    const lease = await goFetch<EndedLease>("/api/v1/leases/" + id + "/end", { method: "POST" })
+    // PUT substitui tudo: o que a tela não mostra volta do contrato atual, lido no servidor.
+    const current = await goFetch<Lease & { deposit_amount?: number | null; iptu_year?: number | null; annual_iptu_amount?: number | null }>(
+      "/api/v1/leases/" + id,
+      {},
+    )
+    const body = {
+      ...toLeaseUpdatePayload(validated.data),
+      ...preserveLeaseFields(current, {
+        iptu_reimbursable: validated.data.iptu_reimbursable,
+        annual_iptu_amount: validated.data.annual_iptu_amount ? Number(validated.data.annual_iptu_amount.replace(",", ".")) : undefined,
+      }),
+    }
+    const lease = await goFetch<Lease>("/api/v1/leases/" + id, { method: "PUT", body: JSON.stringify(body) })
+    revalidatePath("/leases")
+    revalidatePath("/leases/" + id)
+    return { success: true, data: lease }
+  } catch (error) {
+    return mapLeaseError(error, "Erro ao salvar contrato.")
+  }
+}
+
+export async function endLease(id: string, values: EndFormValues, unitId?: string): Promise<LeaseActionResponse<EndedLease>> {
+  const validated = endSchema.safeParse(values)
+  if (!validated.success) {
+    return { error: "Erro de validação. Verifique os campos.", fieldErrors: validated.error.flatten().fieldErrors }
+  }
+  try {
+    const lease = await goFetch<EndedLease>("/api/v1/leases/" + id + "/end", {
+      method: "POST",
+      body: JSON.stringify(toEndPayload(validated.data)),
+    })
     revalidatePath("/leases")
     revalidatePath("/leases/" + id)
     if (unitId) revalidatePath(`/units/${unitId}`)
@@ -122,20 +164,26 @@ export async function renewLease(id: string, values: RenewFormValues): Promise<L
   }
 }
 
-export async function readjustLease(id: string, values: ReadjustFormValues): Promise<LeaseActionResponse> {
+export interface ReadjustResult {
+  payments_updated?: number
+  payments_need_review?: number
+  payments_error?: string
+}
+
+export async function readjustLease(id: string, values: ReadjustFormValues): Promise<LeaseActionResponse<ReadjustResult>> {
   const validated = readjustSchema.safeParse(values)
   if (!validated.success) {
     return { error: "Erro de validação. Verifique os campos.", fieldErrors: validated.error.flatten().fieldErrors }
   }
 
   try {
-    await goFetch("/api/v1/leases/" + id + "/readjust", {
+    const out = await goFetch<ReadjustResult>("/api/v1/leases/" + id + "/readjust", {
       method: "POST",
       body: JSON.stringify(toReadjustPayload(validated.data)),
     })
     revalidatePath("/leases")
     revalidatePath("/leases/" + id)
-    return { success: true }
+    return { success: true, data: out }
   } catch (error) {
     const { code } = goErrorInfo(error)
     if (code === "INVALID_PERCENTAGE") {
@@ -143,30 +191,5 @@ export async function readjustLease(id: string, values: ReadjustFormValues): Pro
       return { error: message, fieldErrors: { percentage: [message] } }
     }
     return mapLeaseError(error, "Erro ao reajustar contrato.")
-  }
-}
-
-export async function getActivePropertiesWithUnits() {
-  try {
-    const properties = await goFetch<{
-      id: string
-      name: string
-      units: { id: string; label: string }[]
-    }[]>("/api/v1/properties", {})
-    return properties || []
-  } catch {
-    return []
-  }
-}
-
-export async function getActiveTenants() {
-  try {
-    const tenants = await goFetch<{ id: string; name: string; document?: string }[]>(
-      "/api/v1/tenants",
-      {}
-    )
-    return tenants || []
-  } catch {
-    return []
   }
 }

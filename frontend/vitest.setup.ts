@@ -42,3 +42,8 @@ vi.mock('next/navigation', () => ({
   }),
   usePathname: () => '/',
 }))
+
+// jsdom não implementa estes métodos, que o Radix Select usa ao abrir.
+Element.prototype.hasPointerCapture ??= () => false
+Element.prototype.releasePointerCapture ??= () => {}
+Element.prototype.scrollIntoView ??= () => {}
