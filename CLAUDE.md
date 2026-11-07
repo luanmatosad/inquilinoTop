@@ -64,6 +64,9 @@ Integração exige `-p 1` (um pacote por vez) para não paralelizar acesso ao DB
 | payment | [backend/internal/payment/CLAUDE.md](backend/internal/payment/CLAUDE.md) | **MIGRADO** — Go API |
 | expense | [backend/internal/expense/CLAUDE.md](backend/internal/expense/CLAUDE.md) | **MIGRADO** — Go API |
 | inspection (laudo de vistoria) | [backend/internal/inspection/CLAUDE.md](backend/internal/inspection/CLAUDE.md) | Go API |
+| organization (org, filiais, membros, convites) | [backend/internal/organization/CLAUDE.md](backend/internal/organization/CLAUDE.md) | — |
+| dashboard (métricas) | [backend/internal/dashboard/CLAUDE.md](backend/internal/dashboard/CLAUDE.md) | — |
+| importexport | [backend/internal/importexport/CLAUDE.md](backend/internal/importexport/CLAUDE.md) | — |
 | fiscal | [backend/internal/fiscal/CLAUDE.md](backend/internal/fiscal/CLAUDE.md) | — |
 | audit | [backend/internal/audit/CLAUDE.md](backend/internal/audit/CLAUDE.md) | — |
 | rbac | [backend/internal/rbac/CLAUDE.md](backend/internal/rbac/CLAUDE.md) | — |
