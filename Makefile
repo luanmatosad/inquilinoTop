@@ -67,6 +67,10 @@ logs-db: ## Exibe logs do PostgreSQL
 
 # ── Banco de dados ────────────────────────────────────────────────────────────
 
+.PHONY: seed-dev-user
+seed-dev-user: ## Cria usuário de teste (com organização) no ambiente de dev
+	./scripts/seed-dev-user.sh
+
 .PHONY: db-shell
 db-shell: ## Abre o psql no banco de desenvolvimento
 	$(DB) psql -U postgres -d inquilinotop
