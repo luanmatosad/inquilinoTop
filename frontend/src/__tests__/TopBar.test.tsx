@@ -48,7 +48,13 @@ describe('TopBar', () => {
     expect(screen.getByRole('button', { name: 'Pesquisar no sistema' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Notificações' })).toHaveAttribute('href', '/owner/settings')
     expect(screen.getByRole('link', { name: 'Ajuda e suporte' })).toHaveAttribute('href', '/support')
-    expect(screen.getByRole('link', { name: 'Novo imóvel' })).toHaveAttribute('href', '/properties/new')
+  })
+
+  it('não tem atalho global "Novo imóvel": o cadastro começa na página de Imóveis', () => {
+    setPlatform('MacIntel')
+    renderBar()
+    expect(screen.queryByRole('link', { name: 'Novo imóvel' })).not.toBeInTheDocument()
+    expect(document.querySelector('a[href="/properties/new"]')).toBeNull()
   })
 
   it('botão de menu tem um único ícone (sem filho duplicado)', () => {

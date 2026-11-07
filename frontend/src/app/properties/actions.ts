@@ -22,9 +22,11 @@ type ActionResponse<T = void> = {
 export interface Property {
   id: string
   organization_id: string
-  type: 'RESIDENTIAL' | 'SINGLE'
+  type: 'RESIDENTIAL' | 'COMMERCIAL' | 'SINGLE'
   name: string
   address_line?: string
+  number?: string
+  complement?: string
   neighborhood?: string
   city?: string
   state?: string

@@ -79,15 +79,15 @@ export function UnitForm({ propertyId, initialData, onSuccess, onCancel }: UnitF
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <FormField
           control={form.control}
           name="label"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Identificação (Label)</FormLabel>
+              <FormLabel>Nome da unidade</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: Apto 101, Sala 3B" {...field} />
+                <Input placeholder="Apartamento 101" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -99,9 +99,9 @@ export function UnitForm({ propertyId, initialData, onSuccess, onCancel }: UnitF
           name="floor"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Andar (Opcional)</FormLabel>
+              <FormLabel>Andar (opcional)</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: 1º Andar, Térreo" {...field} />
+                <Input placeholder="Térreo" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -155,16 +155,16 @@ export function UnitForm({ propertyId, initialData, onSuccess, onCancel }: UnitF
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Observações (Opcional)</FormLabel>
+              <FormLabel>Observações</FormLabel>
               <FormControl>
-                <Textarea placeholder="Detalhes adicionais..." {...field} />
+                <Textarea placeholder="Detalhes adicionais da unidade" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="flex justify-end gap-2 pt-4">
+        <div className="flex justify-end gap-2 pt-2">
           <Button 
             type="button" 
             variant="outline" 
@@ -175,7 +175,7 @@ export function UnitForm({ propertyId, initialData, onSuccess, onCancel }: UnitF
           </Button>
           <Button type="submit" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {initialData ? "Salvar" : "Adicionar"}
+            {initialData ? "Salvar alterações" : "Cadastrar unidade"}
           </Button>
         </div>
       </form>

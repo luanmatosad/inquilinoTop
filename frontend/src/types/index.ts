@@ -3,9 +3,13 @@
 export interface Property {
   id: string
   owner_id: string
-  type: 'RESIDENTIAL' | 'SINGLE'
+  type: 'RESIDENTIAL' | 'COMMERCIAL' | 'SINGLE'
   name: string
   address_line?: string | null
+  number?: string | null
+  complement?: string | null
+  neighborhood?: string | null
+  postal_code?: string | null
   city?: string | null
   state?: string | null
   is_active: boolean
@@ -18,6 +22,9 @@ export interface Unit {
   label: string
   floor?: string | null
   notes?: string | null
+  area_m2?: number | null
+  bedrooms?: number | null
+  bathrooms?: number | null
   is_active: boolean
   created_at: string
 }

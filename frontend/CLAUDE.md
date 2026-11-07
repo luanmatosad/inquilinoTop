@@ -25,7 +25,7 @@ src/middleware.ts             # Auth: redireciona não-autenticados para /login
 |---|---|
 | `/` | Dashboard |
 | `/login` | Login via Go API |
-| `/properties`, `/properties/[id]`, `/properties/[id]/edit` | Imóveis (Supabase) |
+| `/properties`, `/properties/[id]` | Imóveis (Go API): lista em tabela com indicadores; detalhe em abas (`?aba=unidades\|informacoes`). `/properties/new` e `/properties/[id]/edit` só redirecionam |
 | `/tenants` | Inquilinos (Supabase) |
 | `/units/[id]` | Detalhe de unidade (Supabase) |
 | `/financeiro/dashboard` | Dashboard financeiro (stub) |
@@ -41,6 +41,14 @@ O canvas "ImoviFlow — Telas" é a fonte da verdade da navegação (change `red
 - Sem item de menu: Laudos, Importar, Documentos e Fechamento (as rotas `/inspections` e `/import` continuam acessíveis por URL).
 - `AppShell` → `AppSidebar` (servidor: carrega organização e perfil) → `Sidebar` (desktop) + `MobileTabBar` (celular, `md:hidden`). Não há modo visitante: sem sessão, o middleware redireciona para `/login`.
 - Tokens em `src/app/globals.css` espelham o `tokens.json` do canvas (claro e escuro). Fontes: Urbanist e Space Mono, self-hosted via `@fontsource`.
+
+## Imóveis (redesign)
+
+- **Painéis por URL:** `/properties?novo=1` abre o cadastro de imóvel; no detalhe, `?unidade=nova` ou `?unidade=<id>` abre o de unidade (`PropertyFormSheet`, `UnitFormSheet`). Fechar tira só o parâmetro da URL.
+- **Ocupação** (alugada/vaga, inquilino, "desde"): função pura `src/lib/property-occupancy.ts`, que junta imóveis + contratos `ACTIVE` + inquilinos no servidor Next. Contratos fora do ar degradam para "—" em vez de derrubar a tela. `/leases` e `/tenants` não paginam, então se a base crescer essa regra deve migrar para o backend.
+- **Tipos:** `RESIDENTIAL`, `COMMERCIAL` e `SINGLE` (rótulo "Casa"). "Terreno" do canvas mobile não existe no domínio.
+- **Endereço:** `number` e `complement` são colunas próprias; `formatPropertyAddress` compõe o texto de exibição.
+- Fora desta etapa: preenchimento do endereço pelo CEP, abas Despesas e Recebimento do detalhe, "Aluguel de referência" da unidade (entra com Contratos).
 
 ## Auth — MIGRADO para Go
 

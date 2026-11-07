@@ -22,6 +22,13 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+// jsdom não implementa ResizeObserver, que o Radix (RadioGroup, Popper...) usa.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
   useRouter: () => ({

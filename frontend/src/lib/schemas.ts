@@ -25,10 +25,12 @@ function compact<T extends Record<string, unknown>>(obj: T): Partial<T> {
 
 export const propertySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
-  type: z.enum(["RESIDENTIAL", "SINGLE"], {
+  type: z.enum(["RESIDENTIAL", "COMMERCIAL", "SINGLE"], {
     message: "Tipo é obrigatório",
   }),
   address_line: optionalText,
+  number: z.string().max(20, "Máximo de 20 caracteres").optional(),
+  complement: z.string().max(100, "Máximo de 100 caracteres").optional(),
   neighborhood: optionalText,
   city: optionalText,
   state: uf,

@@ -19,6 +19,22 @@ describe('propertySchema', () => {
     const r = propertySchema.safeParse({ ...okProperty, postal_code: '0131' })
     expect(r.success).toBe(false)
   })
+  it.each(['RESIDENTIAL', 'COMMERCIAL', 'SINGLE'])('aceita o tipo %s', (type) => {
+    expect(propertySchema.safeParse({ name: 'X', type }).success).toBe(true)
+  })
+  it('rejeita tipo desconhecido', () => {
+    expect(propertySchema.safeParse({ name: 'X', type: 'TERRENO' }).success).toBe(false)
+  })
+  it('número e complemento são opcionais e respeitam o tamanho do backend', () => {
+    expect(propertySchema.safeParse({ ...okProperty, number: '120', complement: 'Bloco B' }).success).toBe(true)
+    expect(propertySchema.safeParse({ ...okProperty, number: '1'.repeat(21) }).success).toBe(false)
+    expect(propertySchema.safeParse({ ...okProperty, complement: 'a'.repeat(101) }).success).toBe(false)
+  })
+  it('payload envia número e complemento e omite vazios', () => {
+    const p = toPropertyPayload({ ...okProperty, number: '120', complement: '' })
+    expect(p.number).toBe('120')
+    expect(p.complement).toBeUndefined()
+  })
   it('UF precisa de 2 letras', () => {
     expect(propertySchema.safeParse({ ...okProperty, state: 'SP' }).success).toBe(true)
     expect(propertySchema.safeParse({ ...okProperty, state: 'S' }).success).toBe(false)

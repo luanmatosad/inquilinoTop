@@ -1,174 +1,137 @@
-import { Suspense } from "react"
 import Link from "next/link"
-import { Plus, Search, MapPin, Building2 } from "lucide-react"
+import { Plus, Search } from "lucide-react"
+
 import { goFetch } from "@/lib/go/client"
+import { buildOccupancy, type OccupancyLease } from "@/lib/property-occupancy"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { PropertyFilters } from "@/components/properties/PropertyFilters"
+import { PropertyFormSheet } from "@/components/properties/PropertyFormSheet"
+import { PropertyKpis } from "@/components/properties/PropertyKpis"
+import { PropertyTable, type PropertyRow } from "@/components/properties/PropertyTable"
 
-interface PropertyWithUnits {
-  id: string
-  name: string
-  type: string
-  address_line?: string
-  neighborhood?: string
-  city?: string
-  state?: string
-  postal_code?: string
-  is_active: boolean
-  created_at: string
-  units: { id: string }[]
+type SearchParams = { q?: string; tipo?: string; novo?: string }
+
+function matchesSearch(p: PropertyRow, q: string): boolean {
+  const term = q.toLowerCase()
+  return [p.name, p.address_line, p.neighborhood, p.city].some((f) => f?.toLowerCase().includes(term))
 }
 
-const PROPERTY_TYPE_LABELS: Record<string, string> = {
-  RESIDENTIAL: 'Residencial',
-  COMMERCIAL: 'Comercial',
-  SINGLE: 'Único',
-}
-
-const PROPERTY_TYPE_BADGE_CLASS: Record<string, string> = {
-  RESIDENTIAL: 'bg-primary/10 text-primary',
-  COMMERCIAL: 'bg-accent text-accent-foreground',
-  SINGLE: 'bg-secondary text-secondary-foreground',
-}
-
-function getPropertyTypeLabel(type: string): string {
-  return PROPERTY_TYPE_LABELS[type] || 'Desconhecido'
-}
-
-function getPropertyTypeBadgeClass(type: string): string {
-  return PROPERTY_TYPE_BADGE_CLASS[type] || 'bg-muted text-foreground'
-}
-
-function formatAddress(p: PropertyWithUnits): string {
-  const cityState = [p.city, p.state].filter(Boolean).join("/")
-  return [p.address_line, p.neighborhood, cityState].filter(Boolean).join(", ")
-}
-
-async function PropertiesList({ search }: { search?: string }) {
-  let properties: PropertyWithUnits[] = []
-
-  try {
-    properties = await goFetch<PropertyWithUnits[]>("/api/v1/properties", {})
-  } catch (error) {
-    console.error("Erro ao buscar propriedades:", error)
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3 border border-border rounded-xl bg-card">
-        <p className="text-muted-foreground">Não foi possível carregar os imóveis.</p>
-        <Link href={search ? `/properties?q=${encodeURIComponent(search)}` : "/properties"}>
-          <Button variant="outline">Tentar novamente</Button>
-        </Link>
-      </div>
-    )
-  }
-
-  if (search) {
-    const q = search.toLowerCase()
-    properties = (properties ?? []).filter(p =>
-      [p.name, p.address_line, p.neighborhood, p.city].some(f => f?.toLowerCase().includes(q))
-    )
-  }
-
-  if (!properties || properties.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 border border-border rounded-xl bg-card">
-        <p className="text-muted-foreground mb-4">Nenhum imóvel encontrado.</p>
-        <Link href="/properties/new">
-          <Button>Criar Primeiro Imóvel</Button>
-        </Link>
-      </div>
-    )
-  }
-
+function Message({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {properties.map((property) => (
-        <Link key={property.id} href={`/properties/${property.id}`} className="block h-full">
-          <Card className="h-full overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-lg font-semibold text-foreground line-clamp-1">
-                  {property.name}
-                </h3>
-                <Badge className={getPropertyTypeBadgeClass(property.type)}>
-                  {getPropertyTypeLabel(property.type)}
-                </Badge>
-              </div>
-              
-              <div className="flex items-start gap-1 text-muted-foreground mb-4">
-                <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
-                <span className="text-sm line-clamp-1">
-                  {formatAddress(property) || "Sem endereço"}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1 text-muted-foreground text-sm pt-4 border-t border-border">
-                <Building2 className="w-4 h-4" />
-                <span className="font-medium">
-                  {property.units?.length || 0} unidade(s)
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-      ))}
-    </div>
+    <div className="flex flex-col items-center gap-2 rounded-xl bg-muted px-4 py-12 text-center">{children}</div>
   )
 }
 
-export default async function PropertiesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string }>
-}) {
-  const params = await searchParams
-  const query = params.q
+export default async function PropertiesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const { q, tipo, novo } = await searchParams
+
+  // Imóveis é obrigatório; contratos só alimentam a ocupação e podem falhar sem derrubar a tela.
+  const [propertiesRes, leasesRes] = await Promise.allSettled([
+    goFetch<PropertyRow[]>("/api/v1/properties", {}),
+    goFetch<OccupancyLease[]>("/api/v1/leases", {}),
+  ])
+
+  const sheet = <PropertyFormSheet open={novo === "1"} />
+
+  const heading = (
+    <div className="flex flex-wrap items-end gap-4">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold leading-tight">Imóveis</h1>
+        <p className="text-sm text-muted-foreground">Seus imóveis e as unidades de cada um.</p>
+      </div>
+    </div>
+  )
+
+  if (propertiesRes.status === "rejected") {
+    console.error("Erro ao buscar imóveis:", propertiesRes.reason)
+    return (
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        {heading}
+        <Message>
+          <p className="text-muted-foreground">Não foi possível carregar os imóveis.</p>
+          <Button asChild variant="outline">
+            <Link href={q ? `/properties?q=${encodeURIComponent(q)}` : "/properties"}>Tentar novamente</Link>
+          </Button>
+        </Message>
+        {sheet}
+      </div>
+    )
+  }
+
+  const all = propertiesRes.value ?? []
+  let leases: OccupancyLease[] | null = null
+  if (leasesRes.status === "fulfilled") {
+    leases = leasesRes.value ?? []
+  } else {
+    console.error("Erro ao buscar contratos (ocupação indisponível):", leasesRes.reason)
+  }
+
+  const occupancy = buildOccupancy(all, leases ?? [], [])
+  const shown = all.filter((p) => (!tipo || p.type === tipo) && (!q || matchesSearch(p, q)))
+
+  const newButton = (
+    <Button asChild>
+      <Link href="/properties?novo=1">
+        <Plus aria-hidden="true" />
+        Cadastrar imóvel
+      </Link>
+    </Button>
+  )
 
   return (
-    <div className="container py-8 space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Meus Imóveis</h1>
-          <p className="text-base text-muted-foreground mt-1">
-            Gerencie seu portfólio de propriedades.
-          </p>
-        </div>
-        <Link href="/properties/new">
-          <Button variant="secondary">
-            <Plus className="w-4 h-4" />
-            Novo Imóvel
-          </Button>
-        </Link>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 max-md:pb-20">
+      {heading}
+
+      {all.length > 0 && <PropertyKpis totals={occupancy.totals} occupancyAvailable={leases !== null} />}
+      {all.length > 0 && leases === null && (
+        <p role="status" className="text-sm text-muted-foreground">
+          A ocupação está indisponível no momento. Tente recarregar a página.
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <form action="/properties" method="get" role="search" className="relative w-full max-w-80">
+          {tipo && <input type="hidden" name="tipo" value={tipo} />}
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input name="q" defaultValue={q} placeholder="Buscar imóvel" aria-label="Buscar imóvel" className="pl-9" />
+        </form>
+        <PropertyFilters tipo={tipo} q={q} />
+        <div className="ml-auto hidden md:block">{newButton}</div>
       </div>
 
-      <Card className="p-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <form action="/properties" method="GET" className="relative">
-              <Input
-                name="q"
-                placeholder="Buscar por nome, endereço ou cidade..."
-                defaultValue={query}
-                className="pl-10"
-              />
-            </form>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <span className="hidden sm:inline">Filtros</span>
-            </Button>
-            <Button variant="outline">
-              <span className="hidden sm:inline">Ordenar</span>
-            </Button>
-          </div>
-        </div>
-      </Card>
+      {all.length === 0 ? (
+        <Message>
+          <div className="text-base font-semibold">Cadastre seu primeiro imóvel</div>
+          <p className="max-w-md text-sm text-muted-foreground">
+            É o primeiro passo para cobrar aluguel. Leva cerca de 1 minuto.
+          </p>
+          <Button asChild variant="outline" className="mt-2">
+            <Link href="/properties?novo=1">Cadastrar imóvel</Link>
+          </Button>
+        </Message>
+      ) : shown.length === 0 ? (
+        <Message>
+          <p className="text-muted-foreground">Nenhum imóvel encontrado.</p>
+        </Message>
+      ) : (
+        <PropertyTable properties={shown} occupancy={leases === null ? null : occupancy} />
+      )}
 
-      <Suspense fallback={<div className="text-center py-10">Carregando imóveis...</div>}>
-        <PropertiesList search={query} />
-      </Suspense>
+      {all.length > 0 && (
+        <div className="fixed inset-x-0 bottom-[69px] z-20 border-t bg-background p-3 md:hidden">
+          <Button asChild className="h-11 w-full">
+            <Link href="/properties?novo=1">
+              <Plus aria-hidden="true" />
+              Cadastrar imóvel
+            </Link>
+          </Button>
+        </div>
+      )}
+      {sheet}
     </div>
   )
 }

@@ -1,127 +1,146 @@
-import { Suspense } from "react"
 import Link from "next/link"
-import { notFound, redirect } from "next/navigation"
-import { ArrowLeft, Pencil, Building, MapPin } from "lucide-react"
+import { notFound } from "next/navigation"
+
 import { goFetch } from "@/lib/go/client"
-import { maskCep } from "@/lib/masks"
-
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { UnitList, type Unit } from "@/components/properties/UnitList"
+import { buildOccupancy, type OccupancyLease, type OccupancyTenant } from "@/lib/property-occupancy"
+import { formatPropertyAddress, propertyTypeLabel } from "@/lib/property-format"
+import { unitToFormValues } from "@/lib/unit-form"
 import { Badge } from "@/components/ui/badge"
-
+import { Card } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DeletePropertyButton } from "@/components/properties/DeletePropertyButton"
+import { PropertyForm } from "@/components/properties/PropertyForm"
+import { UnitFormSheet } from "@/components/properties/UnitFormSheet"
+import { UnitTable, type Unit } from "@/components/properties/UnitTable"
+import type { PropertyFormValues } from "@/lib/schemas"
 
-interface Property {
+interface PropertyDetail {
   id: string
   name: string
-  type: string
+  type: "RESIDENTIAL" | "COMMERCIAL" | "SINGLE"
   address_line?: string
+  number?: string
+  complement?: string
   neighborhood?: string
   city?: string
   state?: string
   postal_code?: string
   is_active: boolean
-  created_at: string
-  units: Unit[]
+  units?: Unit[]
 }
 
-async function PropertyDetails({ id, addUnit }: { id: string, addUnit: boolean }) {
-  let property: Property
+type SearchParams = { aba?: string; unidade?: string }
 
+export default async function PropertyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<SearchParams>
+}) {
+  const { id } = await params
+  const { aba, unidade } = await searchParams
+  const tab = aba === "informacoes" ? "informacoes" : "unidades"
+
+  let property: PropertyDetail | undefined
   try {
-    property = await goFetch<Property>("/api/v1/properties/" + id, {})
+    property = await goFetch<PropertyDetail>("/api/v1/properties/" + id, {})
   } catch (error) {
-    console.error("Erro ao buscar propriedade:", error)
-    notFound()
-    return null
+    console.error("Erro ao buscar imóvel:", error)
   }
+  if (!property) notFound()
 
-  if (!property) {
-    notFound()
-    return null
-  }
-
-  const units = (property.units || []).sort((a, b) => 
-    a.label.localeCompare(b.label, undefined, { numeric: true })
+  const units = [...(property.units ?? [])].sort((a, b) =>
+    a.label.localeCompare(b.label, undefined, { numeric: true }),
   )
 
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            {property.name}
-            {!property.is_active && (
-              <Badge variant="destructive">Desativado</Badge>
-            )}
-          </h1>
-          <div className="mt-2 text-muted-foreground flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            <span>
-              {[
-                property.address_line,
-                property.neighborhood,
-                [property.city, property.state].filter(Boolean).join("/"),
-                property.postal_code ? `CEP ${maskCep(property.postal_code)}` : undefined,
-              ].filter(Boolean).join(", ") || "Endereço não informado"}
-            </span>
-          </div>
-          <div className="mt-1 text-muted-foreground flex items-center gap-2">
-            <Building className="h-4 w-4" />
-            <span>
-              Tipo: {property.type === "RESIDENTIAL" ? "Residencial" : "Único"}
-            </span>
-          </div>
-        </div>
+  // Ocupação só importa na aba Unidades. Contratos fora do ar degradam para "—"; sem inquilinos, só falta o nome.
+  let occupancy = null
+  if (tab === "unidades") {
+    const [leases, tenants] = await Promise.allSettled([
+      goFetch<OccupancyLease[]>("/api/v1/leases", {}),
+      goFetch<OccupancyTenant[]>("/api/v1/tenants", {}),
+    ])
+    if (leases.status === "fulfilled") {
+      const t = tenants.status === "fulfilled" ? (tenants.value ?? []) : []
+      occupancy = buildOccupancy([{ id: property.id, units }], leases.value ?? [], t).byUnit
+    } else {
+      console.error("Erro ao buscar contratos (ocupação indisponível):", leases.reason)
+    }
+  }
 
-        <div className="flex gap-2">
-          <Link href={`/properties/${id}/edit`}>
-            <Button variant="outline">
-              <Pencil className="mr-2 h-4 w-4" /> Editar Imóvel
-            </Button>
-          </Link>
+  const editing = unidade && unidade !== "nova" ? units.find((u) => u.id === unidade) : undefined
+  const sheetOpen = unidade === "nova" || !!editing
+
+  const formValues = {
+    id: property.id,
+    name: property.name,
+    type: property.type,
+    address_line: property.address_line,
+    number: property.number,
+    complement: property.complement,
+    neighborhood: property.neighborhood,
+    city: property.city,
+    state: property.state,
+    postal_code: property.postal_code,
+  } as PropertyFormValues & { id: string }
+
+  const unitCount = units.length
+  const subtitle = [
+    formatPropertyAddress(property) || "Endereço não informado",
+    propertyTypeLabel(property.type),
+    `${unitCount} ${unitCount === 1 ? "unidade" : "unidades"}`,
+  ].join(" · ")
+
+  return (
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <div className="flex flex-wrap items-start gap-4">
+        <div className="flex flex-col gap-1">
+          <nav aria-label="Navegação" className="text-sm text-muted-foreground">
+            <Link href="/properties" className="hover:underline">
+              Imóveis
+            </Link>{" "}
+            › Detalhes
+          </nav>
+          <h1 className="flex items-center gap-2 text-2xl font-semibold leading-tight">
+            {property.name}
+            {!property.is_active && <Badge variant="destructive">Desativado</Badge>}
+          </h1>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
+        </div>
+        <div className="ml-auto">
           <DeletePropertyButton id={property.id} name={property.name} />
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Unidades ({units.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <UnitList 
-            propertyId={property.id} 
-            units={units} 
-            defaultOpenAdd={addUnit} 
-          />
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
+      <Tabs value={tab}>
+        <TabsList variant="line">
+          <TabsTrigger value="unidades" asChild>
+            <Link href={`/properties/${id}`}>Unidades</Link>
+          </TabsTrigger>
+          <TabsTrigger value="informacoes" asChild>
+            <Link href={`/properties/${id}?aba=informacoes`}>Informações</Link>
+          </TabsTrigger>
+        </TabsList>
 
-export default async function PropertyPage({ 
-  params,
-  searchParams,
-}: { 
-  params: Promise<{ id: string }>
-  searchParams: Promise<{ addUnit?: string }>
-}) {
-  const { id } = await params
-  const { addUnit } = await searchParams
+        <TabsContent value="unidades" className="pt-4">
+          {tab === "unidades" && <UnitTable propertyId={property.id} units={units} occupancy={occupancy} />}
+        </TabsContent>
+        <TabsContent value="informacoes" className="pt-4">
+          {tab === "informacoes" && (
+            <Card className="max-w-xl p-6">
+              <PropertyForm initialData={formValues} />
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
-  return (
-    <div className="container py-8 space-y-8">
-      <div>
-        <Link href="/properties" className="text-muted-foreground hover:text-foreground flex items-center gap-2">
-          <ArrowLeft className="h-4 w-4" /> Voltar para lista
-        </Link>
-      </div>
-
-      <Suspense fallback={<div>Carregando detalhes...</div>}>
-        <PropertyDetails id={id} addUnit={addUnit === "true"} />
-      </Suspense>
+      <UnitFormSheet
+        propertyId={property.id}
+        propertyName={property.name}
+        unit={editing ? unitToFormValues(editing) : undefined}
+        open={sheetOpen}
+      />
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
-import { Bell, CircleHelp, Plus, Search } from 'lucide-react'
+import { Bell, CircleHelp, Search } from 'lucide-react'
 
 import { CommandPalette } from '@/components/CommandPalette'
 import { Button } from '@/components/ui/button'
@@ -67,12 +67,6 @@ export function TopBar() {
           </Link>
         </Button>
         <ThemeToggle />
-        <Button asChild className="gap-1 max-sm:size-8 max-sm:px-0">
-          <Link href="/properties/new">
-            <Plus aria-hidden="true" />
-            <span className="max-sm:sr-only">Novo imóvel</span>
-          </Link>
-        </Button>
       </div>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
