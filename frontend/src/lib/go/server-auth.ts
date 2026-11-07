@@ -2,6 +2,8 @@
 
 import { cookies } from 'next/headers'
 
+import { authCookieOptions } from './auth-cookies'
+
 // API_INTERNAL_URL is for server-side requests (Docker internal network).
 // Falls back to NEXT_PUBLIC_API_URL for local dev.
 const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
@@ -28,13 +30,7 @@ export interface GoError {
 
 export async function setTokens(accessToken: string, refreshToken: string) {
   const cookieStore = await cookies()
-  const options = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30,
-  }
+  const options = authCookieOptions()
   cookieStore.set('access_token', accessToken, options)
   cookieStore.set('refresh_token', refreshToken, options)
 }
@@ -127,6 +123,12 @@ export async function login(email: string, password: string): Promise<AuthRespon
     body: JSON.stringify({ email, password }),
     skipAuth: true,
   })
+
+  // Conta com 2FA recebe só `two_factor_required` + `temp_token`, sem tokens de sessão.
+  // Ainda não há tela para o segundo passo: falha explícita em vez de gravar cookies vazios.
+  if (!res.access_token) {
+    throw Object.assign(new Error('TWO_FACTOR_REQUIRED'), { code: 'TWO_FACTOR_REQUIRED' })
+  }
 
   await setTokens(res.access_token, res.refresh_token)
   return res

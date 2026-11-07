@@ -2,234 +2,182 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect, startTransition } from 'react'
-import { cn } from '@/lib/utils'
+import { ChevronsUpDown } from 'lucide-react'
 
-import { LayoutDashboard, Building2, Users, Menu, X, Plus, Wallet, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Send, Percent, BarChart3, Headphones, Phone, FileText, Receipt, CreditCard, Upload, UserCircle, Settings, Bell, ClipboardCheck } from 'lucide-react'
+import { logout } from '@/app/auth/actions'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Sidebar as SidebarRoot,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from '@/components/ui/sidebar'
+import { isNavItemActive, navGroups } from '@/lib/nav'
 
-const publicRoutes = ['/login', '/auth/callback']
-
-const navItems = [
-  { href: '/', label: 'Dashboard', icon: 'dashboard' },
-  { href: '/properties', label: 'Imóveis', icon: 'home_work' },
-  { href: '/tenants', label: 'Inquilinos', icon: 'groups' },
-  { href: '/leases', label: 'Contratos', icon: 'description' },
-  { href: '/inspections', label: 'Laudos', icon: 'inspection' },
-  { href: '/import', label: 'Importar', icon: 'importar' },
-]
-
-const financialItems = [
-  { href: '/financial/dashboard', label: 'Dashboard', icon: 'wallet' },
-  { href: '/financial/receivables', label: 'Contas a Receber', icon: 'receber' },
-  { href: '/financial/payables', label: 'Contas a Pagar', icon: 'pagar' },
-  // Conciliação, Repasses e Comissões ainda não têm backend: as rotas existem, mas ficam fora do menu.
-]
-
-const supportItems = [
-  { href: '/support', label: 'Central de Suporte', icon: 'support' },
-  { href: '/support/new-ticket', label: 'Abrir Chamado', icon: 'newticket' },
-  { href: '/support/contacts', label: 'Contatos', icon: 'contacts' },
-]
-
-const settingsItems = [
-  { href: '/settings/profile', label: 'Meu Perfil', icon: 'user' },
-  { href: '/settings/team', label: 'Equipe', icon: 'team' },
-  { href: '/settings/financial', label: 'Config. Financeira', icon: 'settings' },
-  { href: '/owner/settings', label: 'Notificações', icon: 'bell' },
-]
-
-function getIconComponent(icon: string) {
-  switch (icon) {
-    case 'dashboard': return LayoutDashboard
-    case 'home_work': return Building2
-    case 'groups': return Users
-    case 'description': return FileText
-    case 'inspection': return ClipboardCheck
-    case 'payments': return CreditCard
-    case 'receipt': return Receipt
-    case 'wallet': return Wallet
-    case 'receber': return ArrowDownRight
-    case 'pagar': return ArrowUpRight
-    case 'conciliacao': return ArrowLeftRight
-    case 'repasses': return Send
-    case 'comissoes': return Percent
-    case 'relatorios': return BarChart3
-    case 'support': return Headphones
-    case 'newticket': return Plus
-    case 'contacts': return Phone
-    case 'importar': return Upload
-    case 'user': return UserCircle
-    case 'settings': return Settings
-    case 'bell': return Bell
-    case 'team': return Users
-    default: return LayoutDashboard
-  }
+export type SidebarOrganization = {
+  name: string
+  plan?: string | null
 }
 
-export function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false)
+export type SidebarUser = {
+  name?: string | null
+  email?: string | null
+}
+
+type SidebarProps = {
+  /** Organização atual (somente exibição, sem troca). `null` usa um texto neutro. */
+  organization: SidebarOrganization | null
+  user: SidebarUser
+}
+
+export const FALLBACK_ORGANIZATION_NAME = 'Organização'
+
+export function getInitials(value: string): string {
+  const parts = value
+    .replace(/@.*$/, '')
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+  if (parts.length === 0) return '?'
+  const letters =
+    parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[parts.length - 1][0]
+  return letters.toUpperCase()
+}
+
+function formatPlan(plan?: string | null): string | null {
+  if (!plan) return null
+  return plan.charAt(0).toUpperCase() + plan.slice(1).toLowerCase()
+}
+
+export function Sidebar({ organization, user }: SidebarProps) {
   const pathname = usePathname()
-  const isPublicRoute = publicRoutes.includes(pathname)
+  const { isMobile, setOpenMobile } = useSidebar()
 
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsOpen(true)
-      } else {
-        setIsOpen(false)
-      }
-    }
-    handleResize()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  const orgName = organization?.name?.trim() || FALLBACK_ORGANIZATION_NAME
+  const orgPlan = formatPlan(organization?.plan)
+  const userName = user.name?.trim() || user.email || 'Usuário'
+  const userEmail = user.email ?? ''
 
-  useEffect(() => {
-    if (window.innerWidth < 768) {
-      startTransition(() => setIsOpen(false))
-    }
-  }, [pathname])
-
-  if (isPublicRoute) return null
+  // No drawer mobile, fecha ao navegar.
+  const closeMobile = () => setOpenMobile(false)
 
   return (
-    <>
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed left-4 top-3 z-50 p-2 md:hidden text-primary"
-        aria-label={isOpen ? 'Fechar menu' : 'Abrir menu'}
-      >
-        {isOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
-
-      <nav
-        className={cn(
-          'fixed left-0 top-0 h-screen w-64 border-r border-sidebar-border bg-sidebar flex flex-col py-6 transition-transform duration-300 z-50',
-          !isOpen ? '-translate-x-full md:translate-x-0' : 'translate-x-0'
-        )}
-      >
-        <div className="px-6 mb-8 flex items-center justify-between mt-8 md:mt-0">
-          <div>
-            <h1 className="text-2xl font-bold text-sidebar-primary tracking-tight">PropHero</h1>
-            <p className="text-sm text-sidebar-foreground/70">Gestão Imobiliária</p>
+    <SidebarRoot aria-label="Navegação principal">
+      <SidebarHeader className="p-2">
+        <div className="flex items-center gap-2.5 rounded-lg p-2" data-slot="organization">
+          <Avatar className="size-8 rounded-lg">
+            <AvatarFallback className="rounded-lg bg-primary text-sm font-medium text-primary-foreground">
+              {getInitials(orgName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex min-w-0 flex-1 flex-col leading-[1.35]">
+            <span className="truncate text-sm font-bold text-foreground">{orgName}</span>
+            {orgPlan && <span className="truncate text-xs text-muted-foreground">{orgPlan}</span>}
           </div>
         </div>
+      </SidebarHeader>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-4 py-2 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-            Gestão
-          </div>
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
-            const IconComponent = getIconComponent(item.icon)
-            
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'mx-3 my-1 flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-lg',
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+      <SidebarContent className="gap-6 p-2">
+        {navGroups.map((group) => (
+          <SidebarGroup key={group.label} className="p-0">
+            <SidebarGroupLabel className="h-6 rounded-sm px-2 py-1.5 leading-3 text-muted-foreground">
+              {group.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const active = isNavItemActive(pathname, item)
+                  const Icon = item.icon
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={active}
+                        className="gap-1 rounded-sm font-normal data-active:font-normal"
+                      >
+                        <Link
+                          href={item.href}
+                          aria-current={active ? 'page' : undefined}
+                          onClick={closeMobile}
+                        >
+                          <Icon aria-hidden="true" />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+
+      <SidebarFooter className="p-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Menu do usuário"
+              className="flex w-full items-center gap-2.5 rounded-lg p-2 text-left outline-hidden ring-sidebar-ring hover:bg-sidebar-accent focus-visible:ring-2 data-[state=open]:bg-sidebar-accent"
+            >
+              <Avatar className="size-8 border-2 border-border">
+                <AvatarFallback className="bg-muted text-sm tracking-tight text-muted-foreground">
+                  {getInitials(userName)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="flex min-w-0 flex-1 flex-col gap-px">
+                <span className="truncate text-sm font-medium text-foreground">{userName}</span>
+                {userEmail && (
+                  <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
                 )}
-              >
-                <IconComponent className="mr-3 w-5 h-5" />
-                {item.label}
-              </Link>
-            )
-          })}
-
-          <div className="px-4 py-2 mt-4 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-            Financeiro
-          </div>
-          {financialItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
-            const IconComponent = getIconComponent(item.icon)
-            
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'mx-3 my-1 flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-lg',
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
-                )}
-              >
-                <IconComponent className="mr-3 w-5 h-5" />
-                {item.label}
-              </Link>
-            )
-          })}
-
-          <div className="px-4 py-2 mt-4 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-            Suporte
-          </div>
-          {supportItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
-            const IconComponent = getIconComponent(item.icon)
-            
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'mx-3 my-1 flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-lg',
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
-                )}
-              >
-                <IconComponent className="mr-3 w-5 h-5" />
-                {item.label}
-              </Link>
-            )
-          })}
-
-          <div className="px-4 py-2 mt-4 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-            Configurações
-          </div>
-          {settingsItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
-            const IconComponent = getIconComponent(item.icon)
-            
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'mx-3 my-1 flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-lg',
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
-                )}
-              >
-                <IconComponent className="mr-3 w-5 h-5" />
-                {item.label}
-              </Link>
-            )
-          })}
-        </div>
-
-        <div className="px-4 mt-auto">
-          <Link
-            href="/properties/new"
-            className="w-full bg-sidebar-primary text-sidebar-primary-foreground text-sm font-medium rounded-lg py-3 flex items-center justify-center hover:opacity-90 transition-opacity shadow-sm"
+              </span>
+              <ChevronsUpDown className="size-5 shrink-0 text-foreground" aria-hidden="true" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side={isMobile ? 'top' : 'right'}
+            align="end"
+            sideOffset={8}
+            className="min-w-56"
           >
-            <Plus className="mr-2 w-5 h-5" />
-            Novo Imóvel
-          </Link>
-        </div>
-      </nav>
-    </>
+            <DropdownMenuLabel className="flex flex-col gap-px font-normal">
+              <span className="truncate text-sm font-medium text-foreground">{userName}</span>
+              {userEmail && (
+                <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
+              )}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/settings/profile" onClick={closeMobile}>
+                Meu Perfil
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <form action={logout}>
+              <DropdownMenuItem asChild>
+                <button type="submit" className="w-full cursor-pointer">
+                  Sair
+                </button>
+              </DropdownMenuItem>
+            </form>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarFooter>
+    </SidebarRoot>
   )
 }

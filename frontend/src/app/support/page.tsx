@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, Wallet, FileText, Smartphone, MoreHorizontal, MessageCircle, Ticket } from 'lucide-react';
+import { Search, Wallet, FileText, Smartphone, MoreHorizontal, MessageCircle, Phone, Ticket } from 'lucide-react';
 
 const categories = [
   { id: 'financeiro', label: 'Financeiro', icon: Wallet, description: 'Dúvidas sobre pagamentos e finanças' },
@@ -62,6 +62,13 @@ export default function SupportCentral() {
           >
             <span className="text-foreground group-hover:text-primary transition-colors">Abrir novo chamado</span>
             <MessageCircle className="w-4 h-4 text-muted-foreground" />
+          </Link>
+          <Link
+            href="/support/contacts"
+            className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors group w-full text-left"
+          >
+            <span className="text-foreground group-hover:text-primary transition-colors">Falar com o suporte</span>
+            <Phone className="w-4 h-4 text-muted-foreground" />
           </Link>
         </div>
       </div>

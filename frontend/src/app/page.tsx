@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { AlertCircle } from 'lucide-react'
+import { SESSION_EXPIRED_LOGIN_URL } from '@/lib/session'
 import { getDashboardMetrics, type DashboardMetrics } from '@/data/dashboard/dal'
 import { classifyDashboardError, type DashboardErrorKind } from '@/data/dashboard/mapper'
 import { StatsCards } from '@/components/dashboard/StatsCards'
@@ -19,7 +20,7 @@ async function DashboardMetricsSection() {
   } catch (error) {
     const kind = classifyDashboardError(error)
     if (kind === 'unauthorized') {
-      redirect('/login')
+      redirect(SESSION_EXPIRED_LOGIN_URL)
     }
     return <DashboardError kind={kind} />
   }

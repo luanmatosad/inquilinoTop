@@ -2,12 +2,24 @@ import { type NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
+import { authCookieOptions } from '@/lib/go/auth-cookies'
+
 function parseJwt(token: string) {
   try {
     return JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
-  } catch (e) {
+  } catch {
     return null
   }
+}
+
+/** Header `cookie` do request sem os tokens de sessão, mais `extra` ao final. */
+function cookieHeader(request: NextRequest, extra: string[]) {
+  return request.cookies
+    .getAll()
+    .filter(c => c.name !== 'access_token' && c.name !== 'refresh_token')
+    .map(c => `${c.name}=${c.value}`)
+    .concat(extra)
+    .join('; ')
 }
 
 export async function middleware(request: NextRequest) {
@@ -34,8 +46,13 @@ export async function middleware(request: NextRequest) {
 
   // Token expiration check
   const payload = parseJwt(accessToken)
-  // Refresh if less than 1 minute remaining or already expired
-  if (payload && (payload.exp * 1000 - Date.now() < 60000)) {
+  // Refresh if unparseable, less than 1 minute remaining or already expired
+  const needsRefresh = !payload || typeof payload.exp !== 'number' || payload.exp * 1000 - Date.now() < 60000
+  // Só é "sessão confirmada" com token ainda válido ou refresh bem-sucedido. Falha transitória
+  // (5xx, rede) não confirma: em /login isso mostra o formulário em vez de redirecionar para /
+  // (que sem backend voltaria para /login em loop).
+  let sessionConfirmed = !needsRefresh
+  if (needsRefresh) {
     try {
       const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:8080'
       const refreshRes = await fetch(`${apiUrl}/api/v1/auth/refresh`, {
@@ -49,51 +66,62 @@ export async function middleware(request: NextRequest) {
         accessToken = data.data.access_token
         refreshToken = data.data.refresh_token
 
-        // Set on response so browser saves them
-        response.cookies.set('access_token', accessToken!, { httpOnly: true, path: '/' })
-        response.cookies.set('refresh_token', refreshToken!, { httpOnly: true, path: '/' })
-        
         // Pass to Next.js downstream so Server Components see the new token
         const requestHeaders = new Headers(request.headers)
-        // Need to preserve other cookies if they exist, but for simplicity we append or replace
-        // A better approach is to reconstruct the cookie header:
-        const allCookies = request.cookies.getAll()
-        const cookieString = allCookies
-          .filter(c => c.name !== 'access_token' && c.name !== 'refresh_token')
-          .map(c => `${c.name}=${c.value}`)
-          .concat(`access_token=${accessToken}`, `refresh_token=${refreshToken}`)
-          .join('; ')
-        
-        requestHeaders.set('cookie', cookieString)
-        
-        response = NextResponse.next({
-          request: {
-            headers: requestHeaders,
-          },
-        })
+        requestHeaders.set('cookie', cookieHeader(request, [`access_token=${accessToken}`, `refresh_token=${refreshToken}`]))
+
+        response = NextResponse.next({ request: { headers: requestHeaders } })
         // Next.js requires setting cookies on the response AFTER recreating it
-        response.cookies.set('access_token', accessToken!, { httpOnly: true, path: '/' })
-        response.cookies.set('refresh_token', refreshToken!, { httpOnly: true, path: '/' })
-      } else {
-        // Refresh failed, redirect to login
+        response.cookies.set('access_token', accessToken!, authCookieOptions())
+        response.cookies.set('refresh_token', refreshToken!, authCookieOptions())
+        sessionConfirmed = true
+      } else if (refreshRes.status === 400 || refreshRes.status === 401) {
+        // Sessão morta (refresh recusado).
         if (!isPublicRoute) {
           const url = request.nextUrl.clone()
           url.pathname = '/login'
-          const redirectRes = NextResponse.redirect(url)
-          redirectRes.cookies.delete('access_token')
-          redirectRes.cookies.delete('refresh_token')
-          return redirectRes
+          url.searchParams.set('next', pathname)
+          // Sem deletes: o refresh token é revogado no uso, então em requests concorrentes o
+          // perdedor receberia 401 e apagaria os tokens novos do vencedor. /login funciona com
+          // cookies mortos (cai na rota pública abaixo) e o login os sobrescreve.
+          return NextResponse.redirect(url)
         }
+        // Rota pública: renderiza deslogado só para este request (tira os tokens do request
+        // repassado). NÃO emite deletes: o refresh token é revogado no uso, então em requests
+        // concorrentes o perdedor receberia 401 e apagaria os tokens novos gravados pelo vencedor.
+        const requestHeaders = new Headers(request.headers)
+        const remaining = cookieHeader(request, [])
+        if (remaining) requestHeaders.set('cookie', remaining)
+        else requestHeaders.delete('cookie')
+        accessToken = undefined
+        refreshToken = undefined
+        response = NextResponse.next({ request: { headers: requestHeaders } })
+      } else {
+        // Outro status (5xx, 429...): falha transitória, não indica sessão morta.
+        console.error(`Failed to refresh token in middleware: status ${refreshRes.status}`)
       }
     } catch (e) {
       console.error("Failed to refresh token in middleware:", e)
     }
   }
 
-  if (accessToken && refreshToken && pathname === '/login') {
+  // Só GET/HEAD: um POST em /login é a Server Action de login; redirecioná-lo (307) o reenviaria
+  // como POST para / e quebraria a página. `session=expired` vem de páginas cujo backend rejeitou
+  // um token que parecia válido: sem pular o redirect, / <-> /login entraria em loop.
+  const isNavigation = request.method === 'GET' || request.method === 'HEAD'
+  const sessionExpiredSignal = request.nextUrl.searchParams.get('session') === 'expired'
+  if (sessionConfirmed && accessToken && refreshToken && pathname === '/login' && isNavigation && !sessionExpiredSignal) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
-    return NextResponse.redirect(url)
+    url.search = '' // não vazar ?next=... para /
+    const redirectRes = NextResponse.redirect(url)
+    // O redirect é uma resposta nova: sem isto, tokens recém-renovados (o refresh antigo já foi
+    // revogado) seriam descartados e o usuário perderia a sessão.
+    if (needsRefresh) {
+      redirectRes.cookies.set('access_token', accessToken, authCookieOptions())
+      redirectRes.cookies.set('refresh_token', refreshToken, authCookieOptions())
+    }
+    return redirectRes
   }
 
   return response

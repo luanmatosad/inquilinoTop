@@ -30,7 +30,17 @@ src/middleware.ts             # Auth: redireciona não-autenticados para /login
 | `/units/[id]` | Detalhe de unidade (Supabase) |
 | `/financeiro/dashboard` | Dashboard financeiro (stub) |
 | `/financeiro/receber`, `/pagar`, `/repasses`, `/comissoes`, `/conciliacao` | Financeiro (stub) |
+| `/reports`, `/integrations` | Placeholders (`ComingSoon`), com item de menu no canvas e sem tela ainda |
 | `/support`, `/support/tickets`, `/support/tickets/[id]`, `/support/new-ticket`, `/support/contacts` | Suporte |
+
+## Shell e navegação
+
+O canvas "ImoviFlow — Telas" é a fonte da verdade da navegação (change `redesign-foundation`).
+
+- `src/lib/nav.ts`: única definição. 3 grupos (Gestão: Hoje, Imóveis, Inquilinos, Contratos · Financeiro: Recebimentos, Despesas, Relatórios · Administrativo: Integrações, Configurações). Itens com `mobileTab` viram abas da barra inferior; os demais caem em "Mais" (`moreItems`).
+- Sem item de menu: Laudos, Importar, Documentos e Fechamento (as rotas `/inspections` e `/import` continuam acessíveis por URL).
+- `AppShell` → `AppSidebar` (servidor: carrega organização e perfil) → `Sidebar` (desktop) + `MobileTabBar` (celular, `md:hidden`). Não há modo visitante: sem sessão, o middleware redireciona para `/login`.
+- Tokens em `src/app/globals.css` espelham o `tokens.json` do canvas (claro e escuro). Fontes: Urbanist e Space Mono, self-hosted via `@fontsource`.
 
 ## Auth — MIGRADO para Go
 

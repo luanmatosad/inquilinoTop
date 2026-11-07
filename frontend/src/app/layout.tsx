@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import Header from "@/components/Header";
+import AppSidebar from "@/components/AppSidebar";
 import { AppShell } from "@/components/AppShell";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -14,10 +16,21 @@ const urbanist = localFont({
   display: "swap",
 });
 
-const geistMono = localFont({
-  variable: "--font-geist-mono",
-  src: "../../node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2",
-  weight: "100 900",
+// Space Mono não é variável: só existem os pesos 400 e 700.
+const spaceMono = localFont({
+  variable: "--font-space-mono",
+  src: [
+    {
+      path: "../../node_modules/@fontsource/space-mono/files/space-mono-latin-400-normal.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../node_modules/@fontsource/space-mono/files/space-mono-latin-700-normal.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   display: "swap",
 });
 
@@ -32,12 +45,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" data-theme="light">
+    // suppressHydrationWarning: next-themes ajusta a classe do <html> antes da hidratação.
+    <html lang="pt-BR" suppressHydrationWarning>
       <body
-        className={`${urbanist.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
+        className={`${urbanist.variable} ${spaceMono.variable} antialiased min-h-screen flex flex-col`}
       >
-        <AppShell header={<Header />}>{children}</AppShell>
-        <Toaster />
+        <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
+          <AppShell sidebar={<AppSidebar />} header={<Header />}>
+            {children}
+          </AppShell>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );
