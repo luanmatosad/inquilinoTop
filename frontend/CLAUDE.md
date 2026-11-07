@@ -36,6 +36,18 @@ src/middleware.ts             # Auth: redireciona não-autenticados para /login
 | `/reports`, `/integrations` | Placeholders (`ComingSoon`), com item de menu no canvas e sem tela ainda |
 | `/support`, `/support/tickets`, `/support/tickets/[id]`, `/support/new-ticket`, `/support/contacts` | Suporte |
 
+## Medidas do canvas nos componentes base
+
+O canvas é a fonte da verdade (spec `ui-primitives`). Os `ui/*` já trazem as medidas; **não** compense na tela com classes de altura ou espaçamento.
+
+- **Fonte:** Urbanist no `<html>` (variáveis `--font-urbanist` e `--font-space-mono` ficam no `<html>`, senão o Tailwind cai na fonte do sistema); `<body>` usa `font-sans`.
+- **Input e Select:** 44px no celular, 36px a partir de `md`; raio 6, borda e `shadow-xs`.
+- **Button padrão:** 44px no celular, 32px a partir de `md`. Não use `h-11` nos botões de rodapé fixo.
+- **Card:** raio 12, borda, `shadow-sm`, 16px de espaçamento; `size="flush"` para moldura de tabela (sem `p-0 gap-0`).
+- **Table:** cabeçalho 12px/500 em `muted`, células 12×16, linha de 56px.
+- **Sheet lateral:** 440px (cheio abaixo de `sm`), 24px de padding (`p-6` no cabeçalho, `px-6 pb-6` no corpo).
+- **Badge:** 20px, pílula. **Chip** (filtros por URL): 28px a partir de `md`, 32px no celular, 13px/500. **Título da página:** `text-2xl font-semibold leading-[1.2]`.
+
 ## Shell e navegação
 
 O canvas "ImoviFlow — Telas" é a fonte da verdade da navegação (change `redesign-foundation`).

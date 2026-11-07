@@ -22,7 +22,7 @@ export function TenantTable({ rows }: { rows: TenantRow[] }) {
   const count = plural(rows.length, 'inquilino', 'inquilinos')
   return (
     <>
-      <Card className="hidden gap-0 overflow-hidden p-0 md:block">
+      <Card size="flush" className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted hover:bg-muted">

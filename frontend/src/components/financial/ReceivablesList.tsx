@@ -64,7 +64,7 @@ export function ReceivablesList({ rows, openRows }: Props) {
 
       {rows.length > 0 && (
         <>
-          <Card className="hidden gap-0 overflow-hidden p-0 md:block">
+          <Card size="flush" className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted hover:bg-muted">

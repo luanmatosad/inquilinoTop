@@ -102,7 +102,7 @@ export default async function PropertyPage({
             </Link>{" "}
             › Detalhes
           </nav>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold leading-tight">
+          <h1 className="flex items-center gap-2 text-2xl font-semibold leading-[1.2]">
             {property.name}
             {!property.is_active && <Badge variant="destructive">Desativado</Badge>}
           </h1>

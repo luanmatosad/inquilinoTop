@@ -47,7 +47,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Prom
   const sheet = <TenantFormSheet open={novo === "1"} />
   const heading = (
     <div className="flex flex-col gap-1">
-      <h1 className="text-2xl font-semibold leading-tight">Inquilinos</h1>
+      <h1 className="text-2xl font-semibold leading-[1.2]">Inquilinos</h1>
       <p className="text-sm text-muted-foreground">Quem mora ou usa seus imóveis.</p>
     </div>
   )
@@ -184,7 +184,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Prom
 
       {all.length > 0 && (
         <div className="fixed inset-x-0 bottom-[69px] z-20 border-t bg-background p-3 md:hidden">
-          <Button asChild className="h-11 w-full">
+          <Button asChild className="w-full">
             <Link href="/tenants?novo=1">
               <Plus aria-hidden="true" />
               Cadastrar inquilino

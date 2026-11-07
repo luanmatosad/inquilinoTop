@@ -11,7 +11,7 @@ export function ComingSoon({ title, description }: ComingSoonProps) {
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold leading-tight">{title}</h1>
+        <h1 className="text-2xl font-semibold leading-[1.2]">{title}</h1>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       <Card>

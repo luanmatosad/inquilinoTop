@@ -46,10 +46,10 @@ export default function RootLayout({
 }>) {
   return (
     // suppressHydrationWarning: next-themes ajusta a classe do <html> antes da hidratação.
-    <html lang="pt-BR" suppressHydrationWarning>
-      <body
-        className={`${urbanist.variable} ${spaceMono.variable} antialiased min-h-screen flex flex-col`}
-      >
+    // As variáveis de fonte ficam no <html>: o Tailwind resolve o font-family padrão ali, e uma variável
+    // definida só no <body> não existe nesse ponto (o texto cairia na fonte do sistema).
+    <html lang="pt-BR" className={`${urbanist.variable} ${spaceMono.variable}`} suppressHydrationWarning>
+      <body className="font-sans antialiased min-h-screen flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
           <AppShell sidebar={<AppSidebar />} header={<Header />}>
             {children}

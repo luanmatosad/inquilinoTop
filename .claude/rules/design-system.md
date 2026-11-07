@@ -1,4 +1,11 @@
+---
+paths:
+  - "frontend/**"
+---
+
 # Design System — Figma ↔ shadcnds ↔ Frontend
+
+> **O canvas manda.** As medidas finais vêm do CSS das artboards do canvas "ImoviFlow — Telas" (change `alinhamento-visual`, spec `ui-primitives`). O preset Nova do `shadcnds` diverge delas (raio 8px e anel em vez de borda e sombra), então `shadcnds` é referência de estrutura, não de medida. Os arquivos `ui/*` do app são ajustados no lugar para as medidas do canvas.
 
 Carrega em toda sessão que toca `frontend/`. Fonte única de verdade pra UI: repo [`shadcnds`](https://github.com/luanmatosad/shadcnds) (local: `~/Documents/muudawork/imoviflow/shadcnds`), espelhando o Figma **UI Kit ImoviFlow — Shandnc**.
 

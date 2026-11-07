@@ -107,7 +107,7 @@ export function Sidebar({ organization, user }: SidebarProps) {
                       <SidebarMenuButton
                         asChild
                         isActive={active}
-                        className="gap-1 rounded-sm font-normal data-active:font-normal"
+                        className="gap-1 rounded-lg font-normal data-active:font-normal"
                       >
                         <Link
                           href={item.href}

@@ -40,14 +40,14 @@ export function LeaseFormSheet({ open, units, tenants, defaultUnitId, defaultTen
 
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && close()}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-[480px]">
+      <SheetContent side="right" className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{lease ? 'Editar contrato' : 'Novo contrato'}</SheetTitle>
           <SheetDescription>
             {lease ? 'Unidade, inquilino e início não mudam. Para trocar, encerre e crie outro.' : 'Escolha a unidade e o inquilino e defina o aluguel.'}
           </SheetDescription>
         </SheetHeader>
-        <div className="px-4 pb-4">
+        <div className="px-6 pb-6">
           <LeaseForm
             units={units}
             tenants={tenants}

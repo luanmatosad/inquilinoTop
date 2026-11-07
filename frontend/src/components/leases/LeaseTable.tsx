@@ -32,7 +32,7 @@ export function LeaseTable({ rows }: { rows: LeaseTableRow[] }) {
   const count = plural(rows.length, 'contrato', 'contratos')
   return (
     <>
-      <Card className="hidden gap-0 overflow-hidden p-0 md:block">
+      <Card size="flush" className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted hover:bg-muted">

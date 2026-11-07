@@ -45,7 +45,7 @@ export default async function LeasesPage({ searchParams }: { searchParams: Promi
 
   const heading = (
     <div className="flex flex-col gap-1">
-      <h1 className="text-2xl font-semibold leading-tight">Contratos</h1>
+      <h1 className="text-2xl font-semibold leading-[1.2]">Contratos</h1>
       <p className="text-sm text-muted-foreground">Quem aluga o quê, por quanto e até quando.</p>
     </div>
   )
@@ -176,7 +176,7 @@ export default async function LeasesPage({ searchParams }: { searchParams: Promi
 
       {all.length > 0 && (
         <div className="fixed inset-x-0 bottom-[69px] z-20 border-t bg-background p-3 md:hidden">
-          <Button asChild className="h-11 w-full">
+          <Button asChild className="w-full">
             <Link href="/leases?novo=1">
               <Plus aria-hidden="true" />
               Criar contrato

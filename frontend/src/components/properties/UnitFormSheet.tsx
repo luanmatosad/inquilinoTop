@@ -45,12 +45,12 @@ export function UnitFormSheet({ propertyId, propertyName, unit, open }: UnitForm
 
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && close()}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-[440px]">
+      <SheetContent side="right" className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{unit ? "Editar unidade" : "Adicionar unidade"}</SheetTitle>
           <SheetDescription>{propertyName}</SheetDescription>
         </SheetHeader>
-        <div className="flex flex-col gap-4 px-4 pb-4">
+        <div className="flex flex-col gap-4 px-6 pb-6">
           <p className="text-sm text-muted-foreground">
             O endereço é o do imóvel, então não precisa preencher de novo.
           </p>

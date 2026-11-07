@@ -91,13 +91,13 @@ export function ReadjustSheet({ open, leaseId, currentRent, defaultIndex, defaul
 
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && close()}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-[440px]">
+      <SheetContent side="right" className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Aplicar reajuste</SheetTitle>
           <SheetDescription>Aluguel atual: {formatCurrency(currentRent)}</SheetDescription>
         </SheetHeader>
 
-        <div className="px-4 pb-4">
+        <div className="px-6 pb-6">
           {done ? (
             <div className="flex flex-col gap-4">
               <p role="status" className="text-sm">

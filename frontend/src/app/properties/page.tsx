@@ -37,7 +37,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
   const heading = (
     <div className="flex flex-wrap items-end gap-4">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold leading-tight">Imóveis</h1>
+        <h1 className="text-2xl font-semibold leading-[1.2]">Imóveis</h1>
         <p className="text-sm text-muted-foreground">Seus imóveis e as unidades de cada um.</p>
       </div>
     </div>
@@ -123,7 +123,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
 
       {all.length > 0 && (
         <div className="fixed inset-x-0 bottom-[69px] z-20 border-t bg-background p-3 md:hidden">
-          <Button asChild className="h-11 w-full">
+          <Button asChild className="w-full">
             <Link href="/properties?novo=1">
               <Plus aria-hidden="true" />
               Cadastrar imóvel

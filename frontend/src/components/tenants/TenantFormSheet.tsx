@@ -71,13 +71,13 @@ export function TenantFormSheet({ open, tenant }: TenantFormSheetProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && close()}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-[440px]">
+      <SheetContent side="right" className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{tenant ? 'Editar inquilino' : 'Novo inquilino'}</SheetTitle>
           <SheetDescription>{tenant ? tenant.name : 'Nome e contato já bastam para começar.'}</SheetDescription>
         </SheetHeader>
 
-        <div className="flex flex-col gap-4 px-4 pb-4">
+        <div className="flex flex-col gap-4 px-6 pb-6">
           <TenantForm initialData={tenant} onSuccess={close} onCancel={close} />
 
           {tenant && (

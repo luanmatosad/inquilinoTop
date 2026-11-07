@@ -86,12 +86,12 @@ export function ExpenseFormSheet({ open, units, defaultUnitId }: Props) {
 
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && close()}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-[440px]">
+      <SheetContent side="right" className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Lançar despesa</SheetTitle>
           <SheetDescription>Fica ligada a uma unidade para entrar nos relatórios.</SheetDescription>
         </SheetHeader>
-        <div className="px-4 pb-4">
+        <div className="px-6 pb-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
               <FormField

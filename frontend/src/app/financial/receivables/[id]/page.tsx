@@ -145,7 +145,7 @@ export default async function ReceivablePage({
 
       <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex flex-col gap-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold leading-tight">
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold leading-[1.2]">
             {tenant?.name ?? "—"}
             <SituationBadge situation={payment.status === "PAID" ? "PAID" : late ? "LATE" : "PENDING"} labels={LABELS} />
           </h1>

@@ -47,7 +47,7 @@ export default async function ReceivablesPage({ searchParams }: { searchParams: 
   const heading = (
     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold leading-tight">Recebimentos</h1>
+        <h1 className="text-2xl font-semibold leading-[1.2]">Recebimentos</h1>
         <p className="text-sm text-muted-foreground">Aluguéis do mês e o que está em atraso.</p>
       </div>
       <MonthNav basePath={BASE} ym={ym} situacao={situacao} />

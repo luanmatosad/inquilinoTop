@@ -15,7 +15,7 @@ export function SituationChips({ basePath, ym, active, chips }: { basePath: stri
             key={c.value || 'ALL'}
             href={`${basePath}?${params.toString()}`}
             aria-current={on ? 'true' : undefined}
-            className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-medium ${
+            className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium md:h-7 ${
               on ? 'border-accent bg-accent text-accent-foreground' : 'bg-background text-muted-foreground hover:bg-accent'
             }`}
           >

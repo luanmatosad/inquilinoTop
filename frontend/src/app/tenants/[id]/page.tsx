@@ -103,7 +103,7 @@ export default async function TenantPage({
             </Link>{" "}
             › Detalhe
           </nav>
-          <h1 className="text-2xl font-semibold leading-tight">{tenant.name}</h1>
+          <h1 className="text-2xl font-semibold leading-[1.2]">{tenant.name}</h1>
           {contact && <p className="text-sm text-muted-foreground">{contact}</p>}
           <div role="group" aria-label="Situação de cobrança" className="pt-1">
             {noLease ? <Badge variant="outline">Sem contrato</Badge> : <BillingBadge status={headerBilling} />}

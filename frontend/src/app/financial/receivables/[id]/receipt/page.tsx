@@ -73,7 +73,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
         <Link href="/financial/receivables" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Recebimentos
         </Link>
-        <h1 className="text-2xl font-semibold leading-tight">Recibo{month ? ` de ${month.split(' ')[0]}` : ''}</h1>
+        <h1 className="text-2xl font-semibold leading-[1.2]">Recibo{month ? ` de ${month.split(' ')[0]}` : ''}</h1>
         <p className="text-sm text-muted-foreground">
           {receipt.tenant.name}
           {where ? ` · ${where}` : ''}
