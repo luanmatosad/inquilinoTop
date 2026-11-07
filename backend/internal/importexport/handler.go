@@ -40,7 +40,15 @@ func (h *Handler) handleImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.service.ImportRecords(r.Context(), ownerID, req)
+	// Mesmo padrão do handler de tenant: o userID gravado é o owner do token.
+	userID := ownerID
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+
+	resp, err := h.service.ImportRecords(r.Context(), ownerID, userID, orgID, req)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "IMPORT_FAILED", err.Error())
 		return

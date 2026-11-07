@@ -67,9 +67,9 @@ Sempre via `httputil`. Envelope: `{"data": ..., "error": null}` ou `{"data": nul
 
 ## Migrations
 
-Numeradas `000001_..._name.up.sql` / `.down.sql`. Rodam automaticamente na startup via `db.RunMigrations`. Última: `000025_create_index_values`.
+Numeradas `000001_..._name.up.sql` / `.down.sql`. Rodam automaticamente na startup via `db.RunMigrations`. Última: `000048_lease_adjustment_and_end_reason`.
 
-Tabelas adicionadas (000009–000025): `tenant.person_type`, `lease.fiscal_fields`, `payment.breakdown`, `lease_readjustments`, `irrf_brackets`, `financial_config`, `payment.charge_fields`, `lease.payment_day`, `support_tickets`, `audit_logs`, `user_roles`, `2fa_fields`, `temp_2fa_tokens`, `documents`, `notifications`, `index_values`.
+Tabelas e alterações adicionadas (000009–000045): `tenant.person_type`, `lease.fiscal_fields`, `payment.breakdown`, `lease_readjustments`, `irrf_brackets`, `financial_config`, `payment.charge_fields`, `lease.payment_day`, `support_tickets`, `audit_logs`, `user_roles`, `2fa_fields`, `temp_2fa_tokens`, `documents`, `notifications`, `index_values`, `import_history`, `user_profiles`, `user_notification_preferences`, `organizations` (+ `organization_id` em `support_tickets` e `audit_logs`, FK NOT NULL), índices do dashboard, campos de unidade/endereço/notas, sem sobreposição de contratos, campos de despesa, `organization_id` em `financial_config` e reajustes, `inspections`, `inspection_items`, `inspection_photos`, `properties` (tipo COMMERCIAL, `number`, `complement`), `units.reference_rent`, `leases` (`adjustment_index`, `adjustment_month`, `end_reason`).
 
 ## Módulos
 
@@ -81,6 +81,10 @@ Tabelas adicionadas (000009–000025): `tenant.person_type`, `lease.fiscal_field
 | lease | [internal/lease/CLAUDE.md](internal/lease/CLAUDE.md) |
 | payment | [internal/payment/CLAUDE.md](internal/payment/CLAUDE.md) |
 | expense | [internal/expense/CLAUDE.md](internal/expense/CLAUDE.md) |
+| inspection | [internal/inspection/CLAUDE.md](internal/inspection/CLAUDE.md) |
+| organization | [internal/organization/CLAUDE.md](internal/organization/CLAUDE.md) |
+| dashboard | [internal/dashboard/CLAUDE.md](internal/dashboard/CLAUDE.md) |
+| importexport | [internal/importexport/CLAUDE.md](internal/importexport/CLAUDE.md) |
 | fiscal | [internal/fiscal/CLAUDE.md](internal/fiscal/CLAUDE.md) |
 | audit | [internal/audit/CLAUDE.md](internal/audit/CLAUDE.md) |
 | rbac | [internal/rbac/CLAUDE.md](internal/rbac/CLAUDE.md) |

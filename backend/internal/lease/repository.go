@@ -15,8 +15,18 @@ import (
 
 type pgRepository struct{ db *db.DB }
 
+// last_readjusted_at vem de uma subconsulta por contrato, então listar não faz uma consulta por linha.
 const leaseCols = `id, organization_id, unit_id, tenant_id, start_date, end_date, rent_amount, deposit_amount, payment_day,
-	status, is_active, late_fee_percent, daily_interest_percent, iptu_reimbursable, annual_iptu_amount, iptu_year, notes, created_at, updated_at`
+	status, is_active, late_fee_percent, daily_interest_percent, iptu_reimbursable, annual_iptu_amount, iptu_year, notes,
+	adjustment_index, adjustment_month, end_reason, created_at, updated_at,
+	(SELECT MAX(r.applied_at) FROM lease_readjustments r WHERE r.lease_id = leases.id) AS last_readjusted_at`
+
+// scanDest lista os destinos do Scan na mesma ordem de leaseCols.
+func (l *Lease) scanDest() []any {
+	return []any{&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
+		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
+		&l.AdjustmentIndex, &l.AdjustmentMonth, &l.EndReason, &l.CreatedAt, &l.UpdatedAt, &l.LastReadjustedAt}
+}
 
 func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
@@ -26,14 +36,14 @@ func (r *pgRepository) Create(ctx context.Context, orgID uuid.UUID, ownerID uuid
 	var l Lease
 	err := r.db.Pool.QueryRow(ctx,
 		`INSERT INTO leases (organization_id, owner_id, unit_id, tenant_id, start_date, end_date, rent_amount, deposit_amount, payment_day,
-			late_fee_percent, daily_interest_percent, iptu_reimbursable, annual_iptu_amount, iptu_year, notes)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+			late_fee_percent, daily_interest_percent, iptu_reimbursable, annual_iptu_amount, iptu_year, notes,
+			adjustment_index, adjustment_month)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
 		 RETURNING `+leaseCols,
 		orgID, ownerID, in.UnitID, in.TenantID, in.StartDate, in.EndDate, in.RentAmount, in.DepositAmount, in.PaymentDay,
 		in.LateFeePercent, in.DailyInterestPercent, in.IPTUReimbursable, in.AnnualIPTUAmount, in.IPTUYear, in.Notes,
-	).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
-		&l.CreatedAt, &l.UpdatedAt)
+		in.AdjustmentIndex, in.AdjustmentMonth,
+	).Scan(l.scanDest()...)
 	if err != nil {
 		if isOverlapViolation(err) {
 			return nil, ErrLeaseOverlap
@@ -48,9 +58,7 @@ func (r *pgRepository) GetByID(ctx context.Context, id, orgID uuid.UUID) (*Lease
 	err := r.db.Pool.QueryRow(ctx,
 		`SELECT `+leaseCols+` FROM leases WHERE id=$1 AND organization_id=$2 AND is_active=true`,
 		id, orgID,
-	).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
-		&l.CreatedAt, &l.UpdatedAt)
+	).Scan(l.scanDest()...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, apierr.ErrNotFound
@@ -72,9 +80,7 @@ func (r *pgRepository) List(ctx context.Context, orgID uuid.UUID) ([]Lease, erro
 	var list []Lease
 	for rows.Next() {
 		var l Lease
-		if err := rows.Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-			&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
-			&l.CreatedAt, &l.UpdatedAt); err != nil {
+		if err := rows.Scan(l.scanDest()...); err != nil {
 			return nil, fmt.Errorf("lease.repo: list scan: %w", err)
 		}
 		list = append(list, l)
@@ -90,15 +96,15 @@ func (r *pgRepository) Update(ctx context.Context, id, orgID uuid.UUID, in Updat
 	var l Lease
 	err := r.db.Pool.QueryRow(ctx,
 		`UPDATE leases SET end_date=$1, rent_amount=$2, deposit_amount=$3, status=$4, payment_day=COALESCE($5, payment_day),
-			late_fee_percent=$6, daily_interest_percent=$7, iptu_reimbursable=$8, annual_iptu_amount=$9, iptu_year=$10, notes=$11, updated_at=NOW()
-		 WHERE id=$12 AND organization_id=$13 AND is_active=true
+			late_fee_percent=$6, daily_interest_percent=$7, iptu_reimbursable=$8, annual_iptu_amount=$9, iptu_year=$10, notes=$11,
+			adjustment_index=$12, adjustment_month=$13, updated_at=NOW()
+		 WHERE id=$14 AND organization_id=$15 AND is_active=true
 		 RETURNING `+leaseCols,
 		in.EndDate, in.RentAmount, in.DepositAmount, in.Status, paymentDay,
 		in.LateFeePercent, in.DailyInterestPercent, in.IPTUReimbursable, in.AnnualIPTUAmount, in.IPTUYear, in.Notes,
+		in.AdjustmentIndex, in.AdjustmentMonth,
 		id, orgID,
-	).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
-		&l.CreatedAt, &l.UpdatedAt)
+	).Scan(l.scanDest()...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, apierr.ErrNotFound
@@ -125,19 +131,17 @@ func (r *pgRepository) Delete(ctx context.Context, id, orgID uuid.UUID) error {
 	return nil
 }
 
-func (r *pgRepository) End(ctx context.Context, id, orgID uuid.UUID) (*Lease, error) {
-	now := time.Now()
+func (r *pgRepository) End(ctx context.Context, id, orgID uuid.UUID, endDate time.Time, reason *string) (*Lease, error) {
 	var l Lease
 	err := r.db.Pool.QueryRow(ctx,
-		`UPDATE leases SET status='ENDED', end_date=LEAST(COALESCE(end_date, $1::date), $1::date), updated_at=NOW()
+		`UPDATE leases SET status='ENDED', end_date=LEAST(COALESCE(end_date, $1::date), $1::date), end_reason=$4, updated_at=NOW()
 		 WHERE id=$2 AND organization_id=$3 AND is_active=true AND status='ACTIVE'
 		 RETURNING `+leaseCols,
-		now, id, orgID,
-	).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
-		&l.CreatedAt, &l.UpdatedAt)
+		endDate, id, orgID, reason,
+	).Scan(l.scanDest()...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			// Já encerrado por outra requisição entre a checagem do serviço e o UPDATE.
 			return nil, ErrLeaseNotActive
 		}
 		return nil, fmt.Errorf("lease.repo: end: %w", err)
@@ -155,18 +159,14 @@ func (r *pgRepository) Renew(ctx context.Context, id, orgID uuid.UUID, in RenewL
 			 WHERE id=$4 AND organization_id=$5 AND is_active=true
 			 RETURNING `+leaseCols,
 			in.NewEndDate, in.RentAmount, paymentDay, id, orgID,
-		).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-			&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
-			&l.CreatedAt, &l.UpdatedAt)
+		).Scan(l.scanDest()...)
 	} else {
 		err = r.db.Pool.QueryRow(ctx,
 			`UPDATE leases SET status='ACTIVE', end_date=$1, payment_day=COALESCE($2, payment_day), updated_at=NOW()
 			 WHERE id=$3 AND organization_id=$4 AND is_active=true
 			 RETURNING `+leaseCols,
 			in.NewEndDate, paymentDay, id, orgID,
-		).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-			&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
-			&l.CreatedAt, &l.UpdatedAt)
+		).Scan(l.scanDest()...)
 	}
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -187,9 +187,7 @@ func (r *pgRepository) UpdateRentAmount(ctx context.Context, id, orgID uuid.UUID
 		 WHERE id=$2 AND organization_id=$3 AND is_active=true
 		 RETURNING `+leaseCols,
 		amount, id, orgID,
-	).Scan(&l.ID, &l.OrganizationID, &l.UnitID, &l.TenantID, &l.StartDate, &l.EndDate, &l.RentAmount, &l.DepositAmount, &l.PaymentDay,
-		&l.Status, &l.IsActive, &l.LateFeePercent, &l.DailyInterestPercent, &l.IPTUReimbursable, &l.AnnualIPTUAmount, &l.IPTUYear, &l.Notes,
-		&l.CreatedAt, &l.UpdatedAt)
+	).Scan(l.scanDest()...)
 	if err != nil {
 		return nil, fmt.Errorf("lease.repo: update rent: %w", err)
 	}

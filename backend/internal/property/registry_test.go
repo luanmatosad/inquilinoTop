@@ -160,3 +160,21 @@ func TestCreatePropertyInput_Validate_NumeroEComplemento(t *testing.T) {
 	limite.Complement = strp(strings.Repeat("a", 100))
 	assert.NoError(t, validator.Validate(limite))
 }
+
+func TestCreateUnitInput_Validate_AluguelDeReferencia(t *testing.T) {
+	base := property.CreateUnitInput{Label: "Apto 101"}
+
+	assert.NoError(t, validator.Validate(base), "sem aluguel de referência é válido")
+
+	ok := base
+	ok.ReferenceRent = f64p(1850)
+	assert.NoError(t, validator.Validate(ok))
+
+	zero := base
+	zero.ReferenceRent = f64p(0)
+	assert.NoError(t, validator.Validate(zero), "zero é aceito (gte=0)")
+
+	neg := base
+	neg.ReferenceRent = f64p(-1)
+	assert.Error(t, validator.Validate(neg))
+}

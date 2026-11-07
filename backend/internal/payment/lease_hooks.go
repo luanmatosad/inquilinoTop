@@ -29,3 +29,10 @@ func (h *LeaseHooks) CancelFuturePending(ctx context.Context, leaseID, orgID uui
 	res, err := h.svc.CancelFuturePending(ctx, leaseID, orgID, after)
 	return res.Deactivated, res.NeedsReview, err
 }
+
+// ReadjustFuturePending aplica o novo aluguel às cobranças RENT futuras pendentes sem cobrança emitida e
+// informa quantas, já emitidas, ficaram para revisão.
+func (h *LeaseHooks) ReadjustFuturePending(ctx context.Context, leaseID, orgID uuid.UUID, from time.Time, newAmount float64) (updated, needsReview int, err error) {
+	res, err := h.svc.ReadjustFuturePending(ctx, leaseID, orgID, from, newAmount)
+	return res.Updated, res.NeedsReview, err
+}

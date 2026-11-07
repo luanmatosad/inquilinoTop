@@ -375,3 +375,79 @@ func TestFinancialRepository_Isolamento(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, cfg.ID, got.ID)
 }
+
+func TestPaymentRepository_UpdateFuturePendingRent(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, ownerID, leaseID := seedLease(t, database)
+	repo := payment.NewRepository(database)
+	from := time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC)
+
+	mk := func(due time.Time, comp, typ string) *payment.Payment {
+		c := comp
+		p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{
+			LeaseID: leaseID, DueDate: due, GrossAmount: 1000, Type: typ, Competency: &c,
+		})
+		require.NoError(t, err)
+		return p
+	}
+	antes := mk(from.AddDate(0, -1, 0), "2026-05", "RENT")  // vencimento antes da vigência
+	naData := mk(from, "2026-06", "RENT")                    // exatamente na vigência: entra
+	futura := mk(from.AddDate(0, 1, 0), "2026-07", "RENT")   // entra
+	emitida := mk(from.AddDate(0, 2, 0), "2026-08", "RENT") // com cobrança emitida: não muda, vira revisão
+	paga := mk(from.AddDate(0, 3, 0), "2026-09", "RENT")    // paga: não muda
+	iptu := mk(from.AddDate(0, 1, 0), "2026-07", "EXPENSE") // IPTU: não muda
+	retirada := mk(from.AddDate(0, 4, 0), "2026-10", "RENT") // desativada: não muda
+
+	require.NoError(t, repo.UpdateChargeInfo(ctx, emitida.ID, orgID, payment.UpdateChargeInfoInput{ChargeID: "ch_1", ChargeMethod: "PIX"}))
+	paidDate := from
+	_, err := repo.Update(ctx, paga.ID, orgID, payment.UpdatePaymentInput{Status: "PAID", PaidDate: &paidDate, GrossAmount: 1000})
+	require.NoError(t, err)
+	_, err = repo.DeactivateFuturePending(ctx, leaseID, orgID, from.AddDate(0, 3, 15))
+	require.NoError(t, err)
+
+	res, err := repo.UpdateFuturePendingRent(ctx, leaseID, orgID, from, 1100)
+	require.NoError(t, err)
+	assert.Equal(t, 2, res.Updated, "só a da vigência e a futura sem cobrança emitida")
+	assert.Equal(t, 1, res.NeedsReview, "a futura com cobrança emitida fica para revisão")
+
+	gross := func(id uuid.UUID) float64 {
+		var v float64
+		require.NoError(t, database.Pool.QueryRow(ctx, `SELECT gross_amount FROM payments WHERE id=$1`, id).Scan(&v))
+		return v
+	}
+	assert.Equal(t, 1000.0, gross(antes.ID), "antes da vigência não muda")
+	assert.Equal(t, 1100.0, gross(naData.ID), "o vencimento igual à vigência entra")
+	assert.Equal(t, 1100.0, gross(futura.ID))
+	assert.Equal(t, 1000.0, gross(emitida.ID), "cobrança emitida não muda")
+	assert.Equal(t, 1000.0, gross(paga.ID), "paga não muda")
+	assert.Equal(t, 1000.0, gross(iptu.ID), "IPTU (EXPENSE) não muda")
+	assert.Equal(t, 1000.0, gross(retirada.ID), "retirada da cobrança (is_active=false) não muda")
+
+	// idempotente: repetir com o mesmo valor não altera nada além do que já foi atualizado
+	res, err = repo.UpdateFuturePendingRent(ctx, leaseID, orgID, from, 1100)
+	require.NoError(t, err)
+	assert.Equal(t, 2, res.Updated)
+	assert.Equal(t, 1100.0, gross(futura.ID))
+}
+
+func TestPaymentRepository_UpdateFuturePendingRent_OutraOrganizacao(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, ownerID, leaseID := seedLease(t, database)
+	repo := payment.NewRepository(database)
+	from := time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC)
+	comp := "2026-07"
+	p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: from.AddDate(0, 1, 0), GrossAmount: 1000, Type: "RENT", Competency: &comp,
+	})
+	require.NoError(t, err)
+
+	res, err := repo.UpdateFuturePendingRent(ctx, leaseID, uuid.New(), from, 1100)
+	require.NoError(t, err)
+	assert.Equal(t, 0, res.Updated)
+
+	var v float64
+	require.NoError(t, database.Pool.QueryRow(ctx, `SELECT gross_amount FROM payments WHERE id=$1`, p.ID).Scan(&v))
+	assert.Equal(t, 1000.0, v)
+}

@@ -1636,7 +1636,10 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Encerra um contrato ACTIVE e retira as cobranças futuras pendentes sem cobrança emitida.",
+                "description": "Encerra um contrato ACTIVE e retira as cobranças futuras pendentes sem cobrança emitida a partir da data de saída. O corpo é opcional: sem ele, a saída é hoje e sem motivo.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1651,6 +1654,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Data de saída e motivo (opcionais)",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/lease.EndLeaseInput"
+                        }
                     }
                 ],
                 "responses": {
@@ -1658,6 +1669,13 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/lease.EndOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "INVALID_BODY, motivo inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "404": {
@@ -1669,6 +1687,13 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "LEASE_NOT_ACTIVE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "INVALID_DATES (saída antes do início)",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1717,6 +1742,66 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "COMPARISON_UNAVAILABLE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/leases/{id}/readjust": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Aplica um percentual (fração: 0,05 = 5%) ao aluguel de um contrato ACTIVE, registra o histórico e passa as cobranças de aluguel (RENT) futuras pendentes, sem cobrança emitida e com vencimento a partir da data de vigência, ao novo valor. Cobranças pagas, de IPTU, anteriores à vigência ou já emitidas não mudam; as emitidas são contadas em payments_need_review. Se atualizar as cobranças falhar, o reajuste do contrato vale e payments_error informa.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "leases"
+                ],
+                "summary": "Reajusta o aluguel do contrato",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do contrato",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Percentual, data de vigência e índice",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/lease.ReadjustInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/lease.ReadjustOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "INVALID_BODY, percentual inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "LEASE_NOT_ACTIVE",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -3680,6 +3765,19 @@ const docTemplate = `{
                 "unit_id"
             ],
             "properties": {
+                "adjustment_index": {
+                    "description": "AdjustmentMonth é opcional: sem ele, usa o mês de StartDate.",
+                    "type": "string",
+                    "enum": [
+                        "IGP-M",
+                        "IPCA"
+                    ]
+                },
+                "adjustment_month": {
+                    "type": "integer",
+                    "maximum": 12,
+                    "minimum": 1
+                },
                 "annual_iptu_amount": {
                     "type": "number",
                     "minimum": 0
@@ -3740,6 +3838,13 @@ const docTemplate = `{
         "lease.CreateOutput": {
             "type": "object",
             "properties": {
+                "adjustment_index": {
+                    "description": "AdjustmentIndex (IGP-M ou IPCA) e AdjustmentMonth (1 a 12) definem quando e por qual índice reajustar.",
+                    "type": "string"
+                },
+                "adjustment_month": {
+                    "type": "integer"
+                },
                 "annual_iptu_amount": {
                     "type": "number"
                 },
@@ -3753,6 +3858,10 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "end_date": {
+                    "type": "string"
+                },
+                "end_reason": {
+                    "description": "EndReason só existe depois de encerrar o contrato.",
                     "type": "string"
                 },
                 "id": {
@@ -3769,6 +3878,10 @@ const docTemplate = `{
                 },
                 "late_fee_percent": {
                     "type": "number"
+                },
+                "next_readjustment": {
+                    "description": "NextReadjustment é calculado pelo serviço (ver NextReadjustment); nulo sem mês de reajuste.",
+                    "type": "string"
                 },
                 "notes": {
                     "type": "string"
@@ -3808,9 +3921,34 @@ const docTemplate = `{
                 }
             }
         },
+        "lease.EndLeaseInput": {
+            "type": "object",
+            "properties": {
+                "end_date": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string",
+                    "enum": [
+                        "TERM_END",
+                        "TENANT_REQUEST",
+                        "NONPAYMENT",
+                        "OWNER_REQUEST",
+                        "OTHER"
+                    ]
+                }
+            }
+        },
         "lease.EndOutput": {
             "type": "object",
             "properties": {
+                "adjustment_index": {
+                    "description": "AdjustmentIndex (IGP-M ou IPCA) e AdjustmentMonth (1 a 12) definem quando e por qual índice reajustar.",
+                    "type": "string"
+                },
+                "adjustment_month": {
+                    "type": "integer"
+                },
                 "annual_iptu_amount": {
                     "type": "number"
                 },
@@ -3824,6 +3962,10 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "end_date": {
+                    "type": "string"
+                },
+                "end_reason": {
+                    "description": "EndReason só existe depois de encerrar o contrato.",
                     "type": "string"
                 },
                 "id": {
@@ -3840,6 +3982,10 @@ const docTemplate = `{
                 },
                 "late_fee_percent": {
                     "type": "number"
+                },
+                "next_readjustment": {
+                    "description": "NextReadjustment é calculado pelo serviço (ver NextReadjustment); nulo sem mês de reajuste.",
+                    "type": "string"
                 },
                 "notes": {
                     "type": "string"
@@ -3885,6 +4031,13 @@ const docTemplate = `{
         "lease.Lease": {
             "type": "object",
             "properties": {
+                "adjustment_index": {
+                    "description": "AdjustmentIndex (IGP-M ou IPCA) e AdjustmentMonth (1 a 12) definem quando e por qual índice reajustar.",
+                    "type": "string"
+                },
+                "adjustment_month": {
+                    "type": "integer"
+                },
                 "annual_iptu_amount": {
                     "type": "number"
                 },
@@ -3898,6 +4051,10 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "end_date": {
+                    "type": "string"
+                },
+                "end_reason": {
+                    "description": "EndReason só existe depois de encerrar o contrato.",
                     "type": "string"
                 },
                 "id": {
@@ -3914,6 +4071,10 @@ const docTemplate = `{
                 },
                 "late_fee_percent": {
                     "type": "number"
+                },
+                "next_readjustment": {
+                    "description": "NextReadjustment é calculado pelo serviço (ver NextReadjustment); nulo sem mês de reajuste.",
+                    "type": "string"
                 },
                 "notes": {
                     "type": "string"
@@ -3947,6 +4108,84 @@ const docTemplate = `{
                 }
             }
         },
+        "lease.ReadjustInput": {
+            "type": "object",
+            "required": [
+                "applied_at",
+                "percentage"
+            ],
+            "properties": {
+                "applied_at": {
+                    "type": "string"
+                },
+                "index_name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "percentage": {
+                    "type": "number",
+                    "minimum": 0.001
+                }
+            }
+        },
+        "lease.ReadjustOutput": {
+            "type": "object",
+            "properties": {
+                "lease": {
+                    "$ref": "#/definitions/lease.Lease"
+                },
+                "payments_error": {
+                    "type": "string"
+                },
+                "payments_need_review": {
+                    "type": "integer"
+                },
+                "payments_updated": {
+                    "description": "PaymentsUpdated conta as cobranças futuras que passaram ao novo aluguel; PaymentsNeedReview, as que já têm\ncobrança emitida e ficaram no valor antigo; PaymentsError, a falha ao atualizá-las (o reajuste do contrato vale).",
+                    "type": "integer"
+                },
+                "readjustment": {
+                    "$ref": "#/definitions/lease.Readjustment"
+                }
+            }
+        },
+        "lease.Readjustment": {
+            "type": "object",
+            "properties": {
+                "applied_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "index_name": {
+                    "type": "string"
+                },
+                "lease_id": {
+                    "type": "string"
+                },
+                "new_amount": {
+                    "type": "number"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "old_amount": {
+                    "type": "number"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "percentage": {
+                    "type": "number"
+                }
+            }
+        },
         "lease.RenewLeaseInput": {
             "type": "object",
             "required": [
@@ -3973,6 +4212,19 @@ const docTemplate = `{
                 "rent_amount"
             ],
             "properties": {
+                "adjustment_index": {
+                    "description": "PUT é substituição total: índice omitido é limpo; mês omitido mantém o atual.",
+                    "type": "string",
+                    "enum": [
+                        "IGP-M",
+                        "IPCA"
+                    ]
+                },
+                "adjustment_month": {
+                    "type": "integer",
+                    "maximum": 12,
+                    "minimum": 1
+                },
                 "annual_iptu_amount": {
                     "type": "number",
                     "minimum": 0
@@ -4186,6 +4438,11 @@ const docTemplate = `{
                 "notes": {
                     "type": "string",
                     "maxLength": 2000
+                },
+                "reference_rent": {
+                    "description": "ReferenceRent é o aluguel sugerido ao criar um contrato na unidade (opcional, não negativo).",
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },

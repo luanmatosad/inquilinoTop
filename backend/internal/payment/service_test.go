@@ -162,6 +162,10 @@ func (m *mockPaymentRepo) DeactivateFuturePending(_ context.Context, _, _ uuid.U
 	return payment.DeactivateResult{}, nil
 }
 
+func (m *mockPaymentRepo) UpdateFuturePendingRent(_ context.Context, _, _ uuid.UUID, _ time.Time, _ float64) (payment.RentUpdateResult, error) {
+	return payment.RentUpdateResult{}, nil
+}
+
 func (m *mockPaymentRepo) List(_ context.Context, orgID uuid.UUID, f payment.PaymentFilter, today time.Time) ([]payment.Payment, error) {
 	var list []payment.Payment
 	for _, p := range m.payments {

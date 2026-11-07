@@ -32,6 +32,7 @@ Toda entidade pertence a um `owner_id`. Nunca retornar ou modificar dados sem fi
 
 - **Soft-delete obrigatório**: deleções sempre via `is_active=false` + `updated_at=NOW()`. Nunca `DELETE FROM`. Ver [ADR cross-cutting 0001](../../docs/decisions/_cross-cutting/0001-soft-delete-obrigatorio.md).
 - **SINGLE auto-cria Unit**: ao criar Property do tipo `SINGLE`, criar automaticamente uma Unit com label `"Unidade 01"`. `RESIDENTIAL` e `COMMERCIAL` são multiunidade e não criam unidade automática (ver [ADR property-0002](../../docs/decisions/property/0002-commercial-multiunidade.md)).
+- **Reajuste atualiza cobranças futuras**: reajustar o aluguel de um contrato passa as cobranças `RENT` futuras `PENDING` sem cobrança emitida ao novo valor (atualização, nunca remoção). Ver [ADR payment-0004](../../docs/decisions/payment/0004-reajuste-atualiza-cobrancas-futuras.md).
 - **ownerID em toda query**: toda query de leitura e escrita DEVE incluir `owner_id` no filtro — sem exceção.
 - **UUIDs**: todos os IDs são `uuid.UUID` no Go / `uuid` no PostgreSQL.
 

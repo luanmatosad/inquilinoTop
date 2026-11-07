@@ -2,105 +2,137 @@ package importexport
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/property"
 	"github.com/inquilinotop/api/internal/tenant"
-	"github.com/inquilinotop/api/pkg/brdoc"
 )
 
 type Service struct {
 	repo         Repository
 	propertyRepo PropertyRepository
-	tenantRepo   TenantRepository
+	tenants      TenantCreator
 }
 
 type PropertyRepository interface {
 	GetByField(ctx context.Context, ownerID uuid.UUID, field string, value string) (*property.Property, error)
 }
 
-type TenantRepository interface {
-	GetByField(ctx context.Context, ownerID uuid.UUID, field string, value string) (*tenant.Tenant, error)
+// TenantCreator cria inquilinos escopados por organização; satisfeita por *tenant.Service.
+type TenantCreator interface {
+	Create(ctx context.Context, userID, orgID uuid.UUID, in tenant.CreateTenantInput) (*tenant.Tenant, error)
 }
 
-func NewService(repo Repository, propertyRepo PropertyRepository, tenantRepo TenantRepository) *Service {
+func NewService(repo Repository, propertyRepo PropertyRepository, tenants TenantCreator) *Service {
 	return &Service{
 		repo:         repo,
 		propertyRepo: propertyRepo,
-		tenantRepo:   tenantRepo,
+		tenants:      tenants,
 	}
 }
 
-func (s *Service) ImportRecords(ctx context.Context, ownerID uuid.UUID, req ImportRequest) (*ImportResponse, error) {
+// ImportRecords importa os registros. O histórico é escopado por ownerID; as entidades
+// importadas são gravadas na organização orgID, em nome de userID.
+func (s *Service) ImportRecords(ctx context.Context, ownerID, userID, orgID uuid.UUID, req ImportRequest) (*ImportResponse, error) {
 	importHistory, err := s.repo.CreateImportHistory(ctx, ownerID, "import", req.EntityType, len(req.Records))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("importexport.svc: criar histórico: %w", err)
 	}
 
-	var imported int
-	var failed int
-	var errors []string
+	if err := s.repo.UpdateImportHistory(ctx, importHistory.ID, 0, 0, "PROCESSING"); err != nil {
+		return nil, fmt.Errorf("importexport.svc: atualizar histórico: %w", err)
+	}
 
-	s.repo.UpdateImportHistory(ctx, importHistory.ID, 0, 0, "PROCESSING")
+	var imported, failed, skipped int
+	errs := []string{}
 
-	for _, record := range req.Records {
-		err := s.importRecord(ctx, ownerID, req.EntityType, record, req.DuplicateStrategy)
-		if err != nil {
-			failed++
-			errors = append(errors, err.Error())
-		} else {
+	for i, record := range req.Records {
+		err := s.importRecord(ctx, userID, orgID, req.EntityType, record)
+		switch {
+		case err == nil:
 			imported++
+		case errors.Is(err, tenant.ErrDuplicateDocument) && req.DuplicateStrategy == "skip":
+			skipped++
+		case errors.Is(err, tenant.ErrDuplicateDocument):
+			failed++
+			errs = append(errs, fmt.Sprintf("linha %d: documento já cadastrado", i+1))
+		default:
+			failed++
+			errs = append(errs, fmt.Sprintf("linha %d: %s", i+1, err.Error()))
 		}
 	}
 
 	status := "COMPLETED"
-	if failed == len(req.Records) {
+	if len(req.Records) > 0 && failed == len(req.Records) {
 		status = "FAILED"
 	}
 
-	s.repo.UpdateImportHistory(ctx, importHistory.ID, imported, failed, status)
+	if err := s.repo.UpdateImportHistory(ctx, importHistory.ID, imported, failed, status); err != nil {
+		return nil, fmt.Errorf("importexport.svc: finalizar histórico: %w", err)
+	}
 
 	return &ImportResponse{
 		ImportID: importHistory.ID,
 		Imported: imported,
 		Failed:   failed,
-		Errors:   errors,
+		Skipped:  skipped,
+		Errors:   errs,
 	}, nil
 }
 
-func (s *Service) importRecord(ctx context.Context, ownerID uuid.UUID, entityType string, record map[string]string, strategy string) error {
+func (s *Service) importRecord(ctx context.Context, userID, orgID uuid.UUID, entityType string, record map[string]string) error {
 	switch entityType {
 	case "tenant":
-		return s.importTenant(ctx, ownerID, record, strategy)
-	case "property":
-		return nil
+		return s.importTenant(ctx, userID, orgID, record)
 	default:
-		return nil
+		return fmt.Errorf("entity_type %q não suportado", entityType)
 	}
 }
 
-func (s *Service) importTenant(ctx context.Context, ownerID uuid.UUID, record map[string]string, strategy string) error {
-	cpf := record["cpf"]
-	if cpf == "" {
-		return &ValidationError{Field: "cpf", Message: "CPF é obrigatório"}
+func (s *Service) importTenant(ctx context.Context, userID, orgID uuid.UUID, record map[string]string) error {
+	doc := firstNonEmpty(record, "cpf", "cnpj", "document")
+	personType := "PF"
+	if strings.EqualFold(strings.TrimSpace(record["person_type"]), "PJ") || strings.TrimSpace(record["cnpj"]) != "" {
+		personType = "PJ"
 	}
 
-	// Mesma regra do cadastro: só dígitos e CPF válido, para casar com o documento gravado.
-	cpf = brdoc.OnlyDigits(cpf)
-	if !brdoc.ValidCPF(cpf) {
-		return &ValidationError{Field: "cpf", Message: "CPF inválido"}
+	in := tenant.CreateTenantInput{
+		Name:        strings.TrimSpace(record["name"]),
+		Document:    optional(doc),
+		PersonType:  &personType,
+		Email:       optional(record["email"]),
+		Phone:       optional(record["phone"]),
+		PostalCode:  optional(record["postal_code"]),
+		AddressLine: optional(record["address_line"]),
+		City:        optional(record["city"]),
+		State:       optional(record["state"]),
+		Notes:       optional(record["notes"]),
 	}
 
-	existing, err := s.tenantRepo.GetByField(ctx, ownerID, "document", cpf)
-	if err != nil {
+	if _, err := s.tenants.Create(ctx, userID, orgID, in); err != nil {
 		return err
 	}
+	return nil
+}
 
-	if existing != nil && strategy == "skip" {
+func firstNonEmpty(m map[string]string, keys ...string) string {
+	for _, k := range keys {
+		if v := strings.TrimSpace(m[k]); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func optional(v string) *string {
+	v = strings.TrimSpace(v)
+	if v == "" {
 		return nil
 	}
-
-	return nil
+	return &v
 }
 
 func (s *Service) ListHistory(ctx context.Context, ownerID uuid.UUID) ([]ImportHistory, error) {

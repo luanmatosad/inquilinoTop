@@ -55,6 +55,14 @@ func (s *Service) checkOverlap(ctx context.Context, unitID, orgID uuid.UUID, sta
 	return nil
 }
 
+// decorate preenche os campos calculados do contrato (hoje, só o próximo reajuste).
+func decorate(l *Lease) *Lease {
+	if l != nil {
+		l.NextReadjustment = NextReadjustment(l.AdjustmentMonth, l.StartDate, l.LastReadjustedAt)
+	}
+	return l
+}
+
 func (s *Service) Create(ctx context.Context, orgID, ownerID uuid.UUID, in CreateLeaseInput) (*CreateOutput, error) {
 	if in.UnitID == uuid.Nil {
 		return nil, fmt.Errorf("lease.svc: unit_id é obrigatório")
@@ -90,12 +98,16 @@ func (s *Service) Create(ctx context.Context, orgID, ownerID uuid.UUID, in Creat
 	if err := s.checkOverlap(ctx, in.UnitID, orgID, in.StartDate, in.EndDate, uuid.Nil); err != nil {
 		return nil, err
 	}
+	if in.AdjustmentMonth == nil {
+		m := int(in.StartDate.Month())
+		in.AdjustmentMonth = &m
+	}
 
 	l, err := s.repo.Create(ctx, orgID, ownerID, in)
 	if err != nil {
 		return nil, err
 	}
-	out := &CreateOutput{Lease: l}
+	out := &CreateOutput{Lease: decorate(l)}
 	if in.GeneratePayments && s.payments != nil {
 		out.PaymentsGenerated, err = s.generateInitialPayments(ctx, ownerID, orgID, l)
 		if err != nil {
@@ -129,11 +141,22 @@ func (s *Service) generateInitialPayments(ctx context.Context, userID, orgID uui
 }
 
 func (s *Service) Get(ctx context.Context, id, orgID uuid.UUID) (*Lease, error) {
-	return s.repo.GetByID(ctx, id, orgID)
+	l, err := s.repo.GetByID(ctx, id, orgID)
+	if err != nil {
+		return nil, err
+	}
+	return decorate(l), nil
 }
 
 func (s *Service) List(ctx context.Context, orgID uuid.UUID) ([]Lease, error) {
-	return s.repo.List(ctx, orgID)
+	list, err := s.repo.List(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		decorate(&list[i])
+	}
+	return list, nil
 }
 
 func (s *Service) Update(ctx context.Context, id, orgID uuid.UUID, in UpdateLeaseInput) (*Lease, error) {
@@ -159,7 +182,14 @@ func (s *Service) Update(ctx context.Context, id, orgID uuid.UUID, in UpdateLeas
 			return nil, err
 		}
 	}
-	return s.repo.Update(ctx, id, orgID, in)
+	if in.AdjustmentMonth == nil {
+		in.AdjustmentMonth = current.AdjustmentMonth
+	}
+	updated, err := s.repo.Update(ctx, id, orgID, in)
+	if err != nil {
+		return nil, err
+	}
+	return decorate(updated), nil
 }
 
 func (s *Service) Delete(ctx context.Context, id, orgID uuid.UUID) error {
@@ -168,7 +198,12 @@ func (s *Service) Delete(ctx context.Context, id, orgID uuid.UUID) error {
 
 // End encerra o contrato ACTIVE e retira as cobranças futuras pendentes sem cobrança emitida.
 // Falha no cancelamento não desfaz o encerramento: vai em PaymentsError para o usuário agir.
-func (s *Service) End(ctx context.Context, id, orgID uuid.UUID) (*EndOutput, error) {
+// End encerra o contrato. A data de saída padrão é hoje; nunca antes do início do contrato. As cobranças
+// futuras são canceladas a partir da data de saída efetiva (a saída nunca estende o prazo previsto).
+func (s *Service) End(ctx context.Context, id, orgID uuid.UUID, in EndLeaseInput) (*EndOutput, error) {
+	if in.Reason != nil && !EndReasons[*in.Reason] {
+		return nil, fmt.Errorf("lease.svc: motivo de encerramento inválido")
+	}
 	current, err := s.repo.GetByID(ctx, id, orgID)
 	if err != nil {
 		return nil, err
@@ -176,13 +211,24 @@ func (s *Service) End(ctx context.Context, id, orgID uuid.UUID) (*EndOutput, err
 	if current.Status != "ACTIVE" {
 		return nil, fmt.Errorf("lease.svc: %w", ErrLeaseNotActive)
 	}
-	ended, err := s.repo.End(ctx, id, orgID)
+	endDate := dateOnly(s.now())
+	if in.EndDate != nil {
+		endDate = dateOnly(*in.EndDate)
+	}
+	if endDate.Before(dateOnly(current.StartDate)) {
+		return nil, ErrInvalidDates
+	}
+	ended, err := s.repo.End(ctx, id, orgID, endDate, in.Reason)
 	if err != nil {
 		return nil, err
 	}
-	out := &EndOutput{Lease: ended}
+	out := &EndOutput{Lease: decorate(ended)}
 	if s.payments != nil {
-		out.PaymentsCanceled, out.PaymentsNeedReview, err = s.payments.CancelFuturePending(ctx, id, orgID, dateOnly(s.now()))
+		cutoff := endDate
+		if ended.EndDate != nil {
+			cutoff = dateOnly(*ended.EndDate)
+		}
+		out.PaymentsCanceled, out.PaymentsNeedReview, err = s.payments.CancelFuturePending(ctx, id, orgID, cutoff)
 		if err != nil {
 			slog.Error("lease: cancelar cobranças futuras falhou", "lease_id", id, "error", err)
 			out.PaymentsError = err.Error()
@@ -211,12 +257,21 @@ func (s *Service) Renew(ctx context.Context, id, orgID uuid.UUID, in RenewLeaseI
 	if err := s.checkOverlap(ctx, current.UnitID, orgID, current.StartDate, &in.NewEndDate, id); err != nil {
 		return nil, err
 	}
-	return s.repo.Renew(ctx, id, orgID, in)
+	renewed, err := s.repo.Renew(ctx, id, orgID, in)
+	if err != nil {
+		return nil, err
+	}
+	return decorate(renewed), nil
 }
 
 type ReadjustOutput struct {
 	Lease        *Lease        `json:"lease"`
 	Readjustment *Readjustment `json:"readjustment"`
+	// PaymentsUpdated conta as cobranças futuras que passaram ao novo aluguel; PaymentsNeedReview, as que já têm
+	// cobrança emitida e ficaram no valor antigo; PaymentsError, a falha ao atualizá-las (o reajuste do contrato vale).
+	PaymentsUpdated    int    `json:"payments_updated"`
+	PaymentsNeedReview int    `json:"payments_need_review"`
+	PaymentsError      string `json:"payments_error,omitempty"`
 }
 
 func (s *Service) Readjust(ctx context.Context, id, orgID uuid.UUID, in ReadjustInput) (*ReadjustOutput, error) {
@@ -245,7 +300,21 @@ func (s *Service) Readjust(ctx context.Context, id, orgID uuid.UUID, in Readjust
 	if err != nil {
 		return nil, fmt.Errorf("lease.svc: readjust persist: %w", err)
 	}
-	return &ReadjustOutput{Lease: updated, Readjustment: r}, nil
+	// O RETURNING do UPDATE saiu antes de o reajuste ser gravado: o reajuste recém-aplicado vale como último.
+	if updated.LastReadjustedAt == nil || in.AppliedAt.After(*updated.LastReadjustedAt) {
+		applied := in.AppliedAt
+		updated.LastReadjustedAt = &applied
+	}
+	out := &ReadjustOutput{Lease: decorate(updated), Readjustment: r}
+	if s.payments != nil {
+		// O reajuste do contrato já valeu: se atualizar as cobranças falhar, o erro vai na resposta e no log.
+		out.PaymentsUpdated, out.PaymentsNeedReview, err = s.payments.ReadjustFuturePending(ctx, id, orgID, dateOnly(in.AppliedAt), newAmount)
+		if err != nil {
+			slog.Error("lease: atualizar cobranças futuras falhou", "lease_id", id, "error", err)
+			out.PaymentsError = err.Error()
+		}
+	}
+	return out, nil
 }
 
 func (s *Service) ListReadjustments(ctx context.Context, leaseID, orgID uuid.UUID) ([]Readjustment, error) {

@@ -3,6 +3,7 @@ package lease
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -215,12 +216,16 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 }
 
 // @Summary Encerra contrato
-// @Description Encerra um contrato ACTIVE e retira as cobranças futuras pendentes sem cobrança emitida.
+// @Description Encerra um contrato ACTIVE e retira as cobranças futuras pendentes sem cobrança emitida a partir da data de saída. O corpo é opcional: sem ele, a saída é hoje e sem motivo.
 // @Tags leases
 // @Security BearerAuth
+// @Accept json
 // @Produce json
 // @Param id path string true "ID do contrato"
+// @Param body body EndLeaseInput false "Data de saída e motivo (opcionais)"
 // @Success 200 {object} EndOutput
+// @Failure 400 {object} map[string]interface{} "INVALID_BODY, motivo inválido"
+// @Failure 422 {object} map[string]interface{} "INVALID_DATES (saída antes do início)"
 // @Failure 404 {object} map[string]interface{} "NOT_FOUND"
 // @Failure 409 {object} map[string]interface{} "LEASE_NOT_ACTIVE"
 // @Router /leases/{id}/end [post]
@@ -240,7 +245,17 @@ func (h *Handler) end(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
 		return
 	}
-	l, err := h.svc.End(r.Context(), id, orgID)
+	var in EndLeaseInput
+	// Corpo opcional: vazio (EOF) mantém o comportamento antigo; qualquer outra coisa precisa ser JSON válido.
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil && !errors.Is(err, io.EOF) {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+	if err := validator.Validate(in); err != nil {
+		httputil.ValidationErr(w, err)
+		return
+	}
+	l, err := h.svc.End(r.Context(), id, orgID, in)
 	if err != nil {
 		if writeDomainErr(w, err) {
 			return
@@ -294,6 +309,18 @@ func (h *Handler) renew(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, l)
 }
 
+// @Summary Reajusta o aluguel do contrato
+// @Description Aplica um percentual (fração: 0,05 = 5%) ao aluguel de um contrato ACTIVE, registra o histórico e passa as cobranças de aluguel (RENT) futuras pendentes, sem cobrança emitida e com vencimento a partir da data de vigência, ao novo valor. Cobranças pagas, de IPTU, anteriores à vigência ou já emitidas não mudam; as emitidas são contadas em payments_need_review. Se atualizar as cobranças falhar, o reajuste do contrato vale e payments_error informa.
+// @Tags leases
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "ID do contrato"
+// @Param body body ReadjustInput true "Percentual, data de vigência e índice"
+// @Success 200 {object} ReadjustOutput
+// @Failure 400 {object} map[string]interface{} "INVALID_BODY, percentual inválido"
+// @Failure 409 {object} map[string]interface{} "LEASE_NOT_ACTIVE"
+// @Router /leases/{id}/readjust [post]
 func (h *Handler) readjust(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
 	if orgID == uuid.Nil {

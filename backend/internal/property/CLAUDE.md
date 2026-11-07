@@ -7,7 +7,7 @@ Um módulo trata Property + Unit juntos. Repository interface tem 10 métodos (5
 | Struct | Campos chave |
 |---|---|
 | `Property` | id, organization_id, type (RESIDENTIAL\|COMMERCIAL\|SINGLE), name, address_line?, number? (≤20), complement? (≤100), city?, state?, postal_code? (8 dígitos), neighborhood?, is_active |
-| `Unit` | id, property_id, label, floor?, notes?, area_m2? (>0), bedrooms? (>=0), bathrooms? (>=0), is_active |
+| `Unit` | id, property_id, label, floor?, notes?, area_m2? (>0), bedrooms? (>=0), bathrooms? (>=0), **reference_rent?** (>=0, sugestão de aluguel ao criar contrato), is_active |
 
 ## Rotas
 

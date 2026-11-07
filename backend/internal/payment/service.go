@@ -266,6 +266,19 @@ func (s *Service) CancelFuturePending(ctx context.Context, leaseID, orgID uuid.U
 	return res, nil
 }
 
+// ReadjustFuturePending aplica o aluguel reajustado às cobranças de aluguel futuras pendentes do contrato.
+// Cobranças já emitidas no provedor (charge_id) são mantidas e contadas em NeedsReview.
+func (s *Service) ReadjustFuturePending(ctx context.Context, leaseID, orgID uuid.UUID, from time.Time, amount float64) (RentUpdateResult, error) {
+	if amount <= 0 {
+		return RentUpdateResult{}, fmt.Errorf("payment.svc: valor do aluguel deve ser positivo")
+	}
+	res, err := s.repo.UpdateFuturePendingRent(ctx, leaseID, orgID, from, amount)
+	if err != nil {
+		return res, fmt.Errorf("payment.svc: reajustar futuras pendentes: %w", err)
+	}
+	return res, nil
+}
+
 func (s *Service) GenerateMonth(ctx context.Context, userID, leaseID, orgID uuid.UUID, month string) ([]Payment, error) {
 	monthStart, err := time.Parse("2006-01", month)
 	if err != nil {

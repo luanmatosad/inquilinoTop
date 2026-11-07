@@ -231,6 +231,30 @@ func (r *pgRepository) GetByChargeID(ctx context.Context, chargeID string) (*Pay
 	return &p, nil
 }
 
+func (r *pgRepository) UpdateFuturePendingRent(ctx context.Context, leaseID, orgID uuid.UUID, from time.Time, amount float64) (RentUpdateResult, error) {
+	var res RentUpdateResult
+	tag, err := r.db.Pool.Exec(ctx,
+		`UPDATE payments SET gross_amount=$1, updated_at=NOW()
+		 WHERE lease_id=$2 AND organization_id=$3 AND is_active=true
+		   AND type='RENT' AND status='PENDING' AND due_date >= $4 AND charge_id IS NULL`,
+		amount, leaseID, orgID, from,
+	)
+	if err != nil {
+		return res, fmt.Errorf("payment.repo: update future pending rent: %w", err)
+	}
+	res.Updated = int(tag.RowsAffected())
+	err = r.db.Pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM payments
+		 WHERE lease_id=$1 AND organization_id=$2 AND is_active=true
+		   AND type='RENT' AND status='PENDING' AND due_date >= $3 AND charge_id IS NOT NULL`,
+		leaseID, orgID, from,
+	).Scan(&res.NeedsReview)
+	if err != nil {
+		return res, fmt.Errorf("payment.repo: count needs review: %w", err)
+	}
+	return res, nil
+}
+
 func (r *pgRepository) DeactivateFuturePending(ctx context.Context, leaseID, orgID uuid.UUID, after time.Time) (DeactivateResult, error) {
 	var res DeactivateResult
 	tag, err := r.db.Pool.Exec(ctx,

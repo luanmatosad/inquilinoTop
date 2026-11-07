@@ -87,6 +87,14 @@ type DeactivateResult struct {
 	NeedsReview int `json:"needs_review"`
 }
 
+// RentUpdateResult resume a atualização do aluguel das cobranças futuras de um contrato reajustado.
+type RentUpdateResult struct {
+	// Updated é o número de cobranças RENT pendentes futuras que passaram ao novo valor.
+	Updated int `json:"updated"`
+	// NeedsReview conta pendentes futuras com cobrança emitida (charge_id), mantidas no valor antigo.
+	NeedsReview int `json:"needs_review"`
+}
+
 // PaymentFilter restringe a listagem e o resumo. Status: PENDING (a vencer), LATE (vencida) ou PAID.
 // From/To filtram o vencimento, inclusive nas extremidades.
 type PaymentFilter struct {
@@ -120,6 +128,9 @@ type Repository interface {
 	// DeactivateFuturePending retira (is_active=false) as cobranças PENDING com vencimento depois de after
 	// e sem charge_id. É a única exceção à imutabilidade de payment (ADR payment-0003).
 	DeactivateFuturePending(ctx context.Context, leaseID, orgID uuid.UUID, after time.Time) (DeactivateResult, error)
+	// UpdateFuturePendingRent aplica o novo aluguel às cobranças RENT PENDING ativas, sem cobrança emitida,
+	// com vencimento a partir de from (inclusive). É atualização, nunca remoção (ADR payment-0001).
+	UpdateFuturePendingRent(ctx context.Context, leaseID, orgID uuid.UUID, from time.Time, amount float64) (RentUpdateResult, error)
 	Update(ctx context.Context, id, orgID uuid.UUID, in UpdatePaymentInput) (*Payment, error)
 	MarkPaid(ctx context.Context, id, orgID uuid.UUID, paidDate time.Time,
 		lateFee, interest, irrf, netAmount float64) (*Payment, error)

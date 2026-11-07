@@ -2,6 +2,7 @@ package lease
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -48,8 +49,17 @@ type Lease struct {
 	AnnualIPTUAmount     *float64   `json:"annual_iptu_amount,omitempty"`
 	IPTUYear             *int       `json:"iptu_year,omitempty"`
 	Notes                *string    `json:"notes,omitempty"`
-	CreatedAt            time.Time  `json:"created_at"`
-	UpdatedAt            time.Time  `json:"updated_at"`
+	// AdjustmentIndex (IGP-M ou IPCA) e AdjustmentMonth (1 a 12) definem quando e por qual índice reajustar.
+	AdjustmentIndex *string `json:"adjustment_index,omitempty"`
+	AdjustmentMonth *int    `json:"adjustment_month,omitempty"`
+	// EndReason só existe depois de encerrar o contrato.
+	EndReason *string `json:"end_reason,omitempty"`
+	// LastReadjustedAt vem do histórico de reajustes e só serve para calcular NextReadjustment.
+	LastReadjustedAt *time.Time `json:"-"`
+	// NextReadjustment é calculado pelo serviço (ver NextReadjustment); nulo sem mês de reajuste.
+	NextReadjustment *time.Time `json:"next_readjustment"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 type CreateLeaseInput struct {
@@ -66,6 +76,9 @@ type CreateLeaseInput struct {
 	AnnualIPTUAmount     *float64   `json:"annual_iptu_amount,omitempty" validate:"omitempty,min=0"`
 	IPTUYear             *int       `json:"iptu_year,omitempty" validate:"omitempty,min=2000,max=2100"`
 	Notes                *string    `json:"notes,omitempty" validate:"omitempty,max=2000"`
+	// AdjustmentMonth é opcional: sem ele, usa o mês de StartDate.
+	AdjustmentIndex *string `json:"adjustment_index,omitempty" validate:"omitempty,oneof=IGP-M IPCA"`
+	AdjustmentMonth *int    `json:"adjustment_month,omitempty" validate:"omitempty,min=1,max=12"`
 	// GeneratePayments gera as cobranças de aluguel do período (no máximo MaxInitialPayments meses).
 	GeneratePayments bool `json:"generate_payments,omitempty"`
 }
@@ -83,6 +96,43 @@ type UpdateLeaseInput struct {
 	IPTUReimbursable     bool     `json:"iptu_reimbursable,omitempty"`
 	AnnualIPTUAmount     *float64 `json:"annual_iptu_amount,omitempty" validate:"omitempty,min=0"`
 	IPTUYear             *int     `json:"iptu_year,omitempty" validate:"omitempty,min=2000,max=2100"`
+	// PUT é substituição total: índice omitido é limpo; mês omitido mantém o atual.
+	AdjustmentIndex *string `json:"adjustment_index,omitempty" validate:"omitempty,oneof=IGP-M IPCA"`
+	AdjustmentMonth *int    `json:"adjustment_month,omitempty" validate:"omitempty,min=1,max=12"`
+}
+
+// EndReasons são os motivos aceitos ao encerrar um contrato.
+var EndReasons = map[string]bool{
+	"TERM_END": true, "TENANT_REQUEST": true, "NONPAYMENT": true, "OWNER_REQUEST": true, "OTHER": true,
+}
+
+// EndLeaseInput é o corpo, opcional, de POST /leases/{id}/end. Sem corpo, a saída é hoje e sem motivo.
+type EndLeaseInput struct {
+	EndDate *time.Time `json:"end_date,omitempty"`
+	Reason  *string    `json:"reason,omitempty" validate:"omitempty,oneof=TERM_END TENANT_REQUEST NONPAYMENT OWNER_REQUEST OTHER"`
+}
+
+// UnmarshalJSON aceita `end_date` como "YYYY-MM-DD" ou RFC3339, já que a tela envia só a data.
+func (in *EndLeaseInput) UnmarshalJSON(b []byte) error {
+	var raw struct {
+		EndDate *string `json:"end_date"`
+		Reason  *string `json:"reason"`
+	}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	in.Reason, in.EndDate = raw.Reason, nil
+	if raw.EndDate != nil && *raw.EndDate != "" {
+		t, err := time.Parse(time.RFC3339, *raw.EndDate)
+		if err != nil {
+			t, err = time.Parse("2006-01-02", *raw.EndDate)
+		}
+		if err != nil {
+			return fmt.Errorf("end_date inválido: use YYYY-MM-DD")
+		}
+		in.EndDate = &t
+	}
+	return nil
 }
 
 type RenewLeaseInput struct {
@@ -97,7 +147,8 @@ type Repository interface {
 	List(ctx context.Context, orgID uuid.UUID) ([]Lease, error)
 	Update(ctx context.Context, id, orgID uuid.UUID, in UpdateLeaseInput) (*Lease, error)
 	Delete(ctx context.Context, id, orgID uuid.UUID) error
-	End(ctx context.Context, id, orgID uuid.UUID) (*Lease, error)
+	// End encerra o contrato em endDate (nunca depois do fim previsto) e grava o motivo, se houver.
+	End(ctx context.Context, id, orgID uuid.UUID, endDate time.Time, reason *string) (*Lease, error)
 	Renew(ctx context.Context, id, orgID uuid.UUID, in RenewLeaseInput) (*Lease, error)
 	UpdateRentAmount(ctx context.Context, id, orgID uuid.UUID, amount float64) (*Lease, error)
 	// HasOverlap informa se a unidade tem outro contrato ACTIVE cujo período intersecta [start, end]
@@ -121,6 +172,9 @@ type PaymentHooks interface {
 	// CancelFuturePending retira as cobranças PENDING com vencimento depois de after e sem cobrança emitida.
 	// needsReview conta as futuras pendentes com cobrança emitida, que ficam para decisão manual.
 	CancelFuturePending(ctx context.Context, leaseID, orgID uuid.UUID, after time.Time) (canceled, needsReview int, err error)
+	// ReadjustFuturePending aplica o novo aluguel às cobranças RENT PENDING sem cobrança emitida com vencimento
+	// a partir de from (inclusive). needsReview conta as futuras com cobrança emitida, que ficam no valor antigo.
+	ReadjustFuturePending(ctx context.Context, leaseID, orgID uuid.UUID, from time.Time, newAmount float64) (updated, needsReview int, err error)
 }
 
 // CreateOutput é o contrato criado mais o resultado da geração de cobranças.

@@ -53,6 +53,13 @@ type fakePayments struct {
 	needReview  int
 	cancelAfter time.Time
 	cancelErr   error
+
+	// reajuste das cobranças futuras
+	reUpdated, reNeedReview int
+	reErr                   error
+	reCalls                 int
+	reFrom                  time.Time
+	reAmount                float64
 }
 
 func (f *fakePayments) GenerateRentMonth(_ context.Context, _, _, _ uuid.UUID, month string) error {
@@ -66,6 +73,12 @@ func (f *fakePayments) GenerateRentMonth(_ context.Context, _, _, _ uuid.UUID, m
 func (f *fakePayments) CancelFuturePending(_ context.Context, _, _ uuid.UUID, after time.Time) (int, int, error) {
 	f.cancelAfter = after
 	return f.canceled, f.needReview, f.cancelErr
+}
+
+func (f *fakePayments) ReadjustFuturePending(_ context.Context, _, _ uuid.UUID, from time.Time, newAmount float64) (int, int, error) {
+	f.reCalls++
+	f.reFrom, f.reAmount = from, newAmount
+	return f.reUpdated, f.reNeedReview, f.reErr
 }
 
 type env struct {
@@ -201,7 +214,7 @@ func TestService_Create_OutraUnidadeNãoSobrepõe(t *testing.T) {
 func TestService_Create_ContratoEncerradoNãoSobrepõe(t *testing.T) {
 	e := newEnv()
 	first := e.create(t, e.in(day(2026, 1, 1), nil))
-	_, err := e.svc.End(context.Background(), first.Lease.ID, e.org)
+	_, err := e.svc.End(context.Background(), first.Lease.ID, e.org, lease.EndLeaseInput{})
 	require.NoError(t, err)
 
 	_, err = e.svc.Create(context.Background(), e.org, e.own, e.in(day(2026, 1, 1), nil))
@@ -267,7 +280,7 @@ func TestService_End_CancelaFuturasPendentes(t *testing.T) {
 	e.payments.canceled, e.payments.needReview = 4, 1
 	created := e.create(t, e.in(day(2026, 1, 1), nil))
 
-	out, err := e.svc.End(context.Background(), created.Lease.ID, e.org)
+	out, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{})
 	require.NoError(t, err)
 	assert.Equal(t, "ENDED", out.Lease.Status)
 	assert.Equal(t, 4, out.PaymentsCanceled)
@@ -275,13 +288,91 @@ func TestService_End_CancelaFuturasPendentes(t *testing.T) {
 	assert.False(t, e.payments.cancelAfter.IsZero(), "corte por data de vencimento é informado")
 }
 
+func TestService_End_SemCorpoUsaHoje(t *testing.T) {
+	e := newEnv()
+	created := e.create(t, e.in(day(2026, 1, 1), nil))
+
+	out, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{})
+	require.NoError(t, err)
+	today := time.Now()
+	require.NotNil(t, out.Lease.EndDate)
+	assert.Equal(t, today.Format("2006-01-02"), out.Lease.EndDate.Format("2006-01-02"))
+	assert.Equal(t, today.Format("2006-01-02"), e.payments.cancelAfter.Format("2006-01-02"))
+	assert.Nil(t, out.Lease.EndReason)
+}
+
+func TestService_End_ComDataDeSaidaCancelaAPartirDela(t *testing.T) {
+	e := newEnv()
+	created := e.create(t, e.in(day(2026, 1, 1), nil))
+
+	out, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{EndDate: dayp(2026, 11, 30)})
+	require.NoError(t, err)
+	assert.Equal(t, "ENDED", out.Lease.Status)
+	assert.True(t, day(2026, 11, 30).Equal(*out.Lease.EndDate))
+	assert.True(t, day(2026, 11, 30).Equal(e.payments.cancelAfter), "o corte das cobranças é a data de saída, não hoje")
+}
+
+func TestService_End_GravaOMotivo(t *testing.T) {
+	e := newEnv()
+	created := e.create(t, e.in(day(2026, 1, 1), nil))
+	reason := "TENANT_REQUEST"
+
+	out, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{Reason: &reason})
+	require.NoError(t, err)
+	require.NotNil(t, out.Lease.EndReason)
+	assert.Equal(t, "TENANT_REQUEST", *out.Lease.EndReason)
+}
+
+func TestService_End_MotivoForaDaListaNaoEncerra(t *testing.T) {
+	e := newEnv()
+	created := e.create(t, e.in(day(2026, 1, 1), nil))
+	reason := "QUALQUER"
+
+	_, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{Reason: &reason})
+	assert.Error(t, err)
+	got, gerr := e.svc.Get(context.Background(), created.Lease.ID, e.org)
+	require.NoError(t, gerr)
+	assert.Equal(t, "ACTIVE", got.Status)
+	assert.True(t, e.payments.cancelAfter.IsZero(), "nada é cancelado quando o encerramento é recusado")
+}
+
+func TestService_End_DataAnteriorAoInicio(t *testing.T) {
+	e := newEnv()
+	created := e.create(t, e.in(day(2026, 3, 10), nil))
+
+	_, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{EndDate: dayp(2026, 3, 9)})
+	assert.ErrorIs(t, err, lease.ErrInvalidDates)
+	got, gerr := e.svc.Get(context.Background(), created.Lease.ID, e.org)
+	require.NoError(t, gerr)
+	assert.Equal(t, "ACTIVE", got.Status)
+	assert.True(t, e.payments.cancelAfter.IsZero())
+}
+
+func TestService_End_SaidaNoDiaDoInicioEhValida(t *testing.T) {
+	e := newEnv()
+	created := e.create(t, e.in(day(2026, 3, 10), nil))
+
+	_, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{EndDate: dayp(2026, 3, 10)})
+	assert.NoError(t, err)
+}
+
+func TestService_End_SaidaNuncaEstendeOPrazo(t *testing.T) {
+	e := newEnv()
+	created := e.create(t, e.in(day(2026, 1, 1), dayp(2027, 3, 10)))
+
+	out, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{EndDate: dayp(2027, 6, 1)})
+	require.NoError(t, err)
+	assert.True(t, day(2027, 3, 10).Equal(*out.Lease.EndDate), "fim permanece 2027-03-10")
+	assert.True(t, day(2027, 3, 10).Equal(e.payments.cancelAfter), "o corte usa o fim efetivo")
+}
+
 func TestService_End_JáEncerrado(t *testing.T) {
 	e := newEnv()
 	created := e.create(t, e.in(day(2026, 1, 1), nil))
-	_, err := e.svc.End(context.Background(), created.Lease.ID, e.org)
+	_, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{})
 	require.NoError(t, err)
 
-	_, err = e.svc.End(context.Background(), created.Lease.ID, e.org)
+	_, err = e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{})
 	assert.ErrorIs(t, err, lease.ErrLeaseNotActive)
 }
 
@@ -290,7 +381,7 @@ func TestService_End_ErroAoCancelarCobrançasNãoDesfazEncerramento(t *testing.T
 	e.payments.cancelErr = errors.New("db down")
 	created := e.create(t, e.in(day(2026, 1, 1), nil))
 
-	out, err := e.svc.End(context.Background(), created.Lease.ID, e.org)
+	out, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{})
 	require.NoError(t, err)
 	assert.Equal(t, "ENDED", out.Lease.Status)
 	assert.NotEmpty(t, out.PaymentsError)
@@ -319,7 +410,7 @@ func TestService_Renew_Válida(t *testing.T) {
 func TestService_Renew_ContratoEncerrado(t *testing.T) {
 	e := newEnv()
 	created := e.create(t, e.in(day(2026, 1, 1), nil))
-	_, err := e.svc.End(context.Background(), created.Lease.ID, e.org)
+	_, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{})
 	require.NoError(t, err)
 
 	_, err = e.svc.Renew(context.Background(), created.Lease.ID, e.org, lease.RenewLeaseInput{NewEndDate: day(2030, 1, 1)})
@@ -340,7 +431,7 @@ func TestService_Renew_SobreposiçãoComOutroContrato(t *testing.T) {
 func TestService_Update_NãoPermiteMudarStatus(t *testing.T) {
 	e := newEnv()
 	created := e.create(t, e.in(day(2026, 1, 1), nil))
-	_, err := e.svc.End(context.Background(), created.Lease.ID, e.org)
+	_, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{})
 	require.NoError(t, err)
 
 	_, err = e.svc.Update(context.Background(), created.Lease.ID, e.org, lease.UpdateLeaseInput{Status: "ACTIVE", RentAmount: 1500})
@@ -383,7 +474,7 @@ func createLease(svc *lease.Service, orgID, ownerID uuid.UUID, in lease.CreateLe
 }
 
 func endLease(svc *lease.Service, id, orgID uuid.UUID) (*lease.Lease, error) {
-	out, err := svc.End(context.Background(), id, orgID)
+	out, err := svc.End(context.Background(), id, orgID, lease.EndLeaseInput{})
 	if err != nil {
 		return nil, err
 	}
@@ -498,10 +589,193 @@ func TestHandler_Renew_DataAnterior_422(t *testing.T) {
 func TestHandler_Renew_ContratoEncerrado_409(t *testing.T) {
 	e := newEnv()
 	created := e.create(t, e.in(day(2026, 1, 1), nil))
-	_, err := e.svc.End(context.Background(), created.Lease.ID, e.org)
+	_, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{})
 	require.NoError(t, err)
 
 	rr := doJSON(leaseRouter(e), http.MethodPost, "/leases/"+created.Lease.ID.String()+"/renew", `{"new_end_date":"2030-06-30T00:00:00Z"}`)
 	require.Equal(t, http.StatusConflict, rr.Code)
 	assert.Contains(t, rr.Body.String(), "LEASE_NOT_ACTIVE")
+}
+
+// ---- índice, mês e próximo reajuste ----
+
+func TestService_Create_MesDeReajustePadraoEMesDoInicio(t *testing.T) {
+	e := newEnv()
+	out := e.create(t, e.in(day(2025, 3, 10), nil))
+	require.NotNil(t, out.Lease.AdjustmentMonth)
+	assert.Equal(t, 3, *out.Lease.AdjustmentMonth)
+	assert.Nil(t, out.Lease.AdjustmentIndex, "índice só existe se o usuário escolher")
+}
+
+func TestService_Create_MesEIndiceInformados(t *testing.T) {
+	e := newEnv()
+	in := e.in(day(2025, 3, 10), nil)
+	idx, mes := "IPCA", 7
+	in.AdjustmentIndex, in.AdjustmentMonth = &idx, &mes
+	out := e.create(t, in)
+	assert.Equal(t, "IPCA", *out.Lease.AdjustmentIndex)
+	assert.Equal(t, 7, *out.Lease.AdjustmentMonth)
+}
+
+func TestService_Create_DevolveProximoReajuste(t *testing.T) {
+	e := newEnv()
+	out := e.create(t, e.in(day(2025, 3, 10), nil))
+	require.NotNil(t, out.Lease.NextReadjustment)
+	assert.True(t, day(2026, 3, 1).Equal(*out.Lease.NextReadjustment))
+}
+
+func TestService_Get_ProximoReajusteConsideraOUltimoReajuste(t *testing.T) {
+	e := newEnv()
+	created := e.create(t, e.in(day(2025, 3, 10), nil))
+	last := day(2026, 3, 5)
+	e.repo.leases[created.Lease.ID].LastReadjustedAt = &last
+
+	got, err := e.svc.Get(context.Background(), created.Lease.ID, e.org)
+	require.NoError(t, err)
+	require.NotNil(t, got.NextReadjustment)
+	assert.True(t, day(2027, 3, 1).Equal(*got.NextReadjustment))
+}
+
+func TestService_List_TrazProximoReajusteDeCadaContrato(t *testing.T) {
+	e := newEnv()
+	e.create(t, e.in(day(2025, 3, 10), nil))
+	other := e.in(day(2026, 2, 1), nil)
+	other.UnitID = uuid.New()
+	e.units.known[other.UnitID] = true
+	e.create(t, other)
+
+	list, err := e.svc.List(context.Background(), e.org)
+	require.NoError(t, err)
+	require.Len(t, list, 2)
+	for _, l := range list {
+		require.NotNil(t, l.NextReadjustment)
+		assert.Equal(t, 1, l.NextReadjustment.Day())
+	}
+}
+
+func TestService_Update_MantemOMesEAtualizaOIndice(t *testing.T) {
+	e := newEnv()
+	in := e.in(day(2025, 3, 10), nil)
+	idx := "IGP-M"
+	in.AdjustmentIndex = &idx
+	created := e.create(t, in)
+
+	novo := "IPCA"
+	got, err := e.svc.Update(context.Background(), created.Lease.ID, e.org, lease.UpdateLeaseInput{
+		RentAmount: 1500, AdjustmentIndex: &novo, // mês omitido: mantém o atual
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "IPCA", *got.AdjustmentIndex)
+	require.NotNil(t, got.AdjustmentMonth)
+	assert.Equal(t, 3, *got.AdjustmentMonth)
+}
+
+func TestService_Update_SemIndiceLimpaOIndice(t *testing.T) {
+	e := newEnv()
+	in := e.in(day(2025, 3, 10), nil)
+	idx := "IGP-M"
+	in.AdjustmentIndex = &idx
+	created := e.create(t, in)
+
+	got, err := e.svc.Update(context.Background(), created.Lease.ID, e.org, lease.UpdateLeaseInput{RentAmount: 1500})
+	require.NoError(t, err)
+	assert.Nil(t, got.AdjustmentIndex, "PUT é substituição total: índice omitido é limpo")
+}
+
+// ---- reajuste atualiza as cobranças futuras ----
+
+func (e *env) readjust(t *testing.T, id uuid.UUID, pct float64, applied time.Time) (*lease.ReadjustOutput, error) {
+	t.Helper()
+	return e.svc.Readjust(context.Background(), id, e.org, lease.ReadjustInput{Percentage: pct, AppliedAt: applied})
+}
+
+func TestService_Readjust_AtualizaCobrancasFuturasComONovoValor(t *testing.T) {
+	e := newEnv()
+	e.payments.reUpdated, e.payments.reNeedReview = 7, 1
+	created := e.create(t, e.in(day(2026, 1, 1), nil)) // aluguel 1500
+
+	out, err := e.readjust(t, created.Lease.ID, 0.10, day(2026, 6, 5))
+	require.NoError(t, err)
+	assert.Equal(t, 1, e.payments.reCalls)
+	assert.Equal(t, 1650.0, e.payments.reAmount, "novo aluguel = 1500 + 10%")
+	assert.True(t, day(2026, 6, 5).Equal(e.payments.reFrom), "vigência é a data do reajuste")
+	assert.Equal(t, 7, out.PaymentsUpdated)
+	assert.Equal(t, 1, out.PaymentsNeedReview)
+	assert.Empty(t, out.PaymentsError)
+}
+
+func TestService_Readjust_VigenciaSemHorario(t *testing.T) {
+	e := newEnv()
+	created := e.create(t, e.in(day(2026, 1, 1), nil))
+
+	_, err := e.readjust(t, created.Lease.ID, 0.05, time.Date(2026, 6, 5, 21, 30, 0, 0, time.UTC))
+	require.NoError(t, err)
+	assert.True(t, day(2026, 6, 5).Equal(e.payments.reFrom), "só a data conta, não o horário")
+}
+
+func TestService_Readjust_FalhaNasCobrancasNaoDesfazOReajuste(t *testing.T) {
+	e := newEnv()
+	e.payments.reErr = errors.New("db down")
+	created := e.create(t, e.in(day(2026, 1, 1), nil))
+
+	out, err := e.readjust(t, created.Lease.ID, 0.10, day(2026, 6, 5))
+	require.NoError(t, err)
+	assert.Equal(t, 1650.0, out.Lease.RentAmount, "o aluguel do contrato foi reajustado")
+	assert.NotEmpty(t, out.PaymentsError)
+	assert.Equal(t, 0, out.PaymentsUpdated)
+}
+
+func TestService_Readjust_SemGanchoDeCobrancasContinuaFuncionando(t *testing.T) {
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo(), &mockIndexRepo{})
+	orgID, ownerID := uuid.New(), uuid.New()
+	created, err := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{UnitID: uuid.New(), TenantID: uuid.New(), StartDate: day(2026, 1, 1), RentAmount: 1000, PaymentDay: 5})
+	require.NoError(t, err)
+
+	out, err := svc.Readjust(context.Background(), created.ID, orgID, lease.ReadjustInput{Percentage: 0.1, AppliedAt: day(2026, 6, 5)})
+	require.NoError(t, err)
+	assert.Equal(t, 1100.0, out.Lease.RentAmount)
+	assert.Zero(t, out.PaymentsUpdated)
+}
+
+func TestService_Readjust_PercentualInvalidoNaoMexeEmCobrancas(t *testing.T) {
+	e := newEnv()
+	created := e.create(t, e.in(day(2026, 1, 1), nil))
+
+	_, err := e.readjust(t, created.Lease.ID, 0, day(2026, 6, 5))
+	assert.Error(t, err)
+	assert.Zero(t, e.payments.reCalls)
+}
+
+func TestService_Readjust_ContratoEncerradoNaoMexeEmCobrancas(t *testing.T) {
+	e := newEnv()
+	created := e.create(t, e.in(day(2026, 1, 1), nil))
+	_, err := e.svc.End(context.Background(), created.Lease.ID, e.org, lease.EndLeaseInput{})
+	require.NoError(t, err)
+
+	_, err = e.readjust(t, created.Lease.ID, 0.10, day(2026, 6, 5))
+	assert.ErrorIs(t, err, lease.ErrLeaseNotActive)
+	assert.Zero(t, e.payments.reCalls)
+}
+
+func TestService_Readjust_ProximoReajusteConsideraOReajusteRecemAplicado(t *testing.T) {
+	e := newEnv()
+	created := e.create(t, e.in(day(2025, 3, 10), nil))
+
+	out, err := e.readjust(t, created.Lease.ID, 0.05, day(2026, 3, 1))
+	require.NoError(t, err)
+	require.NotNil(t, out.Lease.NextReadjustment)
+	assert.True(t, day(2027, 3, 1).Equal(*out.Lease.NextReadjustment))
+}
+
+func TestService_AdjustByAutoIndex_TambemAtualizaCobrancasFuturas(t *testing.T) {
+	e := newEnv()
+	e.payments.reUpdated = 3
+	created := e.create(t, e.in(day(2026, 1, 1), nil))
+	svc := lease.NewService(e.repo, newMockReadjustmentRepo(), &mockIndexRepo{latest: &lease.IndexValue{IndexType: "IGP-M", Cumulative: 0.04, ReferenceMonth: day(2026, 9, 1)}}).
+		WithRefs(e.units, e.tenants).WithPayments(e.payments)
+
+	out, err := svc.AdjustByAutoIndex(context.Background(), created.Lease.ID, e.org, lease.AdjustLeaseInput{IndexType: "IGP-M"})
+	require.NoError(t, err)
+	assert.Equal(t, 3, out.PaymentsUpdated)
+	assert.True(t, day(2026, 9, 1).Equal(e.payments.reFrom), "a vigência do reajuste automático é o mês de referência do índice")
 }

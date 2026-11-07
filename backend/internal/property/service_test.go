@@ -73,7 +73,7 @@ func (m *mockRepo) CreateUnit(_ context.Context, propertyID uuid.UUID, in proper
 	if m.failCreateUnit {
 		return nil, errors.New("db error")
 	}
-	u := &property.Unit{ID: uuid.New(), PropertyID: propertyID, Label: in.Label, IsActive: true}
+	u := &property.Unit{ID: uuid.New(), PropertyID: propertyID, Label: in.Label, ReferenceRent: in.ReferenceRent, IsActive: true}
 	m.units[u.ID] = u
 	return u, nil
 }

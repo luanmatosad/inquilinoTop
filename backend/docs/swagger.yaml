@@ -414,6 +414,16 @@ definitions:
     type: object
   lease.CreateLeaseInput:
     properties:
+      adjustment_index:
+        description: 'AdjustmentMonth é opcional: sem ele, usa o mês de StartDate.'
+        enum:
+        - IGP-M
+        - IPCA
+        type: string
+      adjustment_month:
+        maximum: 12
+        minimum: 1
+        type: integer
       annual_iptu_amount:
         minimum: 0
         type: number
@@ -465,6 +475,12 @@ definitions:
     type: object
   lease.CreateOutput:
     properties:
+      adjustment_index:
+        description: AdjustmentIndex (IGP-M ou IPCA) e AdjustmentMonth (1 a 12) definem
+          quando e por qual índice reajustar.
+        type: string
+      adjustment_month:
+        type: integer
       annual_iptu_amount:
         type: number
       created_at:
@@ -474,6 +490,9 @@ definitions:
       deposit_amount:
         type: number
       end_date:
+        type: string
+      end_reason:
+        description: EndReason só existe depois de encerrar o contrato.
         type: string
       id:
         type: string
@@ -485,6 +504,10 @@ definitions:
         type: boolean
       late_fee_percent:
         type: number
+      next_readjustment:
+        description: NextReadjustment é calculado pelo serviço (ver NextReadjustment);
+          nulo sem mês de reajuste.
+        type: string
       notes:
         type: string
       organization_id:
@@ -510,8 +533,27 @@ definitions:
       updated_at:
         type: string
     type: object
+  lease.EndLeaseInput:
+    properties:
+      end_date:
+        type: string
+      reason:
+        enum:
+        - TERM_END
+        - TENANT_REQUEST
+        - NONPAYMENT
+        - OWNER_REQUEST
+        - OTHER
+        type: string
+    type: object
   lease.EndOutput:
     properties:
+      adjustment_index:
+        description: AdjustmentIndex (IGP-M ou IPCA) e AdjustmentMonth (1 a 12) definem
+          quando e por qual índice reajustar.
+        type: string
+      adjustment_month:
+        type: integer
       annual_iptu_amount:
         type: number
       created_at:
@@ -521,6 +563,9 @@ definitions:
       deposit_amount:
         type: number
       end_date:
+        type: string
+      end_reason:
+        description: EndReason só existe depois de encerrar o contrato.
         type: string
       id:
         type: string
@@ -532,6 +577,10 @@ definitions:
         type: boolean
       late_fee_percent:
         type: number
+      next_readjustment:
+        description: NextReadjustment é calculado pelo serviço (ver NextReadjustment);
+          nulo sem mês de reajuste.
+        type: string
       notes:
         type: string
       organization_id:
@@ -561,6 +610,12 @@ definitions:
     type: object
   lease.Lease:
     properties:
+      adjustment_index:
+        description: AdjustmentIndex (IGP-M ou IPCA) e AdjustmentMonth (1 a 12) definem
+          quando e por qual índice reajustar.
+        type: string
+      adjustment_month:
+        type: integer
       annual_iptu_amount:
         type: number
       created_at:
@@ -570,6 +625,9 @@ definitions:
       deposit_amount:
         type: number
       end_date:
+        type: string
+      end_reason:
+        description: EndReason só existe depois de encerrar o contrato.
         type: string
       id:
         type: string
@@ -581,6 +639,10 @@ definitions:
         type: boolean
       late_fee_percent:
         type: number
+      next_readjustment:
+        description: NextReadjustment é calculado pelo serviço (ver NextReadjustment);
+          nulo sem mês de reajuste.
+        type: string
       notes:
         type: string
       organization_id:
@@ -602,6 +664,60 @@ definitions:
       updated_at:
         type: string
     type: object
+  lease.ReadjustInput:
+    properties:
+      applied_at:
+        type: string
+      index_name:
+        type: string
+      notes:
+        type: string
+      percentage:
+        minimum: 0.001
+        type: number
+    required:
+    - applied_at
+    - percentage
+    type: object
+  lease.ReadjustOutput:
+    properties:
+      lease:
+        $ref: '#/definitions/lease.Lease'
+      payments_error:
+        type: string
+      payments_need_review:
+        type: integer
+      payments_updated:
+        description: |-
+          PaymentsUpdated conta as cobranças futuras que passaram ao novo aluguel; PaymentsNeedReview, as que já têm
+          cobrança emitida e ficaram no valor antigo; PaymentsError, a falha ao atualizá-las (o reajuste do contrato vale).
+        type: integer
+      readjustment:
+        $ref: '#/definitions/lease.Readjustment'
+    type: object
+  lease.Readjustment:
+    properties:
+      applied_at:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      index_name:
+        type: string
+      lease_id:
+        type: string
+      new_amount:
+        type: number
+      notes:
+        type: string
+      old_amount:
+        type: number
+      organization_id:
+        type: string
+      percentage:
+        type: number
+    type: object
   lease.RenewLeaseInput:
     properties:
       new_end_date:
@@ -618,6 +734,17 @@ definitions:
     type: object
   lease.UpdateLeaseInput:
     properties:
+      adjustment_index:
+        description: 'PUT é substituição total: índice omitido é limpo; mês omitido
+          mantém o atual.'
+        enum:
+        - IGP-M
+        - IPCA
+        type: string
+      adjustment_month:
+        maximum: 12
+        minimum: 1
+        type: integer
       annual_iptu_amount:
         minimum: 0
         type: number
@@ -774,6 +901,11 @@ definitions:
       notes:
         maxLength: 2000
         type: string
+      reference_rent:
+        description: ReferenceRent é o aluguel sugerido ao criar um contrato na unidade
+          (opcional, não negativo).
+        minimum: 0
+        type: number
     required:
     - label
     type: object
@@ -1946,14 +2078,22 @@ paths:
       - leases
   /leases/{id}/end:
     post:
-      description: Encerra um contrato ACTIVE e retira as cobranças futuras pendentes
-        sem cobrança emitida.
+      consumes:
+      - application/json
+      description: 'Encerra um contrato ACTIVE e retira as cobranças futuras pendentes
+        sem cobrança emitida a partir da data de saída. O corpo é opcional: sem ele,
+        a saída é hoje e sem motivo.'
       parameters:
       - description: ID do contrato
         in: path
         name: id
         required: true
         type: string
+      - description: Data de saída e motivo (opcionais)
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/lease.EndLeaseInput'
       produces:
       - application/json
       responses:
@@ -1961,6 +2101,11 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/lease.EndOutput'
+        "400":
+          description: INVALID_BODY, motivo inválido
+          schema:
+            additionalProperties: true
+            type: object
         "404":
           description: NOT_FOUND
           schema:
@@ -1968,6 +2113,11 @@ paths:
             type: object
         "409":
           description: LEASE_NOT_ACTIVE
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: INVALID_DATES (saída antes do início)
           schema:
             additionalProperties: true
             type: object
@@ -2008,6 +2158,50 @@ paths:
       summary: Compara laudo de entrada e de saída do contrato
       tags:
       - inspections
+  /leases/{id}/readjust:
+    post:
+      consumes:
+      - application/json
+      description: 'Aplica um percentual (fração: 0,05 = 5%) ao aluguel de um contrato
+        ACTIVE, registra o histórico e passa as cobranças de aluguel (RENT) futuras
+        pendentes, sem cobrança emitida e com vencimento a partir da data de vigência,
+        ao novo valor. Cobranças pagas, de IPTU, anteriores à vigência ou já emitidas
+        não mudam; as emitidas são contadas em payments_need_review. Se atualizar
+        as cobranças falhar, o reajuste do contrato vale e payments_error informa.'
+      parameters:
+      - description: ID do contrato
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Percentual, data de vigência e índice
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/lease.ReadjustInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/lease.ReadjustOutput'
+        "400":
+          description: INVALID_BODY, percentual inválido
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: LEASE_NOT_ACTIVE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reajusta o aluguel do contrato
+      tags:
+      - leases
   /leases/{id}/readjustments:
     get:
       parameters:

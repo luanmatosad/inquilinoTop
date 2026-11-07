@@ -475,3 +475,46 @@ func TestHandler_CreateUnit_ÁreaNegativa_400(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
+
+func TestHandler_CreateUnit_AluguelDeReferencia(t *testing.T) {
+	mock := newMockRepo()
+	svc := property.NewService(mock)
+	ownerID := uuid.New()
+	p, err := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	require.NoError(t, err)
+	h := property.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
+
+	body := `{"label":"Apto 101","reference_rent":1850.5}`
+	req := httptest.NewRequest(http.MethodPost, "/properties/"+p.ID.String()+"/units", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusCreated, rr.Code)
+	var resp struct {
+		Data struct {
+			ReferenceRent float64 `json:"reference_rent"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
+	assert.InDelta(t, 1850.5, resp.Data.ReferenceRent, 0.001)
+}
+
+func TestHandler_CreateUnit_AluguelDeReferenciaNegativo(t *testing.T) {
+	svc := property.NewService(newMockRepo())
+	ownerID := uuid.New()
+	p, err := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	require.NoError(t, err)
+	h := property.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, authMWWithOwnerID(ownerID), noopWriteMw, noopWriteMw)
+
+	req := httptest.NewRequest(http.MethodPost, "/properties/"+p.ID.String()+"/units", strings.NewReader(`{"label":"Apto 1","reference_rent":-5}`))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}

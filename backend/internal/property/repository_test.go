@@ -182,3 +182,50 @@ func TestRepository_Property_ComercialComNumeroEComplemento(t *testing.T) {
 	assert.Equal(t, "COMMERCIAL", list[0].Type)
 	assert.Equal(t, novo, *list[0].Number)
 }
+
+func TestRepository_Unit_AluguelDeReferencia(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, userID := seedOrgAndUser(t, database)
+	repo := property.NewRepository(database)
+	p, err := repo.Create(ctx, userID, orgID, property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Predio"})
+	require.NoError(t, err)
+
+	rent := 1850.5
+	u, err := repo.CreateUnit(ctx, p.ID, property.CreateUnitInput{Label: "Apto 101", ReferenceRent: &rent})
+	require.NoError(t, err)
+	require.NotNil(t, u.ReferenceRent)
+	assert.InDelta(t, 1850.5, *u.ReferenceRent, 0.001)
+
+	semValor, err := repo.CreateUnit(ctx, p.ID, property.CreateUnitInput{Label: "Apto 102"})
+	require.NoError(t, err)
+	assert.Nil(t, semValor.ReferenceRent)
+
+	novo := 2000.0
+	up, err := repo.UpdateUnit(ctx, u.ID, orgID, property.CreateUnitInput{Label: "Apto 101", ReferenceRent: &novo})
+	require.NoError(t, err)
+	assert.InDelta(t, 2000.0, *up.ReferenceRent, 0.001)
+
+	got, err := repo.GetUnit(ctx, u.ID, orgID)
+	require.NoError(t, err)
+	assert.InDelta(t, 2000.0, *got.ReferenceRent, 0.001)
+
+	list, err := repo.ListUnits(ctx, p.ID)
+	require.NoError(t, err)
+	require.Len(t, list, 2)
+	byLabel := map[string]*float64{}
+	for _, x := range list {
+		byLabel[x.Label] = x.ReferenceRent
+	}
+	assert.InDelta(t, 2000.0, *byLabel["Apto 101"], 0.001)
+	assert.Nil(t, byLabel["Apto 102"])
+
+	byProps, err := repo.ListUnitsByPropertyIDs(ctx, []uuid.UUID{p.ID})
+	require.NoError(t, err)
+	require.Len(t, byProps, 2)
+
+	// Limpar o valor: enviar sem reference_rent zera o campo (PUT é substituição total).
+	cleared, err := repo.UpdateUnit(ctx, u.ID, orgID, property.CreateUnitInput{Label: "Apto 101"})
+	require.NoError(t, err)
+	assert.Nil(t, cleared.ReferenceRent)
+}

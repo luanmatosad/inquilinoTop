@@ -186,7 +186,7 @@ func main() {
 	orgReadMw := rbac.PermissionMiddleware(rbac.PermissionOrgRead)
 
 	importRepo := importexport.NewRepository(database)
-	importSvc := importexport.NewService(importRepo, propertyRepo, tenantRepo)
+	importSvc := importexport.NewService(importRepo, propertyRepo, tenantSvc)
 	importHandler := importexport.NewHandler(importSvc)
 
 	reg := prometheus.NewRegistry()

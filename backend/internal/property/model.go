@@ -38,9 +38,11 @@ type Unit struct {
 	AreaM2     *float64  `json:"area_m2,omitempty"`
 	Bedrooms   *int      `json:"bedrooms,omitempty"`
 	Bathrooms  *int      `json:"bathrooms,omitempty"`
-	IsActive   bool      `json:"is_active"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	// ReferenceRent é o aluguel sugerido ao criar um contrato na unidade.
+	ReferenceRent *float64  `json:"reference_rent,omitempty"`
+	IsActive      bool      `json:"is_active"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 type CreatePropertyInput struct {
@@ -63,6 +65,8 @@ type CreateUnitInput struct {
 	AreaM2    *float64 `json:"area_m2,omitempty" validate:"omitempty,gt=0"`
 	Bedrooms  *int     `json:"bedrooms,omitempty" validate:"omitempty,gte=0"`
 	Bathrooms *int     `json:"bathrooms,omitempty" validate:"omitempty,gte=0"`
+	// ReferenceRent é o aluguel sugerido ao criar um contrato na unidade (opcional, não negativo).
+	ReferenceRent *float64 `json:"reference_rent,omitempty" validate:"omitempty,gte=0"`
 }
 
 type PropertyWithUnits struct {

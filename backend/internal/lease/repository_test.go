@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -210,7 +211,7 @@ func TestLeaseRepository_Constraint_ContratoEncerradoLiberaUnidade(t *testing.T)
 	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
 	first, err := repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
 	require.NoError(t, err)
-	_, err = repo.End(ctx, first.ID, orgID)
+	_, err = repo.End(ctx, first.ID, orgID, time.Now(), nil)
 	require.NoError(t, err)
 
 	_, err = repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
@@ -291,12 +292,12 @@ func TestLeaseRepository_End_SóContratoAtivoENãoEstendeFim(t *testing.T) {
 	l, err := repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, passado.AddDate(-1, 0, 0), &passado))
 	require.NoError(t, err)
 
-	ended, err := repo.End(ctx, l.ID, orgID)
+	ended, err := repo.End(ctx, l.ID, orgID, time.Now(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, "ENDED", ended.Status)
 	assert.True(t, ended.EndDate.Before(time.Now().AddDate(0, -1, 0)), "fim anterior a hoje não é esticado")
 
-	_, err = repo.End(ctx, l.ID, orgID)
+	_, err = repo.End(ctx, l.ID, orgID, time.Now(), nil)
 	assert.ErrorIs(t, err, lease.ErrLeaseNotActive)
 }
 
@@ -328,4 +329,150 @@ func TestReadjustmentRepository_CriaELista(t *testing.T) {
 	other, err := readj.ListByLease(ctx, l.ID, uuid.New())
 	require.NoError(t, err)
 	assert.Empty(t, other, "outra organização não vê o histórico")
+}
+
+func TestRepository_ReajusteNoContrato(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, ownerID := seedOrgAndUser(t, database)
+	repo := lease.NewRepository(database)
+	readj := lease.NewReadjustmentRepository(database)
+
+	unitID, tenantID := seedUnitAndTenant(t, database, orgID, ownerID)
+	idx, mes := "IGP-M", 3
+	created, err := repo.Create(ctx, orgID, ownerID, lease.CreateLeaseInput{
+		UnitID: unitID, TenantID: tenantID, StartDate: time.Date(2025, 3, 10, 0, 0, 0, 0, time.UTC),
+		RentAmount: 1760, PaymentDay: 5, AdjustmentIndex: &idx, AdjustmentMonth: &mes,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, created.AdjustmentIndex)
+	assert.Equal(t, "IGP-M", *created.AdjustmentIndex)
+	assert.Equal(t, 3, *created.AdjustmentMonth)
+	assert.Nil(t, created.LastReadjustedAt)
+
+	applied := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	_, err = readj.Create(ctx, &lease.Readjustment{LeaseID: created.ID, OrganizationID: orgID, AppliedAt: applied, OldAmount: 1760, NewAmount: 1850, Percentage: 0.051})
+	require.NoError(t, err)
+	_, err = readj.Create(ctx, &lease.Readjustment{LeaseID: created.ID, OrganizationID: orgID, AppliedAt: applied.AddDate(-1, 0, 0), OldAmount: 1700, NewAmount: 1760, Percentage: 0.035})
+	require.NoError(t, err)
+
+	got, err := repo.GetByID(ctx, created.ID, orgID)
+	require.NoError(t, err)
+	require.NotNil(t, got.LastReadjustedAt)
+	assert.True(t, applied.Equal(*got.LastReadjustedAt), "vale o reajuste mais recente")
+
+	list, err := repo.List(ctx, orgID)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	require.NotNil(t, list[0].LastReadjustedAt)
+	assert.True(t, applied.Equal(*list[0].LastReadjustedAt))
+}
+
+func TestRepository_ReajusteInvalidoNoBanco(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, ownerID := seedOrgAndUser(t, database)
+	repo := lease.NewRepository(database)
+	unitID, tenantID := seedUnitAndTenant(t, database, orgID, ownerID)
+	base := lease.CreateLeaseInput{UnitID: unitID, TenantID: tenantID, StartDate: time.Date(2025, 3, 10, 0, 0, 0, 0, time.UTC), RentAmount: 1000, PaymentDay: 5}
+
+	mes := 13
+	bad := base
+	bad.AdjustmentMonth = &mes
+	_, err := repo.Create(ctx, orgID, ownerID, bad)
+	assert.Error(t, err, "CHECK do mês (1 a 12)")
+
+	idx := "XYZ"
+	bad = base
+	bad.AdjustmentIndex = &idx
+	_, err = repo.Create(ctx, orgID, ownerID, bad)
+	assert.Error(t, err, "CHECK do índice")
+}
+
+func TestMigration000048_PreencheOMesDosContratosExistentes(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, ownerID := seedOrgAndUser(t, database)
+	unitID, tenantID := seedUnitAndTenant(t, database, orgID, ownerID)
+
+	var id uuid.UUID
+	err := database.Pool.QueryRow(ctx,
+		`INSERT INTO leases (organization_id, owner_id, unit_id, tenant_id, start_date, rent_amount, payment_day)
+		 VALUES ($1,$2,$3,$4,'2025-08-15',1000,5) RETURNING id`, orgID, ownerID, unitID, tenantID).Scan(&id)
+	require.NoError(t, err)
+	_, err = database.Pool.Exec(ctx, `UPDATE leases SET adjustment_month=NULL WHERE id=$1`, id)
+	require.NoError(t, err)
+
+	sql, err := os.ReadFile("../../migrations/000048_lease_adjustment_and_end_reason.up.sql")
+	require.NoError(t, err)
+	text := string(sql)
+	i := strings.Index(text, "UPDATE leases")
+	require.GreaterOrEqual(t, i, 0, "a migration precisa ter o backfill do mês")
+	j := strings.Index(text[i:], ";")
+	_, err = database.Pool.Exec(ctx, text[i:i+j+1])
+	require.NoError(t, err)
+
+	var month int
+	require.NoError(t, database.Pool.QueryRow(ctx, `SELECT adjustment_month FROM leases WHERE id=$1`, id).Scan(&month))
+	assert.Equal(t, 8, month)
+}
+
+func seedUnitAndTenant(t *testing.T, database *db.DB, orgID, ownerID uuid.UUID) (unitID, tenantID uuid.UUID) {
+	t.Helper()
+	return seedUnit(t, database, seedProperty(t, database, orgID, ownerID)), seedTenant(t, database, orgID, ownerID)
+}
+
+func TestRepository_End_ComDataEMotivo(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, ownerID := seedOrgAndUser(t, database)
+	repo := lease.NewRepository(database)
+	unitID, tenantID := seedUnitAndTenant(t, database, orgID, ownerID)
+	created, err := repo.Create(ctx, orgID, ownerID, lease.CreateLeaseInput{
+		UnitID: unitID, TenantID: tenantID, StartDate: time.Date(2025, 3, 10, 0, 0, 0, 0, time.UTC), RentAmount: 1000, PaymentDay: 5,
+	})
+	require.NoError(t, err)
+
+	reason := "NONPAYMENT"
+	ended, err := repo.End(ctx, created.ID, orgID, time.Date(2026, 11, 30, 0, 0, 0, 0, time.UTC), &reason)
+	require.NoError(t, err)
+	assert.Equal(t, "ENDED", ended.Status)
+	require.NotNil(t, ended.EndDate)
+	assert.Equal(t, "2026-11-30", ended.EndDate.Format("2006-01-02"))
+	require.NotNil(t, ended.EndReason)
+	assert.Equal(t, "NONPAYMENT", *ended.EndReason)
+}
+
+func TestRepository_End_NaoEstendeOPrazoPrevisto(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, ownerID := seedOrgAndUser(t, database)
+	repo := lease.NewRepository(database)
+	unitID, tenantID := seedUnitAndTenant(t, database, orgID, ownerID)
+	fim := time.Date(2027, 3, 10, 0, 0, 0, 0, time.UTC)
+	created, err := repo.Create(ctx, orgID, ownerID, lease.CreateLeaseInput{
+		UnitID: unitID, TenantID: tenantID, StartDate: time.Date(2025, 3, 10, 0, 0, 0, 0, time.UTC), EndDate: &fim, RentAmount: 1000, PaymentDay: 5,
+	})
+	require.NoError(t, err)
+
+	ended, err := repo.End(ctx, created.ID, orgID, time.Date(2027, 6, 1, 0, 0, 0, 0, time.UTC), nil)
+	require.NoError(t, err)
+	assert.Equal(t, "2027-03-10", ended.EndDate.Format("2006-01-02"))
+	assert.Nil(t, ended.EndReason)
+}
+
+func TestRepository_End_MotivoInvalidoNoBanco(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, ownerID := seedOrgAndUser(t, database)
+	repo := lease.NewRepository(database)
+	unitID, tenantID := seedUnitAndTenant(t, database, orgID, ownerID)
+	created, err := repo.Create(ctx, orgID, ownerID, lease.CreateLeaseInput{
+		UnitID: unitID, TenantID: tenantID, StartDate: time.Date(2025, 3, 10, 0, 0, 0, 0, time.UTC), RentAmount: 1000, PaymentDay: 5,
+	})
+	require.NoError(t, err)
+
+	bad := "QUALQUER"
+	_, err = repo.End(ctx, created.ID, orgID, time.Now(), &bad)
+	assert.Error(t, err, "CHECK do motivo")
 }
