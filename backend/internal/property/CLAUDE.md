@@ -6,7 +6,7 @@ Um módulo trata Property + Unit juntos. Repository interface tem 10 métodos (5
 
 | Struct | Campos chave |
 |---|---|
-| `Property` | id, organization_id, type (RESIDENTIAL\|SINGLE), name, address_line?, city?, state?, postal_code? (8 dígitos), neighborhood?, is_active |
+| `Property` | id, organization_id, type (RESIDENTIAL\|COMMERCIAL\|SINGLE), name, address_line?, number? (≤20), complement? (≤100), city?, state?, postal_code? (8 dígitos), neighborhood?, is_active |
 | `Unit` | id, property_id, label, floor?, notes?, area_m2? (>0), bedrooms? (>=0), bathrooms? (>=0), is_active |
 
 ## Rotas
@@ -26,6 +26,7 @@ Um módulo trata Property + Unit juntos. Repository interface tem 10 métodos (5
 
 ## Invariantes
 
+- **COMMERCIAL** é multiunidade como RESIDENTIAL: não cria unidade automática.
 - **SINGLE auto-unit**: `CreateProperty(SINGLE)` cria automaticamente `Unit{Label: "Unidade 01", Notes: "Unidade criada automaticamente"}` — feito no service.
 - `CreateUnit` verifica `ownerID` via `GetByID` antes de criar (autorização).
 - Soft-delete em todas as deleções (`is_active=false`).
@@ -42,3 +43,4 @@ Um módulo trata Property + Unit juntos. Repository interface tem 10 métodos (5
 ## Decisões
 
 - [0001 - SINGLE auto-cria Unit](../../../docs/decisions/property/0001-single-auto-cria-unit.md)
+- [0002 - COMMERCIAL como tipo multiunidade](../../../docs/decisions/property/0002-commercial-multiunidade.md)

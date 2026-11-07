@@ -22,6 +22,8 @@ type Property struct {
 	State          *string   `json:"state,omitempty"`
 	PostalCode     *string   `json:"postal_code,omitempty"`
 	Neighborhood   *string   `json:"neighborhood,omitempty"`
+	Number         *string   `json:"number,omitempty"`
+	Complement     *string   `json:"complement,omitempty"`
 	IsActive       bool      `json:"is_active"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
@@ -42,7 +44,7 @@ type Unit struct {
 }
 
 type CreatePropertyInput struct {
-	Type        string  `json:"type" validate:"required,oneof=RESIDENTIAL SINGLE"`
+	Type        string  `json:"type" validate:"required,oneof=RESIDENTIAL COMMERCIAL SINGLE"`
 	Name        string  `json:"name" validate:"required,max=200"`
 	AddressLine *string `json:"address_line,omitempty" validate:"omitempty,max=500"`
 	City        *string `json:"city,omitempty" validate:"omitempty,max=100"`
@@ -50,6 +52,8 @@ type CreatePropertyInput struct {
 	// PostalCode é o CEP com 8 dígitos, sem máscara.
 	PostalCode   *string `json:"postal_code,omitempty" validate:"omitempty,len=8,numeric"`
 	Neighborhood *string `json:"neighborhood,omitempty" validate:"omitempty,max=100"`
+	Number       *string `json:"number,omitempty" validate:"omitempty,max=20"`
+	Complement   *string `json:"complement,omitempty" validate:"omitempty,max=100"`
 }
 
 type CreateUnitInput struct {

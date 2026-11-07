@@ -394,6 +394,13 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             }
@@ -4117,6 +4124,10 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 100
                 },
+                "complement": {
+                    "type": "string",
+                    "maxLength": 100
+                },
                 "name": {
                     "type": "string",
                     "maxLength": 200
@@ -4124,6 +4135,10 @@ const docTemplate = `{
                 "neighborhood": {
                     "type": "string",
                     "maxLength": 100
+                },
+                "number": {
+                    "type": "string",
+                    "maxLength": 20
                 },
                 "postal_code": {
                     "description": "PostalCode é o CEP com 8 dígitos, sem máscara.",
@@ -4137,6 +4152,7 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "RESIDENTIAL",
+                        "COMMERCIAL",
                         "SINGLE"
                     ]
                 }

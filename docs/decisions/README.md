@@ -13,6 +13,7 @@ Template para novas decisões: [`_template.md`](./_template.md).
 | rbac-0001 | Hierarquia de roles escopada a Property | Superseded | rbac | [0001-hierarquia-roles-property-scoped.md](./rbac/0001-hierarquia-roles-property-scoped.md) |
 | rbac-0002 | Migração de domínios para organization_id | Accepted | rbac | [0002-migracao-organization-id.md](./rbac/0002-migracao-organization-id.md) |
 | property-0001 | SINGLE auto-cria Unit | Accepted | property | [0001-single-auto-cria-unit.md](./property/0001-single-auto-cria-unit.md) |
+| property-0002 | COMMERCIAL como tipo multiunidade | Accepted | property | [0002-commercial-multiunidade.md](./property/0002-commercial-multiunidade.md) |
 | payment-0001 | Payment imutável (sem Delete) | Accepted | payment | [0001-payment-imutavel-sem-delete.md](./payment/0001-payment-imutavel-sem-delete.md) |
 | payment-0002 | Abstração multi-provider (PaymentProvider) | Accepted | payment | [0002-abstracao-multi-provider.md](./payment/0002-abstracao-multi-provider.md) |
 | payment-0003 | Cancelamento de cobranças futuras pendentes ao encerrar contrato | Accepted | payment | [0003-cancelamento-de-futuras-pendentes-ao-encerrar-contrato.md](./payment/0003-cancelamento-de-futuras-pendentes-ao-encerrar-contrato.md) |

@@ -20,7 +20,7 @@ func (s *Service) CreateProperty(ctx context.Context, userID, orgID uuid.UUID, i
 	if in.Name == "" {
 		return nil, fmt.Errorf("property.svc: nome é obrigatório")
 	}
-	if in.Type != "RESIDENTIAL" && in.Type != "SINGLE" {
+	if in.Type != "RESIDENTIAL" && in.Type != "COMMERCIAL" && in.Type != "SINGLE" {
 		return nil, fmt.Errorf("property.svc: tipo inválido")
 	}
 	p, err := s.repo.Create(ctx, userID, orgID, in)

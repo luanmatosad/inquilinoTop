@@ -21,11 +21,11 @@ func NewRepository(database *db.DB) Repository {
 func (r *pgRepository) Create(ctx context.Context, userID, orgID uuid.UUID, in CreatePropertyInput) (*Property, error) {
 	var p Property
 	err := r.db.Pool.QueryRow(ctx,
-		`INSERT INTO properties (organization_id, owner_id, type, name, address_line, city, state, postal_code, neighborhood)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-		 RETURNING id, organization_id, type, name, address_line, city, state, postal_code, neighborhood, is_active, created_at, updated_at`,
-		orgID, userID, in.Type, in.Name, in.AddressLine, in.City, in.State, in.PostalCode, in.Neighborhood,
-	).Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.PostalCode, &p.Neighborhood, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+		`INSERT INTO properties (organization_id, owner_id, type, name, address_line, city, state, postal_code, neighborhood, number, complement)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		 RETURNING id, organization_id, type, name, address_line, city, state, postal_code, neighborhood, number, complement, is_active, created_at, updated_at`,
+		orgID, userID, in.Type, in.Name, in.AddressLine, in.City, in.State, in.PostalCode, in.Neighborhood, in.Number, in.Complement,
+	).Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.PostalCode, &p.Neighborhood, &p.Number, &p.Complement, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("property.repo: create: %w", err)
 	}
@@ -35,10 +35,10 @@ func (r *pgRepository) Create(ctx context.Context, userID, orgID uuid.UUID, in C
 func (r *pgRepository) GetByID(ctx context.Context, id, orgID uuid.UUID) (*Property, error) {
 	var p Property
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT id, organization_id, type, name, address_line, city, state, postal_code, neighborhood, is_active, created_at, updated_at
+		`SELECT id, organization_id, type, name, address_line, city, state, postal_code, neighborhood, number, complement, is_active, created_at, updated_at
 		 FROM properties WHERE id=$1 AND organization_id=$2 AND is_active=true`,
 		id, orgID,
-	).Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.PostalCode, &p.Neighborhood, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+	).Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.PostalCode, &p.Neighborhood, &p.Number, &p.Complement, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, apierr.ErrNotFound
@@ -50,7 +50,7 @@ func (r *pgRepository) GetByID(ctx context.Context, id, orgID uuid.UUID) (*Prope
 
 func (r *pgRepository) List(ctx context.Context, orgID uuid.UUID) ([]Property, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		`SELECT id, organization_id, type, name, address_line, city, state, postal_code, neighborhood, is_active, created_at, updated_at
+		`SELECT id, organization_id, type, name, address_line, city, state, postal_code, neighborhood, number, complement, is_active, created_at, updated_at
 		 FROM properties WHERE organization_id=$1 AND is_active=true ORDER BY created_at DESC`,
 		orgID,
 	)
@@ -61,7 +61,7 @@ func (r *pgRepository) List(ctx context.Context, orgID uuid.UUID) ([]Property, e
 	var list []Property
 	for rows.Next() {
 		var p Property
-		if err := rows.Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.PostalCode, &p.Neighborhood, &p.IsActive, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.PostalCode, &p.Neighborhood, &p.Number, &p.Complement, &p.IsActive, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("property.repo: list scan: %w", err)
 		}
 		list = append(list, p)
@@ -75,11 +75,11 @@ func (r *pgRepository) List(ctx context.Context, orgID uuid.UUID) ([]Property, e
 func (r *pgRepository) Update(ctx context.Context, id, orgID uuid.UUID, in CreatePropertyInput) (*Property, error) {
 	var p Property
 	err := r.db.Pool.QueryRow(ctx,
-		`UPDATE properties SET type=$1, name=$2, address_line=$3, city=$4, state=$5, postal_code=$6, neighborhood=$7, updated_at=NOW()
-		 WHERE id=$8 AND organization_id=$9 AND is_active=true
-		 RETURNING id, organization_id, type, name, address_line, city, state, postal_code, neighborhood, is_active, created_at, updated_at`,
-		in.Type, in.Name, in.AddressLine, in.City, in.State, in.PostalCode, in.Neighborhood, id, orgID,
-	).Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.PostalCode, &p.Neighborhood, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+		`UPDATE properties SET type=$1, name=$2, address_line=$3, city=$4, state=$5, postal_code=$6, neighborhood=$7, number=$8, complement=$9, updated_at=NOW()
+		 WHERE id=$10 AND organization_id=$11 AND is_active=true
+		 RETURNING id, organization_id, type, name, address_line, city, state, postal_code, neighborhood, number, complement, is_active, created_at, updated_at`,
+		in.Type, in.Name, in.AddressLine, in.City, in.State, in.PostalCode, in.Neighborhood, in.Number, in.Complement, id, orgID,
+	).Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.PostalCode, &p.Neighborhood, &p.Number, &p.Complement, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("property.repo: update: %w", err)
 	}
@@ -228,10 +228,10 @@ func (r *pgRepository) GetByField(ctx context.Context, orgID uuid.UUID, field st
 	}
 	var p Property
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT id, organization_id, type, name, address_line, city, state, postal_code, neighborhood, is_active, created_at, updated_at
+		`SELECT id, organization_id, type, name, address_line, city, state, postal_code, neighborhood, number, complement, is_active, created_at, updated_at
 		 FROM properties WHERE organization_id=$1 AND LOWER(name)=LOWER($2) AND is_active=true`,
 		orgID, value,
-	).Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.PostalCode, &p.Neighborhood, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+	).Scan(&p.ID, &p.OrganizationID, &p.Type, &p.Name, &p.AddressLine, &p.City, &p.State, &p.PostalCode, &p.Neighborhood, &p.Number, &p.Complement, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil

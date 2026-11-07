@@ -3,6 +3,7 @@ package property_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -129,4 +130,33 @@ func TestService_UpdateUnit_MesmoRótuloDaPrópriaUnidade(t *testing.T) {
 	area := 40.0
 	_, err = svc.UpdateUnit(ctx, u.ID, org, property.CreateUnitInput{Label: "101", AreaM2: &area})
 	assert.NoError(t, err)
+}
+
+func TestCreatePropertyInput_Validate_TipoComercial(t *testing.T) {
+	for _, typ := range []string{"RESIDENTIAL", "COMMERCIAL", "SINGLE"} {
+		assert.NoError(t, validator.Validate(property.CreatePropertyInput{Type: typ, Name: "X"}), "tipo %s deveria ser válido", typ)
+	}
+	assert.Error(t, validator.Validate(property.CreatePropertyInput{Type: "TERRENO", Name: "X"}))
+}
+
+func TestCreatePropertyInput_Validate_NumeroEComplemento(t *testing.T) {
+	base := property.CreatePropertyInput{Type: "RESIDENTIAL", Name: "Edifício"}
+
+	ok := base
+	ok.Number = strp("120")
+	ok.Complement = strp("Bloco B")
+	assert.NoError(t, validator.Validate(ok))
+
+	long := base
+	long.Number = strp(strings.Repeat("1", 21))
+	assert.Error(t, validator.Validate(long), "number com mais de 20 caracteres")
+
+	long = base
+	long.Complement = strp(strings.Repeat("a", 101))
+	assert.Error(t, validator.Validate(long), "complement com mais de 100 caracteres")
+
+	limite := base
+	limite.Number = strp(strings.Repeat("1", 20))
+	limite.Complement = strp(strings.Repeat("a", 100))
+	assert.NoError(t, validator.Validate(limite))
 }

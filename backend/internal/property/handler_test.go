@@ -64,6 +64,47 @@ func TestHandler_Create_Válido(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, rr.Code)
 }
 
+func TestHandler_Create_ComercialComNumeroEComplemento(t *testing.T) {
+	svc := property.NewService(newMockRepo())
+	h := property.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
+
+	body := `{"type":"COMMERCIAL","name":"Centro Empresarial","number":"300","complement":"Sala 2"}`
+	req := httptest.NewRequest(http.MethodPost, "/properties", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusCreated, rr.Code)
+	var resp struct {
+		Data struct {
+			Type       string `json:"type"`
+			Number     string `json:"number"`
+			Complement string `json:"complement"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
+	assert.Equal(t, "COMMERCIAL", resp.Data.Type)
+	assert.Equal(t, "300", resp.Data.Number)
+	assert.Equal(t, "Sala 2", resp.Data.Complement)
+}
+
+func TestHandler_Create_NumeroLongoDemais(t *testing.T) {
+	svc := property.NewService(newMockRepo())
+	h := property.NewHandler(svc)
+	r := chi.NewRouter()
+	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
+
+	body := `{"type":"RESIDENTIAL","name":"X","number":"` + strings.Repeat("9", 21) + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/properties", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
 func TestHandler_Get_IDInválido(t *testing.T) {
 	svc := property.NewService(newMockRepo())
 	h := property.NewHandler(svc)

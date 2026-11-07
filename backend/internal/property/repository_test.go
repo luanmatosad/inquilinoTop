@@ -153,3 +153,32 @@ func TestRepository_Unit_RótuloLiberadoAposSoftDelete(t *testing.T) {
 	_, err = repo.CreateUnit(ctx, p.ID, property.CreateUnitInput{Label: "101"})
 	assert.NoError(t, err)
 }
+
+func TestRepository_Property_ComercialComNumeroEComplemento(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, userID := seedOrgAndUser(t, database)
+	repo := property.NewRepository(database)
+
+	num, comp := "300", "Sala 2"
+	p, err := repo.Create(ctx, userID, orgID, property.CreatePropertyInput{Type: "COMMERCIAL", Name: "Centro Empresarial", Number: &num, Complement: &comp})
+	require.NoError(t, err)
+	assert.Equal(t, "COMMERCIAL", p.Type)
+	require.NotNil(t, p.Number)
+	assert.Equal(t, num, *p.Number)
+
+	novo := "310"
+	up, err := repo.Update(ctx, p.ID, orgID, property.CreatePropertyInput{Type: "COMMERCIAL", Name: "Centro Empresarial", Number: &novo, Complement: &comp})
+	require.NoError(t, err)
+	assert.Equal(t, novo, *up.Number)
+
+	got, err := repo.GetByID(ctx, p.ID, orgID)
+	require.NoError(t, err)
+	assert.Equal(t, comp, *got.Complement)
+
+	list, err := repo.List(ctx, orgID)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, "COMMERCIAL", list[0].Type)
+	assert.Equal(t, novo, *list[0].Number)
+}

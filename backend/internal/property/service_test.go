@@ -28,7 +28,7 @@ func newMockRepo() *mockRepo {
 }
 
 func (m *mockRepo) Create(_ context.Context, userID, orgID uuid.UUID, in property.CreatePropertyInput) (*property.Property, error) {
-	p := &property.Property{ID: uuid.New(), OrganizationID: orgID, Type: in.Type, Name: in.Name, IsActive: true}
+	p := &property.Property{ID: uuid.New(), OrganizationID: orgID, Type: in.Type, Name: in.Name, Number: in.Number, Complement: in.Complement, IsActive: true}
 	m.properties[p.ID] = p
 	return p, nil
 }
@@ -150,6 +150,18 @@ func TestService_CreateSingleProperty_AutoCreatesUnit(t *testing.T) {
 	units, _ := svc.ListUnits(context.Background(), p.ID)
 	assert.Len(t, units, 1)
 	assert.Equal(t, "Unidade 01", units[0].Label)
+}
+
+func TestService_CreateCommercialProperty_NoAutoUnit(t *testing.T) {
+	svc := property.NewService(newMockRepo())
+	ownerID := uuid.New()
+
+	p, err := svc.CreateProperty(context.Background(), ownerID, ownerID, property.CreatePropertyInput{Type: "COMMERCIAL", Name: "Centro Empresarial"})
+	require.NoError(t, err)
+	assert.Equal(t, "COMMERCIAL", p.Type)
+
+	units, _ := svc.ListUnits(context.Background(), p.ID)
+	assert.Empty(t, units, "COMMERCIAL é multiunidade: não cria unidade automática")
 }
 
 func TestService_CreateProperty_InvalidType(t *testing.T) {

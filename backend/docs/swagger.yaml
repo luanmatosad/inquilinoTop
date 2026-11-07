@@ -727,11 +727,17 @@ definitions:
       city:
         maxLength: 100
         type: string
+      complement:
+        maxLength: 100
+        type: string
       name:
         maxLength: 200
         type: string
       neighborhood:
         maxLength: 100
+        type: string
+      number:
+        maxLength: 20
         type: string
       postal_code:
         description: PostalCode é o CEP com 8 dígitos, sem máscara.
@@ -742,6 +748,7 @@ definitions:
       type:
         enum:
         - RESIDENTIAL
+        - COMMERCIAL
         - SINGLE
         type: string
     required:
@@ -1135,6 +1142,11 @@ paths:
             type: object
         "400":
           description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
           schema:
             additionalProperties: true
             type: object

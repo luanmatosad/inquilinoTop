@@ -5,7 +5,7 @@ Carrega em toda sessão. Define as entidades, invariantes e direção de migraç
 ## Hierarquia de Entidades
 
 ```
-Property (RESIDENTIAL | SINGLE)
+Property (RESIDENTIAL | COMMERCIAL | SINGLE)
   └── Unit
         └── Lease (Tenant ↔ Unit)
               ├── Payment
@@ -19,7 +19,7 @@ Toda entidade pertence a um `owner_id`. Nunca retornar ou modificar dados sem fi
 
 | Entidade | Campo | Valores |
 |---|---|---|
-| Property | type | `RESIDENTIAL`, `SINGLE` |
+| Property | type | `RESIDENTIAL`, `COMMERCIAL`, `SINGLE` |
 | Lease | status | `ACTIVE`, `ENDED`, `CANCELED` |
 | Payment | status | `PENDING`, `PAID`, `LATE` |
 | Payment | type | `RENT`, `DEPOSIT`, `EXPENSE`, `OTHER` |
@@ -31,7 +31,7 @@ Toda entidade pertence a um `owner_id`. Nunca retornar ou modificar dados sem fi
 ## Invariantes
 
 - **Soft-delete obrigatório**: deleções sempre via `is_active=false` + `updated_at=NOW()`. Nunca `DELETE FROM`. Ver [ADR cross-cutting 0001](../../docs/decisions/_cross-cutting/0001-soft-delete-obrigatorio.md).
-- **SINGLE auto-cria Unit**: ao criar Property do tipo `SINGLE`, criar automaticamente uma Unit com label `"Unidade 01"`.
+- **SINGLE auto-cria Unit**: ao criar Property do tipo `SINGLE`, criar automaticamente uma Unit com label `"Unidade 01"`. `RESIDENTIAL` e `COMMERCIAL` são multiunidade e não criam unidade automática (ver [ADR property-0002](../../docs/decisions/property/0002-commercial-multiunidade.md)).
 - **ownerID em toda query**: toda query de leitura e escrita DEVE incluir `owner_id` no filtro — sem exceção.
 - **UUIDs**: todos os IDs são `uuid.UUID` no Go / `uuid` no PostgreSQL.
 
