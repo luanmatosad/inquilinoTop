@@ -9,12 +9,14 @@ import { todaySaoPaulo } from "@/lib/lease-overview"
 import { formatDateBR, monthName } from "@/lib/date-format"
 import { maskPhone } from "@/lib/masks"
 import { dailyToMonthly } from "@/lib/interest"
+import { whenLabel } from "@/lib/public-charge"
 import { buildTimeline, lateBreakdown, PAYMENT_METHOD_LABEL, fmtPercent, formatReceiptNumber, type TimelineApiItem } from "@/lib/receivable-detail"
 import { getProfile } from "@/app/settings/profile/actions"
 import { RegisterPaymentPanel } from "@/components/financial/RegisterPaymentDialog"
 import { SendChargeDialog } from "@/components/financial/SendChargeDialog"
 import { AgreementSheet } from "@/components/financial/AgreementSheet"
 import { PaymentTimeline } from "@/components/financial/PaymentTimeline"
+import { ReportNotice } from "@/components/financial/ReportNotice"
 import { SituationBadge } from "@/components/financial/SituationBadge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -34,6 +36,11 @@ type ApiPayment = {
   payment_method?: string | null
   receipt_number?: number | null
   receipt_year?: number | null
+  awaiting_confirmation?: boolean
+  reported_amount?: number | null
+  reported_at?: string | null
+  reported_date?: string | null
+  has_proof?: boolean
 }
 type ApiLease = {
   id: string
@@ -47,7 +54,7 @@ type ApiTenant = { id: string; name: string; email?: string | null; phone?: stri
 type ApiProperty = { id: string; name: string; units?: { id: string; label: string }[] | null }
 type SearchParams = { enviar?: string; pagar?: string; acordo?: string }
 
-const LABELS = { LATE: "Atrasado", PAID: "Pago", PENDING: "Previsto" } as const
+const LABELS = { LATE: "Atrasado", PAID: "Pago", PENDING: "Previsto", AWAITING: "Aguardando confirmação" } as const
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -107,6 +114,7 @@ export default async function ReceivablePage({
   const month = payment.competency ? monthName(`${payment.competency}-01`).toLowerCase() : monthName(payment.due_date).toLowerCase()
   const open = payment.status !== "PAID"
   const late = payment.status === "LATE"
+  const awaiting = open && !!payment.awaiting_confirmation && payment.reported_amount != null
   const pixConfigured = configRes.ok && !!configRes.v?.pix_key?.trim()
   const missing = [
     !leaseRes.ok && "contrato",
@@ -147,7 +155,7 @@ export default async function ReceivablePage({
         <div className="flex flex-col gap-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold leading-[1.2]">
             {tenant?.name ?? "—"}
-            <SituationBadge situation={payment.status === "PAID" ? "PAID" : late ? "LATE" : "PENDING"} labels={LABELS} />
+            <SituationBadge situation={payment.status === "PAID" ? "PAID" : awaiting ? "AWAITING" : late ? "LATE" : "PENDING"} labels={LABELS} />
           </h1>
           <p className="text-sm text-muted-foreground">
             {where} · aluguel de {month}
@@ -179,6 +187,23 @@ export default async function ReceivablePage({
         <p role="status" className="text-sm text-muted-foreground">
           Dados indisponíveis no momento ({missing.join(", ")}): alguns campos aparecem como “—”.
         </p>
+      )}
+
+      {awaiting && payment.reported_amount != null && (
+        <Section title="Aviso do inquilino">
+          <ReportNotice
+            summary={`${tenant?.name ?? "O inquilino"} avisou ${payment.reported_at ? whenLabel(payment.reported_at).toLowerCase() : ""} que pagou ${formatCurrency(payment.reported_amount)}${payment.reported_date ? ` em ${formatDateBR(payment.reported_date)}` : ""}.`}
+            info={{
+              paymentId: id,
+              tenantName: tenant?.name ?? "Inquilino",
+              reportedAmount: formatCurrency(payment.reported_amount),
+              reportedWhen: payment.reported_at ? whenLabel(payment.reported_at) : "",
+              hasProof: !!payment.has_proof,
+              differsFromDue: Math.abs(payment.reported_amount - breakdown.total) > 0.01,
+              dueTotal: formatCurrency(breakdown.total),
+            }}
+          />
+        </Section>
       )}
 
       <Section title="Linha do tempo">

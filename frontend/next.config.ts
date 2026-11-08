@@ -6,10 +6,25 @@ const nextConfig: NextConfig = {
   // Fotos de laudo chegam por multipart de até 10 MB (+ cabeçalhos); o padrão do middleware é 10 MB.
   experimental: {
     proxyClientMaxBodySize: "12mb",
+    // "Já paguei" envia comprovante de até 5 MB pela server action (o padrão é 1 MB).
+    serverActions: { bodySizeLimit: "6mb" },
   },
   images: {
     qualities: [75, 90],
     dangerouslyAllowSVG: true,
+  },
+  // Página pública da cobrança: o token está no endereço, então não pode vazar por Referer nem ser guardada em cache.
+  async headers() {
+    return [
+      {
+        source: "/p/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Cache-Control", value: "no-store" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+    ];
   },
   // Árvore de rotas única: /owner/properties|tenants|contracts foi consolidada em /properties|tenants|leases.
   async redirects() {

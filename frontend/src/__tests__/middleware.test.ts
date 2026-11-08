@@ -126,6 +126,19 @@ describe('middleware', () => {
       expect(new URL(res.headers.get('location')!).searchParams.get('next')).toBe('/properties')
     })
 
+    it('página pública da cobrança (/p/<token>) abre sem sessão', async () => {
+      for (const path of ['/p/abc123', '/p/abc123/recibo']) {
+        const res = await middleware(req(path, {}))
+        expect(res.status, path).toBe(200)
+        expect(res.headers.get('location'), path).toBeNull()
+      }
+    })
+
+    it('/payments continua exigindo sessão (não é /p)', async () => {
+      const res = await middleware(req('/payments', {}))
+      expect(res.status).toBe(307)
+    })
+
     it.each(['/reports', '/integrations'])('%s (placeholder do menu) exige sessão', async (path) => {
       const res = await middleware(req(path, {}))
       expect(res.status).toBe(307)

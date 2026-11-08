@@ -17,6 +17,7 @@ import { MonthNav } from '@/components/financial/MonthNav'
 import { ReceivablesList, type ReceivableItem } from '@/components/financial/ReceivablesList'
 import { SituationChips } from '@/components/financial/SituationChips'
 import { plural } from '@/lib/property-format'
+import { whenLabel } from '@/lib/public-charge'
 
 const BASE = '/financial/receivables'
 
@@ -85,6 +86,8 @@ export default async function ReceivablesPage({ searchParams }: { searchParams: 
 
   const toItem = (r: (typeof all)[number]): ReceivableItem => {
     const p = r.payment
+    const lateTotal = p.status === 'LATE' ? (p.late_fee_amount ?? 0) + (p.interest_amount ?? 0) : 0
+    const totalDue = Math.round((p.gross_amount + lateTotal) * 100) / 100
     return {
       id: p.id,
       tenant: r.tenantName,
@@ -92,10 +95,19 @@ export default async function ReceivablesPage({ searchParams }: { searchParams: 
       due: dayMonth(p.due_date),
       amount: formatCurrency(p.gross_amount),
       grossAmount: p.gross_amount,
-      totalDue: Math.round((p.gross_amount + (r.situation === "LATE" ? (p.late_fee_amount ?? 0) + (p.interest_amount ?? 0) : 0)) * 100) / 100,
+      totalDue,
       updatedTotal:
         r.situation === 'LATE' ? formatCurrency(p.gross_amount + (p.late_fee_amount ?? 0) + (p.interest_amount ?? 0)) : undefined,
       situation: r.situation,
+      report:
+        r.situation === 'AWAITING' && p.reported_amount != null
+          ? {
+              amount: formatCurrency(p.reported_amount),
+              when: p.reported_at ? whenLabel(p.reported_at) : '',
+              hasProof: !!p.has_proof,
+              differsFromDue: Math.abs(p.reported_amount - totalDue) > 0.01,
+            }
+          : undefined,
     }
   }
 
@@ -135,6 +147,7 @@ export default async function ReceivablesPage({ searchParams }: { searchParams: 
             active={situacao}
             chips={[
               { value: '', label: 'Todas', count: counts.ALL },
+              { value: 'AWAITING', label: 'Aguardando confirmação', count: counts.AWAITING },
               { value: 'LATE', label: 'Atrasadas', count: counts.LATE },
               { value: 'PAID', label: 'Pagas', count: counts.PAID },
               { value: 'PENDING', label: 'Previstas', count: counts.PENDING },

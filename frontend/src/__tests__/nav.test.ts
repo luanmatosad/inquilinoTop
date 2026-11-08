@@ -112,6 +112,13 @@ describe('isPublicRoute', () => {
     expect(isPublicRoute('/auth/callback')).toBe(true)
   })
 
+  it('página pública da cobrança fica sem shell, mas /payments não', () => {
+    expect(isPublicRoute('/p/abc123')).toBe(true)
+    expect(isPublicRoute('/p/abc123/recibo')).toBe(true)
+    expect(isPublicRoute('/payments')).toBe(false)
+    expect(isPublicRoute('/pricing')).toBe(false)
+  })
+
   it('demais rotas usam o shell', () => {
     expect(isPublicRoute('/')).toBe(false)
     expect(isPublicRoute('/properties')).toBe(false)

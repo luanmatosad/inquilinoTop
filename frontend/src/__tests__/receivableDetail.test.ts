@@ -152,3 +152,20 @@ describe('lateBreakdown', () => {
     expect(b.lines[2].label).toBe('Juros (1% ao mês · 1 dia)')
   })
 })
+
+describe('buildTimeline — aviso do inquilino', () => {
+  it('REPORTED mostra valor e data informados, sem autor', () => {
+    const [r] = buildTimeline([{ kind: 'REPORTED', at: '2026-11-07T12:12:00Z', data: { amount: 1850, paid_date: '2026-11-06', has_proof: true } }], U)
+    expect(r.title).toBe('Inquilino avisou que pagou')
+    expect(r.detail.replace(/\u00a0/g, ' ')).toBe('06/11 · R$ 1.850,00 · com comprovante')
+  })
+  it('REPORTED sem comprovante', () => {
+    const [r] = buildTimeline([{ kind: 'REPORTED', at: '2026-11-07T12:12:00Z', data: { amount: 1850, paid_date: '2026-11-06', has_proof: false } }], U)
+    expect(r.detail.replace(/\u00a0/g, ' ')).toBe('06/11 · R$ 1.850,00')
+  })
+  it('REJECTED mostra quem recusou', () => {
+    const [r] = buildTimeline([{ kind: 'REJECTED', at: '2026-11-07T15:00:00Z', actor_id: U }], U)
+    expect(r.title).toBe('Aviso recusado')
+    expect(r.detail).toBe('07/11, 12:00 · por você')
+  })
+})

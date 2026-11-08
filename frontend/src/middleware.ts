@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  const publicRoutes = ['/login', '/auth/callback', '/']
+  const publicRoutes = ['/login', '/auth/callback', '/', '/p']
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
 
   let response = NextResponse.next()

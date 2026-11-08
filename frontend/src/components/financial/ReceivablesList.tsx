@@ -5,12 +5,14 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import type { Situation } from '@/lib/financial-overview'
+import { ConfirmReportDialog, type ReportInfo } from '@/components/financial/ConfirmReportDialog'
 import { RegisterPaymentDialog } from '@/components/financial/RegisterPaymentDialog'
 import { SituationBadge } from '@/components/financial/SituationBadge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { plural } from '@/lib/property-format'
+import { formatCurrency } from '@/lib/utils'
 
 export type ReceivableItem = {
   id: string
@@ -26,9 +28,11 @@ export type ReceivableItem = {
   /** Total atualizado com multa e juros, formatado; só quando `LATE`. */
   updatedTotal?: string
   situation: Situation
+  /** Aviso "já paguei" pendente (situação `AWAITING`), com os textos prontos para o diálogo. */
+  report?: { amount: string; when: string; hasProof: boolean; differsFromDue: boolean }
 }
 
-const LABELS = { LATE: 'Atrasado', PAID: 'Pago', PENDING: 'Previsto' } as const
+const LABELS = { LATE: 'Atrasado', PAID: 'Pago', PENDING: 'Previsto', AWAITING: 'Aguardando confirmação' } as const
 
 type Props = {
   /** Linhas visíveis (já filtradas pelo chip). */
@@ -40,11 +44,28 @@ type Props = {
 export function ReceivablesList({ rows, openRows }: Props) {
   const router = useRouter()
   const [dialog, setDialog] = useState<{ open: boolean; id: string }>({ open: false, id: '' })
+  const [confirming, setConfirming] = useState<ReportInfo | null>(null)
   const open = (id: string) => setDialog({ open: true, id })
 
-  // Uma ação por linha, como no canvas: Recibo (paga), Cobrar (atrasada) ou Enviar cobrança (prevista).
+  const confirm = (r: ReceivableItem) =>
+    r.report &&
+    setConfirming({
+      paymentId: r.id,
+      tenantName: r.tenant,
+      reportedAmount: r.report.amount,
+      reportedWhen: r.report.when,
+      hasProof: r.report.hasProof,
+      differsFromDue: r.report.differsFromDue,
+      dueTotal: formatCurrency(r.totalDue),
+    })
+
+  // Uma ação por linha, como no canvas: Recibo (paga), Confirmar (aviso do inquilino), Cobrar (atrasada) ou Enviar cobrança (prevista).
   const action = (r: ReceivableItem) =>
-    r.situation === 'PAID' ? (
+    r.situation === 'AWAITING' && r.report ? (
+      <Button type="button" variant="outline" size="sm" onClick={() => confirm(r)}>
+        Confirmar
+      </Button>
+    ) : r.situation === 'PAID' ? (
       <Button asChild variant="ghost" size="sm">
         <Link href={`/financial/receivables/${r.id}/receipt`}>Recibo</Link>
       </Button>
@@ -125,6 +146,8 @@ export function ReceivablesList({ rows, openRows }: Props) {
           </ul>
         </>
       )}
+
+      <ConfirmReportDialog open={confirming !== null} info={confirming} onClose={() => setConfirming(null)} onDone={() => router.refresh()} />
 
       <RegisterPaymentDialog
         key={dialog.open ? dialog.id : 'closed'}

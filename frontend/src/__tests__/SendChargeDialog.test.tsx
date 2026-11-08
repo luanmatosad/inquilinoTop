@@ -3,7 +3,8 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 const recordPaymentEvent = vi.hoisted(() => vi.fn())
-vi.mock('@/app/financial/actions', () => ({ recordPaymentEvent }))
+const createPaymentLink = vi.hoisted(() => vi.fn())
+vi.mock('@/app/financial/actions', () => ({ recordPaymentEvent, createPaymentLink }))
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
 vi.mock('sonner', () => ({ toast }))
 const nav = vi.hoisted(() => ({
@@ -38,6 +39,7 @@ const base = {
 
 beforeEach(() => {
   recordPaymentEvent.mockReset().mockResolvedValue({ success: true })
+  createPaymentLink.mockReset().mockResolvedValue({ url: 'https://app.imoviflow.test/p/TOKEN123' })
   Object.values(toast).forEach((f) => f.mockReset())
   Object.values(nav.router).forEach((f) => f.mockReset())
   nav.search = 'enviar=1'
@@ -134,5 +136,35 @@ describe('SendChargeDialog', () => {
     render(<SendChargeDialog {...base} />)
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Voltar' }))
     expect(nav.router.replace).toHaveBeenCalledWith('/financial/receivables/p1?x=1')
+  })
+
+  it('Gerar link coloca o endereço na mensagem e avisa que o anterior deixa de valer', async () => {
+    render(<SendChargeDialog {...base} />)
+    expect(screen.getByText(/desativa o anterior/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Gerar link de pagamento' }))
+    await waitFor(() => expect(createPaymentLink).toHaveBeenCalledWith('p1'))
+    const msg = (screen.getByLabelText('Mensagem') as HTMLTextAreaElement).value
+    expect(msg).toContain('https://app.imoviflow.test/p/TOKEN123')
+    expect(msg).not.toContain('000201PIXCODE')
+    expect(screen.queryByRole('button', { name: 'Gerar link de pagamento' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Gerar novo link' })).toBeInTheDocument()
+  })
+
+  it('mensagem editada: o link entra no fim, sem apagar o texto', async () => {
+    render(<SendChargeDialog {...base} />)
+    const msg = screen.getByLabelText('Mensagem')
+    await userEvent.clear(msg)
+    await userEvent.type(msg, 'Texto meu')
+    await userEvent.click(screen.getByRole('button', { name: 'Gerar link de pagamento' }))
+    await waitFor(() => expect((msg as HTMLTextAreaElement).value).toContain('https://app.imoviflow.test/p/TOKEN123'))
+    expect((msg as HTMLTextAreaElement).value.startsWith('Texto meu')).toBe(true)
+  })
+
+  it('erro ao gerar o link avisa e mantém a mensagem', async () => {
+    createPaymentLink.mockResolvedValue({ error: 'Configure APP_PUBLIC_URL.' })
+    render(<SendChargeDialog {...base} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Gerar link de pagamento' }))
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Configure APP_PUBLIC_URL.'))
+    expect((screen.getByLabelText('Mensagem') as HTMLTextAreaElement).value).toContain('000201PIXCODE')
   })
 })

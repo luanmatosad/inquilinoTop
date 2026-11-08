@@ -30,12 +30,15 @@ export const formatMonthLabel = (ym: string) => `${MONTHS[Number(ym.slice(5, 7))
 
 // ---------- Comum ----------
 
-export type Situation = 'LATE' | 'PAID' | 'PENDING'
+/** `AWAITING`: o inquilino avisou que pagou e o dono ainda não confirmou (só em Recebimentos). */
+export type Situation = 'LATE' | 'PAID' | 'PENDING' | 'AWAITING'
 export type Bucket = { total: number; count: number }
 const DASH = '—'
 const sum = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) * 100) / 100
 const bucket = (xs: number[]): Bucket => ({ total: sum(xs), count: xs.length })
 const situationOf = (status: string): Situation => (status === 'PAID' ? 'PAID' : status === 'LATE' ? 'LATE' : 'PENDING')
+const receivableSituation = (p: OverviewPayment): Situation =>
+  p.status !== 'PAID' && p.awaiting_confirmation ? 'AWAITING' : situationOf(p.status)
 
 type Property = { id: string; name: string; units?: { id: string; label: string }[] | null }
 
@@ -63,6 +66,12 @@ export type OverviewPayment = {
   gross_amount: number
   late_fee_amount?: number
   interest_amount?: number
+  /** Aviso "já paguei" do inquilino pendente de confirmação. */
+  awaiting_confirmation?: boolean
+  reported_at?: string
+  reported_amount?: number
+  reported_date?: string
+  has_proof?: boolean
 }
 type OverviewLease = { id: string; tenant_id: string; unit_id: string }
 
@@ -91,7 +100,7 @@ export function buildReceivableRows(input: {
       payment,
       tenantName: (lease && tenants.get(lease.tenant_id)) || DASH,
       where: unit ? `${unit.label} · ${unit.property}` : DASH,
-      situation: situationOf(payment.status),
+      situation: receivableSituation(payment),
     }
   })
 }
@@ -107,11 +116,12 @@ export const chipCounts = (rows: ReceivableRowView[]): Record<ReceivableChip, nu
   LATE: rows.filter((r) => r.situation === 'LATE').length,
   PAID: rows.filter((r) => r.situation === 'PAID').length,
   PENDING: rows.filter((r) => r.situation === 'PENDING').length,
+  AWAITING: rows.filter((r) => r.situation === 'AWAITING').length,
 })
 
 /** Valor desconhecido de `?situacao=` vira "sem filtro". */
 export function filterBySituation(rows: ReceivableRowView[], situacao?: string): ReceivableRowView[] {
-  return situacao === 'LATE' || situacao === 'PAID' || situacao === 'PENDING' ? rows.filter((r) => r.situation === situacao) : rows
+  return situacao === 'LATE' || situacao === 'PAID' || situacao === 'PENDING' || situacao === 'AWAITING' ? rows.filter((r) => r.situation === situacao) : rows
 }
 
 // ---------- Despesas ----------

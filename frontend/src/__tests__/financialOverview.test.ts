@@ -99,7 +99,7 @@ describe('chips de situação', () => {
     payments: [pay('1', { status: 'PAID' }), pay('2'), pay('3', { status: 'LATE' }), pay('4')],
     leases, tenants, properties,
   })
-  it('contagens', () => expect(chipCounts(rs)).toEqual({ ALL: 4, LATE: 1, PAID: 1, PENDING: 2 }))
+  it('contagens', () => expect(chipCounts(rs)).toEqual({ AWAITING: 0, ALL: 4, LATE: 1, PAID: 1, PENDING: 2 }))
   it('filtra', () => {
     expect(filterBySituation(rs, 'LATE')).toHaveLength(1)
     expect(filterBySituation(rs, 'PENDING')).toHaveLength(2)

@@ -134,12 +134,34 @@ describe('Recebimentos', () => {
     expect(within(rowOf('Marina Souza')).getByRole('link', { name: 'Marina Souza' })).toHaveAttribute('href', '/financial/receivables/p1')
   })
 
-  it('chips com contagem e sem "Aguardando confirmação"', async () => {
+  it('chips com contagem, incluindo "Aguardando confirmação"', async () => {
     mockApi()
     await renderPage()
     const chips = screen.getByRole('navigation', { name: 'Situação' })
-    for (const t of ['Todas · 5', 'Atrasadas · 1', 'Pagas · 1', 'Previstas · 3']) expect(within(chips).getByText(t)).toBeInTheDocument()
-    expect(screen.queryByText(/Aguardando/)).not.toBeInTheDocument()
+    for (const t of ['Todas · 5', 'Aguardando confirmação · 0', 'Atrasadas · 1', 'Pagas · 1', 'Previstas · 3']) expect(within(chips).getByText(t)).toBeInTheDocument()
+  })
+
+  it('aviso do inquilino: chip com contagem, selo, Confirmar e diferença de valor', async () => {
+    const reported = { awaiting_confirmation: true, reported_amount: 1500, reported_at: '2026-11-07T12:12:00Z', has_proof: true }
+    mockApi({ mo: month.map((p) => (p.id === 'p2' ? { ...p, ...reported } : p)) })
+    await renderPage()
+    const chips = screen.getByRole('navigation', { name: 'Situação' })
+    expect(within(chips).getByText('Aguardando confirmação · 1')).toBeInTheDocument()
+    const row = rowOf('Rafael Tavares')
+    expect(within(row).getByText('Aguardando confirmação')).toBeInTheDocument()
+    await userEvent.click(within(row).getByRole('button', { name: 'Confirmar' }))
+    const dialog = screen.getByRole('dialog', { name: 'Confirmar pagamento de Rafael?' })
+    expect(within(dialog).getByText(/Ver comprovante/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/valor devido hoje é/)).toBeInTheDocument()
+  })
+
+  it('filtra por ?situacao=AWAITING', async () => {
+    const reported = { awaiting_confirmation: true, reported_amount: 1600, reported_at: '2026-11-07T12:12:00Z' }
+    mockApi({ mo: month.map((p) => (p.id === 'p2' ? { ...p, ...reported } : p)) })
+    await renderPage({ situacao: 'AWAITING' })
+    const table = screen.getByRole('table')
+    expect(within(table).getByText('Rafael Tavares')).toBeInTheDocument()
+    expect(within(table).queryByText('Marina Souza')).not.toBeInTheDocument()
   })
 
   it('filtra por ?situacao=LATE', async () => {

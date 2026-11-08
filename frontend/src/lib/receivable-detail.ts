@@ -27,6 +27,8 @@ type ChargeMessageInput = {
   late: boolean
   /** Pix copia-e-cola; sem ele, o bloco do Pix some. */
   pix?: string | null
+  /** Link da página pública da cobrança; quando existe, ele leva o Pix e a mensagem não repete o código. */
+  link?: string | null
   ownerFirstName?: string
 }
 
@@ -39,7 +41,8 @@ export function buildChargeMessage(i: ChargeMessageInput): string {
       ? `Oi, ${first}! O aluguel de ${i.month} (${i.where}) venceu em ${i.dueLabel} e ainda está em aberto: ${amount}, com multa e juros até hoje.`
       : `Oi, ${first}! Passando para lembrar do aluguel de ${i.month} (${i.where}): ${amount}, vence em ${i.dueLabel}.`,
   )
-  if (i.pix) lines.push('', 'Pague pelo Pix (copia e cola):', i.pix)
+  if (i.link) lines.push('', 'Veja a cobrança e pague pelo Pix neste link:', i.link)
+  else if (i.pix) lines.push('', 'Pague pelo Pix (copia e cola):', i.pix)
   lines.push('', 'Qualquer dúvida, é só responder.' + (i.ownerFirstName ? ` — ${i.ownerFirstName}` : ''))
   return lines.join('\n')
 }
@@ -107,6 +110,17 @@ export function buildTimeline(items: TimelineApiItem[], currentUserId?: string |
         ].filter(Boolean)
         return { key, title: 'Pagamento registrado', detail: `${parts.join(' · ')}${by(it, currentUserId)}` }
       }
+      case 'REPORTED': {
+        const d = it.data ?? {}
+        const parts = [
+          typeof d.paid_date === 'string' ? dayMonth(d.paid_date) : dm(it.at),
+          typeof d.amount === 'number' ? formatCurrency(d.amount) : '',
+          d.has_proof === true ? 'com comprovante' : '',
+        ].filter(Boolean)
+        return { key, title: 'Inquilino avisou que pagou', detail: parts.join(' · ') }
+      }
+      case 'REJECTED':
+        return { key, title: 'Aviso recusado', detail: `${stamp}${by(it, currentUserId)}` }
       default:
         return { key, title: it.kind, detail: stamp }
     }

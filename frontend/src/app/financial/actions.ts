@@ -334,3 +334,47 @@ export async function createAgreement(id: string, values: AgreementFormValues, t
     return { error: 'Erro ao salvar o acordo.' }
   }
 }
+
+/** Gera (ou troca) o link público da cobrança; o anterior deixa de valer e a URL só aparece nesta resposta. */
+export async function createPaymentLink(id: string): Promise<{ url: string } | { error: string }> {
+  try {
+    const res = await goFetch<{ url: string }>(`/api/v1/payments/${id}/link`, { method: 'POST' })
+    return { url: res.url }
+  } catch (error) {
+    const { code } = goErrorInfo(error)
+    if (code === 'PUBLIC_URL_NOT_CONFIGURED') return { error: 'Configure APP_PUBLIC_URL no servidor para gerar o link.' }
+    if (code === 'NOT_FOUND') return { error: 'Cobrança não encontrada.' }
+    console.error('Erro ao gerar o link da cobrança:', error)
+    return { error: 'Erro ao gerar o link.' }
+  }
+}
+
+const REPORT_ERRORS: Record<string, string> = {
+  NO_PENDING_REPORT: 'Esta cobrança não tem aviso pendente.',
+  ALREADY_PAID: 'Esta cobrança já está paga.',
+  NOT_FOUND: 'Cobrança não encontrada.',
+}
+
+async function reportAction(id: string, path: 'confirm-report' | 'reject-report', fallback: string): Promise<FinancialActionResponse> {
+  try {
+    await goFetch(`/api/v1/payments/${id}/${path}`, { method: 'POST', body: path === 'confirm-report' ? '{}' : undefined })
+    revalidateFinancial()
+    revalidatePath(`/financial/receivables/${id}`)
+    return { success: true }
+  } catch (error) {
+    const { code } = goErrorInfo(error)
+    if (code && REPORT_ERRORS[code]) return { error: REPORT_ERRORS[code] }
+    console.error(fallback, error)
+    return { error: fallback }
+  }
+}
+
+/** Confirma o aviso do inquilino: baixa a cobrança como Pix na data que ele informou. */
+export async function confirmReport(id: string): Promise<FinancialActionResponse> {
+  return reportAction(id, 'confirm-report', 'Erro ao confirmar o recebimento.')
+}
+
+/** "Ainda não recebi": descarta o aviso e a cobrança volta ao estado de antes. */
+export async function rejectReport(id: string): Promise<FinancialActionResponse> {
+  return reportAction(id, 'reject-report', 'Erro ao recusar o aviso.')
+}

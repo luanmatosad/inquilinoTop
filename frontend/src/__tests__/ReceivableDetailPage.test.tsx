@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import React from 'react'
 
 const goFetch = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/go/client', () => ({ goFetch }))
 vi.mock('@/lib/go/session-user', () => ({ sessionUserId: async () => 'user-1' }))
-vi.mock('@/app/financial/actions', () => ({ payReceivable: vi.fn(), recordPaymentEvent: vi.fn(), createAgreement: vi.fn() }))
+vi.mock('@/app/financial/actions', () => ({ payReceivable: vi.fn(), recordPaymentEvent: vi.fn(), createAgreement: vi.fn(), createPaymentLink: vi.fn(), confirmReport: vi.fn(), rejectReport: vi.fn() }))
 vi.mock('@/app/settings/profile/actions', () => ({ getProfile: async () => ({ full_name: 'Luan Matos' }) }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }))
 const notFound = vi.hoisted(() => vi.fn(() => { throw new Error('NEXT_NOT_FOUND') }))
@@ -202,5 +203,23 @@ describe('detalhe da cobrança', () => {
     mockApi()
     await renderPage({ acordo: '1' })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('aviso do inquilino: selo, resumo e Confirmar que abre o diálogo', async () => {
+    mockApi({
+      pay: { ...open, awaiting_confirmation: true, reported_amount: 1850, reported_at: '2026-11-07T12:12:00Z', reported_date: '2026-11-06T00:00:00Z', has_proof: true },
+    })
+    await renderPage()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Aguardando confirmação')
+    const notice = screen.getByRole('region', { name: 'Aviso do inquilino' })
+    expect(within(notice).getByText(/1\.850,00/)).toBeInTheDocument()
+    await userEvent.click(within(notice).getByRole('button', { name: 'Confirmar' }))
+    expect(screen.getByRole('dialog', { name: 'Confirmar pagamento de Marina?' })).toBeInTheDocument()
+  })
+
+  it('sem aviso não mostra a seção', async () => {
+    mockApi()
+    await renderPage()
+    expect(screen.queryByRole('region', { name: 'Aviso do inquilino' })).not.toBeInTheDocument()
   })
 })

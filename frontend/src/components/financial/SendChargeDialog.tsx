@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
-import { recordPaymentEvent } from '@/app/financial/actions'
+import { createPaymentLink, recordPaymentEvent } from '@/app/financial/actions'
 import { buildChargeMessage, mailtoUrl } from '@/lib/receivable-detail'
 import { whatsappUrl } from '@/lib/whatsapp'
 import { Button } from '@/components/ui/button'
@@ -42,7 +42,10 @@ export function SendChargeDialog(p: Props) {
   const [prevOpen, setPrevOpen] = useState(p.open)
   const [channel, setChannel] = useState<Channel>('WHATSAPP')
   const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState(() =>
+  const [link, setLink] = useState<string | null>(null)
+  const [linking, setLinking] = useState(false)
+  // Com o link, a página pública já leva o Pix: a mensagem troca o código pelo endereço.
+  const autoMessage = (l: string | null) =>
     buildChargeMessage({
       tenantName: p.tenantName,
       month: p.month,
@@ -50,10 +53,11 @@ export function SendChargeDialog(p: Props) {
       amount: p.amount,
       dueLabel: p.dueLabel,
       late: p.late,
-      pix: p.pix,
+      pix: l ? null : p.pix,
+      link: l,
       ownerFirstName: p.ownerFirstName,
-    }),
-  )
+    })
+  const [message, setMessage] = useState(() => autoMessage(null))
   if (p.open !== prevOpen) {
     setPrevOpen(p.open)
     setIsOpen(p.open)
@@ -73,6 +77,27 @@ export function SendChargeDialog(p: Props) {
       toast.success('Mensagem copiada.')
     } catch {
       toast.error('Não foi possível copiar. Selecione o texto e copie manualmente.')
+    }
+  }
+
+  async function generateLink() {
+    setLinking(true)
+    try {
+      const res = await createPaymentLink(p.paymentId)
+      if ('error' in res) {
+        toast.error(res.error)
+        return
+      }
+      // Texto que o dono não mexeu é refeito; texto editado só ganha (ou troca) o endereço.
+      if (message === autoMessage(link)) setMessage(autoMessage(res.url))
+      else if (link && message.includes(link)) setMessage(message.replace(link, res.url))
+      else setMessage(`${message.trimEnd()}\n\nVeja a cobrança e pague pelo Pix neste link: ${res.url}`)
+      setLink(res.url)
+      toast.success('Link gerado. O anterior deixou de valer.')
+    } catch {
+      toast.error('Ocorreu um erro inesperado.')
+    } finally {
+      setLinking(false)
     }
   }
 
@@ -126,6 +151,21 @@ export function SendChargeDialog(p: Props) {
               </Link>
             </p>
           )}
+
+          <div className="flex flex-col gap-2 rounded-lg border p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm font-medium">Link de pagamento</div>
+              <Button type="button" size="sm" variant="outline" onClick={generateLink} disabled={linking}>
+                {linking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {link ? 'Gerar novo link' : 'Gerar link de pagamento'}
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {link
+                ? 'O inquilino vê o Pix, avisa que pagou e baixa o recibo por ele.'
+                : 'O inquilino abre sem login, paga pelo Pix e avisa aqui. Gerar um novo link desativa o anterior.'}
+            </p>
+          </div>
 
           <div className="flex flex-col gap-2">
             <label htmlFor="charge-message" className="text-sm font-medium">

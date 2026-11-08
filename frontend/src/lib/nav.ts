@@ -112,7 +112,8 @@ export function isNavItemActive(pathname: string, item: NavItem): boolean {
   return (item.match ?? [item.href]).some((p) => matchesPrefix(pathname, p))
 }
 
-export const publicRoutes = ['/login', '/auth/callback']
+// '/p': página pública da cobrança (o token no endereço é a credencial; sem sessão, sem menu).
+export const publicRoutes = ['/login', '/auth/callback', '/p']
 
 export function isPublicRoute(pathname: string | null | undefined): boolean {
   if (!pathname) return false
