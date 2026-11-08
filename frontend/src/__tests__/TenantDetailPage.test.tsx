@@ -99,12 +99,12 @@ describe('cabeçalho', () => {
     expect(notFound).toHaveBeenCalled()
   })
 
-  it('sem abas, sem fiador e sem histórico de contratos', async () => {
+  it('sem fiador e sem histórico de contratos', async () => {
     mockApi()
     await renderPage()
     expect(screen.queryByRole('tab')).not.toBeInTheDocument()
     expect(screen.queryByText(/fiador/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/extrato/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Extrato' }).getAttribute('href')).toBe('/tenants/t1/extrato')
     expect(screen.queryByText(/^Contratos \(/)).not.toBeInTheDocument()
   })
 })

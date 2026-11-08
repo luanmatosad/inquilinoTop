@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BillingBadge, type BillingDisplay } from "@/components/tenants/BillingBadge"
+import { TenantTabs } from "@/components/tenants/TenantTabs"
 import { TenantFormSheet } from "@/components/tenants/TenantFormSheet"
 import type { TenantFormData } from "@/components/tenants/TenantForm"
 
@@ -129,6 +130,8 @@ export default async function TenantPage({
           )}
         </div>
       </div>
+
+      <TenantTabs id={tenant.id} active="resumo" />
 
       {!leasesOk && (
         <p role="status" className="text-sm text-muted-foreground">
