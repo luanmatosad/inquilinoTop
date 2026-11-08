@@ -2,6 +2,8 @@
 
 Read-only: agrega métricas por organização. Sem escrita, sem entidade própria.
 
+> Sem consumidor no frontend desde a tela Hoje (change `redesign-hoje`), que monta o dia a partir de `/payments`, `/leases` e afins. O endpoint continua disponível.
+
 ## Endpoint
 
 | Método | Rota | Obs |

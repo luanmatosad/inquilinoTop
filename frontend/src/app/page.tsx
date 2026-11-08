@@ -1,101 +1,101 @@
-import { Suspense } from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
-import { AlertCircle } from 'lucide-react'
-import { SESSION_EXPIRED_LOGIN_URL } from '@/lib/session'
-import { getDashboardMetrics, type DashboardMetrics } from '@/data/dashboard/dal'
-import { classifyDashboardError, type DashboardErrorKind } from '@/data/dashboard/mapper'
-import { StatsCards } from '@/components/dashboard/StatsCards'
-import { FinancialSummary } from '@/components/dashboard/FinancialSummary'
-import { RecentActivity } from '@/components/dashboard/RecentActivity'
-import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton'
+
+import { getProfile } from '@/app/settings/profile/actions'
+import { GettingStarted } from '@/components/today/GettingStarted'
+import { TodayKpis } from '@/components/today/TodayKpis'
+import { TodayLists } from '@/components/today/TodayLists'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { monthRange, parseMonth, type OverviewPayment } from '@/lib/financial-overview'
+import { goFetch } from '@/lib/go/client'
+import { MONTHS } from '@/lib/date-format'
+import { SESSION_EXPIRED_LOGIN_URL } from '@/lib/session'
+import { buildChecklist, buildToday, dateLabel, greeting, headline, type TodayLease } from '@/lib/today-overview'
 
-async function DashboardMetricsSection() {
-  let metrics: DashboardMetrics
-  try {
-    metrics = await getDashboardMetrics()
-  } catch (error) {
-    const kind = classifyDashboardError(error)
-    if (kind === 'unauthorized') {
-      redirect(SESSION_EXPIRED_LOGIN_URL)
-    }
-    return <DashboardError kind={kind} />
-  }
+type ApiTenant = { id: string; name: string }
+type ApiProperty = { id: string; name: string; units?: { id: string; label: string }[] | null }
 
-  return (
-    <div className="space-y-6">
-      <StatsCards metrics={metrics} />
+const Shell = ({ children }: { children: React.ReactNode }) => <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">{children}</div>
 
-      <div className="grid gap-4 lg:grid-cols-7">
-        <div className="lg:col-span-4">
-          <FinancialSummary revenue={metrics.monthlyRevenue} />
-        </div>
-        <div className="lg:col-span-3">
-          <RecentActivity payments={metrics.recentPayments} expiringLeases={metrics.expiringLeases} />
-        </div>
-      </div>
-    </div>
-  )
-}
+/** Hoje: o que confirmar, cobrar e resolver. As buscas são as de Recebimentos mais contratos, config e perfil. */
+export default async function TodayPage() {
+  const now = new Date()
+  const ym = parseMonth(undefined, now)
+  const { from, to } = monthRange(ym)
 
-const ERROR_MESSAGES: Record<DashboardErrorKind, { title: string; description: string; retry: boolean }> = {
-  unauthorized: { title: 'Sessão expirada', description: 'Entre novamente para continuar.', retry: false },
-  no_org: {
-    title: 'Conta sem organização',
-    description: 'Sua conta ainda não está vinculada a uma organização. Entre em contato com o suporte.',
-    retry: false,
-  },
-  forbidden: {
-    title: 'Sem permissão',
-    description: 'Seu perfil não tem acesso ao painel. Fale com o administrador da sua organização.',
-    retry: false,
-  },
-  server: { title: 'Não foi possível carregar o painel', description: 'Tente novamente em instantes.', retry: true },
-}
+  // Cobranças são obrigatórias; o resto só enriquece (ou alimenta os primeiros passos) e degrada.
+  const [monthRes, lateRes, leasesRes, tenantsRes, propertiesRes, configRes, profile] = await Promise.allSettled([
+    goFetch<OverviewPayment[]>(`/api/v1/payments?from=${from}&to=${to}`, {}),
+    goFetch<OverviewPayment[]>('/api/v1/payments?status=LATE', {}),
+    goFetch<TodayLease[]>('/api/v1/leases', {}),
+    goFetch<ApiTenant[]>('/api/v1/tenants', {}),
+    goFetch<ApiProperty[]>('/api/v1/properties', {}),
+    goFetch<{ pix_key?: string | null }>('/api/v1/payments/config', {}),
+    getProfile(),
+  ])
 
-function DashboardError({ kind }: { kind: DashboardErrorKind }) {
-  const { title, description, retry } = ERROR_MESSAGES[kind]
-  return (
-    <Card role="alert">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-destructive">
-          <AlertCircle className="size-5" />
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col items-start gap-4">
-        <p className="text-sm text-muted-foreground">{description}</p>
-        {retry && (
-          <Button variant="outline" asChild>
+  const failed = monthRes.status === 'rejected' ? monthRes : lateRes.status === 'rejected' ? lateRes : null
+  if (failed) {
+    const reason = failed.reason
+    if (reason instanceof Error && reason.message === 'UNAUTHORIZED') redirect(SESSION_EXPIRED_LOGIN_URL)
+    console.error('Erro ao buscar o painel:', reason)
+    return (
+      <Shell>
+        <div role="alert" className="flex flex-col items-center gap-2 rounded-xl bg-muted px-4 py-12 text-center">
+          <p className="text-muted-foreground">Não foi possível carregar o painel de hoje.</p>
+          <Button asChild variant="outline">
             <Link href="/">Tentar novamente</Link>
           </Button>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
-export default async function DashboardPage() {
-  const cookieStore = await cookies()
-  const accessToken = cookieStore.get('access_token')?.value
-
-  if (!accessToken) {
-    redirect('/login')
+        </div>
+      </Shell>
+    )
   }
 
-  return (
-    <div className="container py-8 space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground">Visão geral dos seus imóveis e finanças deste mês.</p>
-      </div>
+  const optional = [['contratos', leasesRes], ['inquilinos', tenantsRes], ['imóveis', propertiesRes]] as const
+  for (const [name, r] of optional) if (r.status === 'rejected') console.error(`Erro ao buscar ${name}:`, r.reason)
+  const missing = optional.filter(([, r]) => r.status === 'rejected').map(([n]) => n)
 
-      <Suspense fallback={<DashboardSkeleton />}>
-        <DashboardMetricsSection />
-      </Suspense>
-    </div>
+  const leases = leasesRes.status === 'fulfilled' ? (leasesRes.value ?? []) : []
+  const tenants = tenantsRes.status === 'fulfilled' ? (tenantsRes.value ?? []) : []
+  const properties = propertiesRes.status === 'fulfilled' ? (propertiesRes.value ?? []) : []
+
+  const today = buildToday({
+    payments: [...(monthRes.status === 'fulfilled' ? (monthRes.value ?? []) : []), ...(lateRes.status === 'fulfilled' ? (lateRes.value ?? []) : [])],
+    leases,
+    tenants,
+    properties,
+    now,
+  })
+
+  // Conta nova = nenhum contrato; se a busca de contratos falhou, não dá para afirmar.
+  const isNewAccount = leasesRes.status === 'fulfilled' && leases.length === 0
+  const hasPix = configRes.status === 'fulfilled' && !!configRes.value?.pix_key?.trim()
+  const firstName = profile.status === 'fulfilled' ? profile.value?.full_name?.trim().split(/\s+/)[0] : undefined
+  const monthName = MONTHS[Number(ym.slice(5, 7)) - 1].toLowerCase()
+
+  return (
+    <Shell>
+      <header className="flex flex-col gap-1.5">
+        <p className="text-sm text-muted-foreground">{dateLabel(now)}</p>
+        <h1 className="text-2xl font-semibold leading-[1.2]">{firstName ? `${greeting(now)}, ${firstName}` : greeting(now)}</h1>
+        <p className="text-base">
+          {isNewAccount ? 'Seu painel ganha vida assim que você cadastrar o primeiro contrato.' : headline(today.count)}
+        </p>
+      </header>
+
+      {missing.length > 0 && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Dados indisponíveis no momento ({missing.join(', ')}): alguns campos aparecem como “—”.
+        </p>
+      )}
+
+      <TodayKpis kpis={today.kpis} monthLabel={monthName} />
+
+      {isNewAccount ? (
+        <GettingStarted checklist={buildChecklist({ properties: properties.length, tenants: tenants.length, leases: leases.length, hasPix })} />
+      ) : (
+        <TodayLists confirm={today.confirm} late={today.late} collect={today.collect} watch={today.watch} />
+      )}
+    </Shell>
   )
 }

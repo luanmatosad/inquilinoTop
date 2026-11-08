@@ -9,8 +9,7 @@ src/app/                     # Pages + Server Actions (App Router)
 src/app/<módulo>/actions.ts  # Server Actions ("use server")
 src/components/<módulo>/     # Feature components (forms, lists, dialogs)
 src/components/ui/           # Shadcn/UI — NÃO modificar
-src/components/dashboard/    # StatsCards, FinancialSummary, RecentActivity
-src/data/dashboard/dal.ts    # Data Access Layer — queries Supabase para dashboard
+src/components/today/        # Hoje: TodayKpis, TodayLists (client), GettingStarted
 src/data/financeiro/dal.ts   # DAL financeiro (stub/placeholder)
 src/lib/go/client.ts         # Cliente HTTP para Go API (goFetch, login, logout, refresh)
 src/lib/go/middleware.ts     # Middleware Go auth
@@ -23,7 +22,7 @@ src/middleware.ts             # Auth: redireciona não-autenticados para /login
 
 | Rota | Página |
 |---|---|
-| `/` | Dashboard |
+| `/` | **Hoje**: saudação, indicadores e as listas Confirmar pagamento, Atrasados, Para cobrar e Fique de olho (`lib/today-overview.ts`, junção no servidor com as buscas de Recebimentos mais contratos, config Pix e perfil). Conta sem contrato mostra os Primeiros passos. Cobrar e Enviar cobrança levam a `/financial/receivables/{id}?enviar=1`; Revisar reajuste, a `/leases/{id}?reajustar=1`. "Para cobrar" = vence em até 7 dias e sem aviso (não checa envio anterior); reajuste sem percentual (o acumulado do índice não existe) |
 | `/login` | Login via Go API |
 | `/properties`, `/properties/[id]` | Imóveis (Go API): lista em tabela com indicadores; detalhe em abas (`?aba=unidades\|informacoes`). `/properties/new` e `/properties/[id]/edit` só redirecionam |
 | `/tenants`, `/tenants/[id]` | Inquilinos (Go API): lista em tabela com cobrança do mês; detalhe sem abas (`?editar=1` abre a edição) |
@@ -138,7 +137,7 @@ Todas as actions em `src/app/<módulo>/actions.ts`:
 
 - `goFetch` retorna `(data as { data: T }).data` — unwrap do envelope `{"data": ...}`.
 - `goFetch` com `skipAuth: true` não adiciona Authorization header — usado em login/register/refresh.
-- Dashboard e financeiro usam Supabase diretamente — não há DAL para Go ainda.
+- O financeiro antigo (`/financial/dashboard` e afins) ainda é stub; Hoje e Recebimentos/Despesas usam a Go API.
 - Schemas Zod em `schemas.ts` só cobrem property e unit.
 
 ## Decisões
