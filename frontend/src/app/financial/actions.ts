@@ -378,3 +378,35 @@ export async function confirmReport(id: string): Promise<FinancialActionResponse
 export async function rejectReport(id: string): Promise<FinancialActionResponse> {
   return reportAction(id, 'reject-report', 'Erro ao recusar o aviso.')
 }
+
+const CLOSING_ERRORS: Record<string, string> = {
+  MONTH_NOT_ENDED: 'Só é possível fechar meses que já terminaram.',
+  ALREADY_CLOSED: 'Este mês já está fechado.',
+  NOT_CLOSED: 'Este mês não está fechado.',
+  INVALID_REASON: 'Informe o motivo da reabertura.',
+  INVALID_MONTH: 'Mês inválido.',
+}
+
+async function closingAction(path: string, body: Record<string, string>, fallback: string): Promise<FinancialActionResponse> {
+  try {
+    await goFetch(path, { method: 'POST', body: JSON.stringify(body) })
+    revalidateFinancial()
+    revalidatePath('/financial/receivables/fechamento')
+    return { success: true }
+  } catch (error) {
+    const { code } = goErrorInfo(error)
+    if (code && CLOSING_ERRORS[code]) return { error: CLOSING_ERRORS[code] }
+    console.error(fallback, error)
+    return { error: fallback }
+  }
+}
+
+/** Fecha o mês (AAAA-MM): o backend grava o retrato; pendências não bloqueiam. */
+export async function closeMonth(month: string): Promise<FinancialActionResponse> {
+  return closingAction('/api/v1/closings', { month }, 'Erro ao fechar o mês.')
+}
+
+/** Reabre o mês fechado; o motivo fica no histórico. */
+export async function reopenMonth(month: string, reason: string): Promise<FinancialActionResponse> {
+  return closingAction(`/api/v1/closings/${month}/reopen`, { reason }, 'Erro ao reabrir o mês.')
+}

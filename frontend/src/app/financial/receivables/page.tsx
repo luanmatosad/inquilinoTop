@@ -4,6 +4,7 @@ import { goFetch } from '@/lib/go/client'
 import { formatCurrency } from '@/lib/utils'
 import {
   buildReceivableRows,
+  formatMonthLabel,
   chipCounts,
   filterBySituation,
   monthRange,
@@ -11,7 +12,9 @@ import {
   receivableIndicators,
   type OverviewPayment,
 } from '@/lib/financial-overview'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { isPastMonth, type MonthClosing } from '@/lib/month-closing'
 import { FinancialKpis } from '@/components/financial/FinancialKpis'
 import { MonthNav } from '@/components/financial/MonthNav'
 import { ReceivablesList, type ReceivableItem } from '@/components/financial/ReceivablesList'
@@ -37,13 +40,18 @@ export default async function ReceivablesPage({ searchParams }: { searchParams: 
   const { from, to } = monthRange(ym)
 
   // Cobranças (do mês e atrasadas) são obrigatórias; contratos, inquilinos e imóveis só enriquecem as linhas.
-  const [monthRes, lateRes, leasesRes, tenantsRes, propertiesRes] = await Promise.allSettled([
+  const past = isPastMonth(ym)
+  const [monthRes, lateRes, leasesRes, tenantsRes, propertiesRes, closingRes] = await Promise.allSettled([
     goFetch<OverviewPayment[]>(`/api/v1/payments?from=${from}&to=${to}`, {}),
     goFetch<OverviewPayment[]>('/api/v1/payments?status=LATE', {}),
     goFetch<ApiLease[]>('/api/v1/leases', {}),
     goFetch<ApiTenant[]>('/api/v1/tenants', {}),
     goFetch<ApiProperty[]>('/api/v1/properties', {}),
+    // O estado do fechamento só interessa em meses passados; se falhar, a ação simplesmente não aparece.
+    past ? goFetch<MonthClosing>(`/api/v1/closings?month=${ym}`, {}) : Promise.reject(new Error('mês em curso')),
   ])
+  const closingStatus = past && closingRes.status === 'fulfilled' ? closingRes.value?.status : undefined
+  const monthWord = formatMonthLabel(ym).split(' ')[0].toLowerCase()
 
   const heading = (
     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -51,7 +59,19 @@ export default async function ReceivablesPage({ searchParams }: { searchParams: 
         <h1 className="text-2xl font-semibold leading-[1.2]">Recebimentos</h1>
         <p className="text-sm text-muted-foreground">Aluguéis do mês e o que está em atraso.</p>
       </div>
-      <MonthNav basePath={BASE} ym={ym} situacao={situacao} />
+      <div className="flex flex-wrap items-center gap-2">
+        {closingStatus === 'CLOSED' && (
+          <Link href={`${BASE}/fechamento?mes=${ym}`} aria-label={`Ver o fechamento de ${monthWord}`}>
+            <Badge variant="outline">Mês fechado</Badge>
+          </Link>
+        )}
+        {closingStatus === 'OPEN' && (
+          <Button asChild variant="outline">
+            <Link href={`${BASE}/fechamento?mes=${ym}`}>Fechar {monthWord}</Link>
+          </Button>
+        )}
+        <MonthNav basePath={BASE} ym={ym} situacao={situacao} />
+      </div>
     </div>
   )
 

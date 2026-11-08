@@ -31,6 +31,7 @@ src/middleware.ts             # Auth: redireciona não-autenticados para /login
 | `/units/[id]` | Detalhe de unidade (Go API): resumo do contrato ativo e "Criar contrato" |
 | `/financial/receivables`, `/financial/payables` | Recebimentos e Despesas (Go API): por mês (`?mes=AAAA-MM`), com indicadores e chips (`?situacao=`). `/financial/payables?novo=1` abre o lançamento de despesa |
 | `/p/[token]`, `/p/[token]/recibo` | **Página pública da cobrança** (sem login nem menu; o token no endereço é a credencial). Pix com QR e copiar, "Já paguei" (`?avisar=1`), aviso enviado, cobrança paga e recibo. Busca com `goFetch(..., { skipAuth: true })` em `/api/v1/public/payments/{token}`; `notFound()` em 404. Fora do shell (`publicRoutes` em `lib/nav.ts` e `middleware.ts`), `noindex` e `no-referrer`. A server action `reportPayment` repassa multipart (comprovante até 5 MB, `serverActions.bodySizeLimit: 6mb`) |
+| `/financial/receivables/fechamento` | **Fechamento do mês** (`?mes=AAAA-MM`; Go `GET /closings?month=`): mês aberto mostra Previsto/Recebido/Em atraso, "Antes de fechar" (avisos confirmados, recibos, cobranças em atraso com nomes) e **Fechar {mês}** (só mês passado; pendências não bloqueiam); mês fechado é somente leitura (quem e quando fechou, pendências, histórico) com **Reabrir mês** (motivo obrigatório). Resumo em PDF = impressão do navegador. Recebimentos de mês passado mostra **Fechar {mês}** ou o selo **Mês fechado** (`lib/month-closing.ts`, `ClosingActions`, actions `closeMonth`/`reopenMonth`). O fechamento não trava as cobranças: só o retrato é imutável |
 | `/financial/receivables/[id]` | Detalhe da cobrança (Go API): linha do tempo, valor atualizado, enviar cobrança (`?enviar=1`), registrar pagamento (`?pagar=1`), negociar atraso (`?acordo=1`); `/receipt` é o recibo numerado |
 | `/financeiro/dashboard` | Dashboard financeiro (stub) |
 | `/financeiro/receber`, `/pagar`, `/repasses`, `/comissoes`, `/conciliacao` | Financeiro (stub) |
@@ -54,7 +55,7 @@ O canvas é a fonte da verdade (spec `ui-primitives`). Os `ui/*` já trazem as m
 O canvas "ImoviFlow — Telas" é a fonte da verdade da navegação (change `redesign-foundation`).
 
 - `src/lib/nav.ts`: única definição. 3 grupos (Gestão: Hoje, Imóveis, Inquilinos, Contratos · Financeiro: Recebimentos, Despesas, Relatórios · Administrativo: Integrações, Configurações). Itens com `mobileTab` viram abas da barra inferior; os demais caem em "Mais" (`moreItems`).
-- Sem item de menu: Laudos, Importar, Documentos e Fechamento (as rotas `/inspections` e `/import` continuam acessíveis por URL).
+- Sem item de menu: Laudos, Importar, Documentos e Fechamento (esta fica em Recebimentos, no botão Fechar {mês}) (as rotas `/inspections` e `/import` continuam acessíveis por URL).
 - `AppShell` → `AppSidebar` (servidor: carrega organização e perfil) → `Sidebar` (desktop) + `MobileTabBar` (celular, `md:hidden`). Não há modo visitante: sem sessão, o middleware redireciona para `/login`.
 - Tokens em `src/app/globals.css` espelham o `tokens.json` do canvas (claro e escuro). Fontes: Urbanist e Space Mono, self-hosted via `@fontsource`.
 
