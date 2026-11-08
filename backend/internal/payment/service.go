@@ -24,6 +24,10 @@ type Service struct {
 	ownerReader  OwnerReader
 	irrf         IRRFCalculator
 	events       EventStore
+	links        LinkStore
+	publicURL    string
+	reports      ReportStore
+	proofs       ProofStorage
 	loc          *time.Location
 	now          func() time.Time
 }
@@ -92,7 +96,7 @@ func (s *Service) ListByLease(ctx context.Context, leaseID, orgID uuid.UUID) ([]
 
 func validStatusFilter(status string) bool {
 	switch status {
-	case "", "PENDING", "LATE", "PAID":
+	case "", "PENDING", "LATE", "PAID", statusAwaiting:
 		return true
 	}
 	return false
@@ -156,6 +160,8 @@ func (s *Service) Enrich(ctx context.Context, p Payment) Payment {
 
 // enrich reaproveita leases já lidos (cache por chamada) para não consultar o mesmo contrato N vezes.
 func (s *Service) enrich(ctx context.Context, p Payment, leases map[uuid.UUID]*lease.Lease) Payment {
+	p.HasProof = p.ProofPath != nil
+	p.AwaitingConfirmation = p.Status != "PAID" && p.ReportedAt != nil
 	if p.PaidDate != nil || p.Status == "PAID" {
 		return p
 	}

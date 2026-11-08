@@ -804,12 +804,36 @@ definitions:
     required:
     - new_due_date
     type: object
+  payment.Amounts:
+    properties:
+      discount:
+        type: number
+      gross:
+        type: number
+      interest:
+        type: number
+      irrf_withheld:
+        type: number
+      late_fee:
+        type: number
+      net_paid:
+        type: number
+    type: object
   payment.Bucket:
     properties:
       count:
         type: integer
       total:
         type: number
+    type: object
+  payment.ConfirmInput:
+    properties:
+      discount:
+        minimum: 0
+        type: number
+      note:
+        maxLength: 500
+        type: string
     type: object
   payment.CreatePaymentInput:
     properties:
@@ -836,6 +860,160 @@ definitions:
     - gross_amount
     - type
     type: object
+  payment.LinkResult:
+    properties:
+      expires_at:
+        type: string
+      url:
+        type: string
+    type: object
+  payment.Party:
+    properties:
+      document:
+        type: string
+      name:
+        type: string
+      person_type:
+        type: string
+    type: object
+  payment.Payment:
+    properties:
+      awaiting_confirmation:
+        type: boolean
+      charge_barcode:
+        type: string
+      charge_id:
+        type: string
+      charge_link:
+        type: string
+      charge_method:
+        type: string
+      charge_qrcode:
+        type: string
+      competency:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      discount_amount:
+        type: number
+      due_date:
+        type: string
+      gross_amount:
+        type: number
+      has_proof:
+        type: boolean
+      id:
+        type: string
+      interest_amount:
+        type: number
+      irrf_amount:
+        type: number
+      late_fee_amount:
+        type: number
+      lease_id:
+        type: string
+      net_amount:
+        type: number
+      organization_id:
+        type: string
+      original_due_date:
+        type: string
+      paid_date:
+        type: string
+      payment_method:
+        description: Dados do pagamento manual, do acordo e do recibo (migration 000049).
+        type: string
+      payment_note:
+        type: string
+      payout_id:
+        type: string
+      payout_status:
+        type: string
+      receipt_number:
+        type: integer
+      receipt_year:
+        type: integer
+      reported_amount:
+        type: number
+      reported_at:
+        description: Aviso "já paguei" do inquilino (migration 000050). AwaitingConfirmation
+          e HasProof são calculados na leitura.
+        type: string
+      reported_date:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  payment.PixCode:
+    properties:
+      amount:
+        type: number
+      payload:
+        type: string
+    type: object
+  payment.PublicView:
+    properties:
+      amount:
+        type: number
+      competency:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      landlord_name:
+        type: string
+      paid_date:
+        type: string
+      receipt_number:
+        type: string
+      reported_amount:
+        type: number
+      reported_at:
+        type: string
+      reported_date:
+        type: string
+      status:
+        description: PENDING | LATE | AWAITING_CONFIRMATION | PAID
+        type: string
+      unit_label:
+        type: string
+    type: object
+  payment.Receipt:
+    properties:
+      amounts:
+        $ref: '#/definitions/payment.Amounts'
+      competency:
+        type: string
+      issued_at:
+        type: string
+      legal_note:
+        type: string
+      number:
+        description: Number é o número sequencial por organização e ano, no formato
+          0001/2026.
+        type: string
+      owner:
+        $ref: '#/definitions/payment.Party'
+      paid_date:
+        type: string
+      payment_id:
+        type: string
+      payment_method:
+        type: string
+      payment_note:
+        type: string
+      tenant:
+        $ref: '#/definitions/payment.Party'
+      unit:
+        $ref: '#/definitions/payment.UnitRef'
+    type: object
   payment.RecordEventInput:
     properties:
       channel:
@@ -861,6 +1039,13 @@ definitions:
         $ref: '#/definitions/payment.Bucket'
       to_receive:
         $ref: '#/definitions/payment.Bucket'
+    type: object
+  payment.UnitRef:
+    properties:
+      label:
+        type: string
+      property_address:
+        type: string
     type: object
   payment.UpdatePaymentInput:
     properties:
@@ -2542,6 +2727,40 @@ paths:
       summary: Acordo de atraso (nova data e valor combinado)
       tags:
       - payments
+  /payments/{id}/confirm-report:
+    post:
+      consumes:
+      - application/json
+      description: Baixa a cobrança como Pix na data informada pelo inquilino; desconto
+        opcional.
+      parameters:
+      - description: ID do pagamento
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Desconto e observação
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/payment.ConfirmInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/payment.Payment'
+        "409":
+          description: NO_PENDING_REPORT ou ALREADY_PAID
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Confirma o recebimento do aviso do inquilino
+      tags:
+      - payments
   /payments/{id}/events:
     get:
       parameters:
@@ -2606,6 +2825,38 @@ paths:
       summary: Registra o envio da cobrança (SENT ou REMINDER)
       tags:
       - payments
+  /payments/{id}/link:
+    post:
+      description: A URL com o token só aparece nesta resposta; o link anterior é
+        revogado.
+      parameters:
+      - description: ID do pagamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/payment.LinkResult'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: PUBLIC_URL_NOT_CONFIGURED
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria (ou rotaciona) o link público da cobrança
+      tags:
+      - payments
   /payments/{id}/pix:
     get:
       parameters:
@@ -2637,6 +2888,29 @@ paths:
       summary: Pix copia-e-cola da cobrança (valor atualizado do dia)
       tags:
       - payments
+  /payments/{id}/proof:
+    get:
+      parameters:
+      - description: ID do pagamento
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Baixa o comprovante do aviso (só o dono)
+      tags:
+      - payments
   /payments/{id}/receipt:
     get:
       parameters:
@@ -2661,6 +2935,32 @@ paths:
       security:
       - BearerAuth: []
       summary: Recibo mensal (status=PAID)
+      tags:
+      - payments
+  /payments/{id}/reject-report:
+    post:
+      parameters:
+      - description: ID do pagamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: NO_PENDING_REPORT ou ALREADY_PAID
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Recusa o aviso do inquilino ("ainda não recebi")
       tags:
       - payments
   /payments/summary:
@@ -2868,6 +3168,140 @@ paths:
       summary: Cria unidade em um imóvel
       tags:
       - units
+  /public/payments/{token}:
+    get:
+      description: Sem login. Devolve só o que o inquilino precisa ver; token inválido,
+        expirado ou revogado dá 404 idêntico.
+      parameters:
+      - description: Token do link
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/payment.PublicView'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Cobrança pelo link público
+      tags:
+      - public-payments
+  /public/payments/{token}/pix:
+    get:
+      parameters:
+      - description: Token do link
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/payment.PixCode'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: ALREADY_PAID
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: PIX_KEY_NOT_CONFIGURED
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Pix copia-e-cola pelo link público
+      tags:
+      - public-payments
+  /public/payments/{token}/receipt:
+    get:
+      parameters:
+      - description: Token do link
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/payment.Receipt'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: NOT_PAID
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Recibo pelo link público (sem documentos nem endereço)
+      tags:
+      - public-payments
+  /public/payments/{token}/report:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 'Multipart: amount, paid_date (YYYY-MM-DD) e proof opcional (JPEG,
+        PNG ou PDF até 5 MB). Limite de 5 avisos por hora por link.'
+      parameters:
+      - description: Token do link
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: INVALID_REPORT ou INVALID_PAID_DATE
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: ALREADY_PAID
+          schema:
+            additionalProperties: true
+            type: object
+        "413":
+          description: PROOF_TOO_LARGE
+          schema:
+            additionalProperties: true
+            type: object
+        "415":
+          description: PROOF_TYPE_NOT_ALLOWED
+          schema:
+            additionalProperties: true
+            type: object
+        "429":
+          description: RATE_LIMIT_EXCEEDED
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Inquilino avisa que pagou
+      tags:
+      - public-payments
   /roles:
     delete:
       consumes:

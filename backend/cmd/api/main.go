@@ -145,6 +145,9 @@ func main() {
 	documentRepo := document.NewRepository(database)
 	documentSvc := document.NewService(documentRepo, docStorage)
 	documentHandler := document.NewHandler(documentSvc)
+	// Link público da cobrança e aviso "já paguei"; o comprovante usa o mesmo armazenamento dos documentos.
+	paymentSvc.WithPublicLinks(payment.NewLinkStore(database), os.Getenv("APP_PUBLIC_URL")).
+		WithReports(payment.NewReportStore(database), docStorage)
 
 	inspectionRepo := inspection.NewRepository(database)
 	inspectionSvc := inspection.NewService(inspectionRepo, leaseRepo).WithAuditor(auditSvc).WithStorage(docStorage)
@@ -229,6 +232,7 @@ func main() {
 	tenantHandler.Register(r, authMW, tenantReadMw, tenantWriteMw)
 	leaseHandler.Register(r, authMW, leaseReadMw, leaseWriteMw)
 	paymentHandler.Register(r, authMW, paymentReadMw, paymentWriteMw)
+	paymentHandler.RegisterPublic(r)
 	expenseHandler.Register(r, authMW, expenseReadMw, expenseWriteMw)
 	// Laudos pertencem ao contrato: reaproveitam as permissões de lease.
 	inspectionHandler.Register(r, authMW, leaseReadMw, leaseWriteMw)

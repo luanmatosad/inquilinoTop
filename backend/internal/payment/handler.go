@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/payment/provider"
+	"github.com/inquilinotop/api/internal/ratelimit"
 	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/inquilinotop/api/pkg/httputil"
@@ -20,6 +21,9 @@ import (
 
 type Handler struct {
 	svc *Service
+	// ipLimit e tokenLimit protegem as rotas públicas (ver RegisterPublic); nil usa os limites padrão.
+	ipLimit    ratelimit.RateLimiter
+	tokenLimit ratelimit.RateLimiter
 }
 
 func NewHandler(svc *Service) *Handler {
@@ -39,6 +43,10 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler,
 		r.With(readMw).Get("/payments/{id}/receipt", h.Receipt)
 		r.With(writeMw).Post("/payments/{id}/agreement", h.agreement)
 		r.With(readMw).Get("/payments/{id}/pix", h.pixCode)
+		r.With(writeMw).Post("/payments/{id}/link", h.createLink)
+		r.With(readMw).Get("/payments/{id}/proof", h.proofFile)
+		r.With(writeMw).Post("/payments/{id}/confirm-report", h.confirmReport)
+		r.With(writeMw).Post("/payments/{id}/reject-report", h.rejectReport)
 		r.With(readMw).Get("/payments/{id}/events", h.listEvents)
 		r.With(writeMw).Post("/payments/{id}/events", h.recordEvent)
 		r.With(writeMw).Post("/payments/{id}/charge", h.handleCreateCharge)

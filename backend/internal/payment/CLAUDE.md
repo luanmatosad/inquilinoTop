@@ -18,9 +18,15 @@ Vinculado a Lease. Sem Delete (pagamentos são imutáveis); única exceção: `D
 | PUT | /api/v1/payments/{id} | payment atualizado |
 | POST | /api/v1/leases/{leaseId}/payments/generate?month=YYYY-MM | gera RENT + IPTU do mês |
 | GET | /api/v1/payments/{id}/receipt | recibo numerado (só se PAID): `number` 0001/2026, forma, desconto |
-| GET | /api/v1/payments/{id}/events | linha do tempo: Criada, eventos gravados (SENT, REMINDER, AGREEMENT, PAID) e Venceu em |
+| GET | /api/v1/payments/{id}/events | linha do tempo: Criada, eventos gravados (SENT, REMINDER, AGREEMENT, REPORTED, REJECTED, PAID) e Venceu em |
 | POST | /api/v1/payments/{id}/events | registra envio: `kind` SENT\|REMINDER, `channel` WHATSAPP\|EMAIL\|COPY (409 se paga) |
 | GET | /api/v1/payments/{id}/pix | Pix copia-e-cola estático com o valor atualizado do dia (422 `PIX_KEY_NOT_CONFIGURED`, 409 se paga) |
+| POST | /api/v1/payments/{id}/link | cria (ou **rotaciona**, revogando o anterior) o link público; devolve `{url, expires_at}` uma única vez (422 `PUBLIC_URL_NOT_CONFIGURED`) |
+| GET | /api/v1/payments/{id}/proof | comprovante do aviso do inquilino (só o dono, escopado à organização) |
+| POST | /api/v1/payments/{id}/confirm-report | baixa pelo aviso: Pix, data informada, `discount`/`note` opcionais (409 `NO_PENDING_REPORT`) |
+| POST | /api/v1/payments/{id}/reject-report | "ainda não recebi": limpa o aviso, apaga o comprovante, evento `REJECTED` |
+| GET | /api/v1/public/payments/{token}, `/pix`, `/receipt` | **sem login**; ver Link público |
+| POST | /api/v1/public/payments/{token}/report | "já paguei": multipart `amount`, `paid_date`, `proof?` |
 | POST | /api/v1/payments/{id}/agreement | acordo de atraso: `new_due_date` (> hoje), `agreed_amount?`, `note?` |
 | POST | /api/v1/payments/{id}/charge | cria cobrança no provider (PIX/BOLETO) |
 | POST | /api/v1/payments/webhook | recebe webhook do provider |
@@ -64,6 +70,16 @@ Factory: `provider.NewProvider(providerType, config)` — string `"asaas"|"sicoo
 - `late_fee_percent`/`daily_interest_percent` do contrato são percentuais (2 = 2%): multa = bruto × percent / 100.
 - `financial_config` é escopada por `organization_id` (migration 000041; `owner_id` virou legado opcional). Uma configuração ativa por organização, garantida por índice único parcial que o upsert usa no `ON CONFLICT`.
 - Soft-delete em `DeleteFinancialConfig` (não DELETE real).
+
+## Link público e aviso do inquilino (000050)
+
+- **Token:** 32 bytes de `crypto/rand` em base64url; o banco guarda só o SHA-256 (`payment_links.token_hash`). Um link ativo por cobrança (índice único parcial); `RotateLink` revoga o anterior numa transação. Token inexistente, revogado ou expirado dá o mesmo 404 `NOT_FOUND`.
+- **Validade:** `expires_at` = vencimento + 90 dias (mínimo hoje + 30), calculada na leitura como o maior entre o gravado, vencimento + 90 e, se paga, pagamento + 365 (acordo e pagamento estendem sem escrever).
+- **Exposição mínima (`PublicView`):** nome do locador, valor do dia, vencimento, rótulo da unidade, competência, situação, data e número do recibo. O recibo público vem sem documentos nem endereço.
+- **Aviso:** colunas `reported_at/amount/date` e `proof_path`; **"Aguardando confirmação" é derivada** (`awaiting_confirmation` = não paga com `reported_at`), `status` não muda. `SaveReport`/`ClearReport` gravam a coluna e o evento `REPORTED`/`REJECTED` na mesma transação. Novo aviso substitui o anterior e apaga o comprovante antigo.
+- **Comprovante:** até 5 MB, JPEG/PNG/PDF detectado por `http.DetectContentType` (nunca pelo nome), extensão vem do tipo, gravado em `ProofStorage` (`document.Storage`) sob a organização; nunca servido por rota pública.
+- **Limites** (`Handler.RegisterPublic`): 30 req/min por IP e 5 avisos/hora por link (`ratelimit.New`); o IP segue `X-Forwarded-For`/`X-Real-IP` como o middleware global, então atrás de proxy não confiável o limite por IP pode ser contornado (o limite por link continua valendo). Respostas com `Cache-Control: no-store`.
+- `REPORTED` e `REJECTED` só o sistema grava: `POST /events` continua aceitando apenas `SENT`/`REMINDER`.
 
 ## Decisões
 

@@ -3,6 +3,7 @@ package payment
 import (
 	"context"
 	"errors"
+	"io"
 	"time"
 
 	"github.com/google/uuid"
@@ -59,8 +60,15 @@ type Payment struct {
 	OriginalDueDate *time.Time `json:"original_due_date,omitempty"`
 	ReceiptNumber   *int       `json:"receipt_number,omitempty"`
 	ReceiptYear     *int       `json:"receipt_year,omitempty"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	// Aviso "já paguei" do inquilino (migration 000050). AwaitingConfirmation e HasProof são calculados na leitura.
+	ReportedAt           *time.Time `json:"reported_at,omitempty"`
+	ReportedAmount       *float64   `json:"reported_amount,omitempty"`
+	ReportedDate         *time.Time `json:"reported_date,omitempty"`
+	ProofPath            *string    `json:"-"`
+	HasProof             bool       `json:"has_proof"`
+	AwaitingConfirmation bool       `json:"awaiting_confirmation"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
 }
 
 type CreatePaymentInput struct {
@@ -136,7 +144,8 @@ type RentUpdateResult struct {
 	NeedsReview int `json:"needs_review"`
 }
 
-// PaymentFilter restringe a listagem e o resumo. Status: PENDING (a vencer), LATE (vencida) ou PAID.
+// PaymentFilter restringe a listagem e o resumo. Status: PENDING (a vencer), LATE (vencida), PAID ou
+// AWAITING_CONFIRMATION (não paga, com aviso do inquilino pendente).
 // From/To filtram o vencimento, inclusive nas extremidades.
 type PaymentFilter struct {
 	Status  string
@@ -164,6 +173,9 @@ const (
 	EventReminder  = "REMINDER"
 	EventAgreement = "AGREEMENT"
 	EventPaid      = "PAID"
+	// Gravados só pelo sistema (aviso do inquilino e recusa do dono); nunca por POST /events.
+	EventReported = "REPORTED"
+	EventRejected = "REJECTED"
 	// Marcos calculados, nunca gravados.
 	TimelineCreated = "CREATED"
 	TimelineOverdue = "OVERDUE"
@@ -329,4 +341,79 @@ type UpsertFinancialConfigInput struct {
 	Config   map[string]any `json:"config" validate:"required"`
 	PixKey   *string        `json:"pix_key,omitempty" validate:"omitempty,max=100"`
 	BankInfo *BankInfo      `json:"bank_info,omitempty"`
+}
+
+// MaxProofBytes é o tamanho máximo do comprovante enviado pelo inquilino.
+const MaxProofBytes = 5 << 20
+
+// PaymentLink é o link público de uma cobrança; o banco guarda só o hash do token.
+type PaymentLink struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	PaymentID      uuid.UUID
+	CreatedBy      *uuid.UUID
+	ExpiresAt      time.Time
+	RevokedAt      *time.Time
+}
+
+// LinkStore guarda os links públicos. RotateLink revoga o link ativo da cobrança e cria o novo, numa transação.
+type LinkStore interface {
+	RotateLink(ctx context.Context, orgID, paymentID uuid.UUID, createdBy *uuid.UUID, tokenHash string, expiresAt time.Time) error
+	GetLinkByHash(ctx context.Context, tokenHash string) (*PaymentLink, error)
+}
+
+// ReportApply é o aviso do inquilino que o repositório grava.
+type ReportApply struct {
+	Amount    float64
+	PaidDate  time.Time
+	ProofPath *string
+}
+
+// ReportStore grava e limpa o aviso do inquilino junto do evento REPORTED/REJECTED. Devolvem o comprovante
+// anterior, para o service apagar o arquivo.
+type ReportStore interface {
+	SaveReport(ctx context.Context, orgID, paymentID uuid.UUID, in ReportApply) (oldProofPath *string, err error)
+	ClearReport(ctx context.Context, orgID, paymentID uuid.UUID, actorID *uuid.UUID) (oldProofPath *string, err error)
+}
+
+// ProofStorage guarda os comprovantes; document.Storage já satisfaz esta interface.
+type ProofStorage interface {
+	Save(ctx context.Context, ownerID uuid.UUID, filename string, r io.Reader) (string, error)
+	Load(ctx context.Context, path string) (io.ReadCloser, error)
+	Delete(ctx context.Context, path string) error
+}
+
+// LinkResult é o link recém-criado; a URL com o token só existe nesta resposta.
+type LinkResult struct {
+	URL       string    `json:"url"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// PublicView é tudo o que a página pública mostra ao inquilino. Sem documentos, endereço, contato ou ids internos.
+type PublicView struct {
+	LandlordName   string     `json:"landlord_name"`
+	Amount         float64    `json:"amount"`
+	DueDate        time.Time  `json:"due_date"`
+	UnitLabel      *string    `json:"unit_label,omitempty"`
+	Competency     *string    `json:"competency,omitempty"`
+	Description    *string    `json:"description,omitempty"`
+	Status         string     `json:"status"` // PENDING | LATE | AWAITING_CONFIRMATION | PAID
+	PaidDate       *time.Time `json:"paid_date,omitempty"`
+	ReceiptNumber  *string    `json:"receipt_number,omitempty"`
+	ReportedAt     *time.Time `json:"reported_at,omitempty"`
+	ReportedAmount *float64   `json:"reported_amount,omitempty"`
+	ReportedDate   *time.Time `json:"reported_date,omitempty"`
+}
+
+// ReportInput é o "já paguei" do inquilino; Proof é o comprovante opcional.
+type ReportInput struct {
+	Amount   float64
+	PaidDate time.Time
+	Proof    []byte
+}
+
+// ConfirmInput são os ajustes do dono ao confirmar o aviso.
+type ConfirmInput struct {
+	Discount float64 `json:"discount" validate:"min=0"`
+	Note     *string `json:"note,omitempty" validate:"omitempty,max=500"`
 }

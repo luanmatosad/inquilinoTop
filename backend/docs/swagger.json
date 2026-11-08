@@ -2311,6 +2311,58 @@
                 }
             }
         },
+        "/payments/{id}/confirm-report": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Baixa a cobrança como Pix na data informada pelo inquilino; desconto opcional.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Confirma o recebimento do aviso do inquilino",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Desconto e observação",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/payment.ConfirmInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/payment.Payment"
+                        }
+                    },
+                    "409": {
+                        "description": "NO_PENDING_REPORT ou ALREADY_PAID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/payments/{id}/events": {
             "get": {
                 "security": [
@@ -2410,6 +2462,54 @@
                 }
             }
         },
+        "/payments/{id}/link": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "A URL com o token só aparece nesta resposta; o link anterior é revogado.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Cria (ou rotaciona) o link público da cobrança",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/payment.LinkResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "PUBLIC_URL_NOT_CONFIGURED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/payments/{id}/pix": {
             "get": {
                 "security": [
@@ -2458,6 +2558,43 @@
                 }
             }
         },
+        "/payments/{id}/proof": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Baixa o comprovante do aviso (só o dono)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/payments/{id}/receipt": {
             "get": {
                 "security": [
@@ -2491,6 +2628,47 @@
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/{id}/reject-report": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Recusa o aviso do inquilino (\"ainda não recebi\")",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "NO_PENDING_REPORT ou ALREADY_PAID",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2762,6 +2940,201 @@
                     },
                     "409": {
                         "description": "DUPLICATE_UNIT_LABEL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/payments/{token}": {
+            "get": {
+                "description": "Sem login. Devolve só o que o inquilino precisa ver; token inválido, expirado ou revogado dá 404 idêntico.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-payments"
+                ],
+                "summary": "Cobrança pelo link público",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Token do link",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/payment.PublicView"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/payments/{token}/pix": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-payments"
+                ],
+                "summary": "Pix copia-e-cola pelo link público",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Token do link",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/payment.PixCode"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "ALREADY_PAID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "PIX_KEY_NOT_CONFIGURED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/payments/{token}/receipt": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-payments"
+                ],
+                "summary": "Recibo pelo link público (sem documentos nem endereço)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Token do link",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/payment.Receipt"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "NOT_PAID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/payments/{token}/report": {
+            "post": {
+                "description": "Multipart: amount, paid_date (YYYY-MM-DD) e proof opcional (JPEG, PNG ou PDF até 5 MB). Limite de 5 avisos por hora por link.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public-payments"
+                ],
+                "summary": "Inquilino avisa que pagou",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Token do link",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "INVALID_REPORT ou INVALID_PAID_DATE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "ALREADY_PAID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "413": {
+                        "description": "PROOF_TOO_LARGE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "415": {
+                        "description": "PROOF_TYPE_NOT_ALLOWED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "429": {
+                        "description": "RATE_LIMIT_EXCEEDED",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4508,6 +4881,29 @@
                 }
             }
         },
+        "payment.Amounts": {
+            "type": "object",
+            "properties": {
+                "discount": {
+                    "type": "number"
+                },
+                "gross": {
+                    "type": "number"
+                },
+                "interest": {
+                    "type": "number"
+                },
+                "irrf_withheld": {
+                    "type": "number"
+                },
+                "late_fee": {
+                    "type": "number"
+                },
+                "net_paid": {
+                    "type": "number"
+                }
+            }
+        },
         "payment.Bucket": {
             "type": "object",
             "properties": {
@@ -4516,6 +4912,19 @@
                 },
                 "total": {
                     "type": "number"
+                }
+            }
+        },
+        "payment.ConfirmInput": {
+            "type": "object",
+            "properties": {
+                "discount": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "note": {
+                    "type": "string",
+                    "maxLength": 500
                 }
             }
         },
@@ -4550,6 +4959,235 @@
                         "EXPENSE",
                         "OTHER"
                     ]
+                }
+            }
+        },
+        "payment.LinkResult": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "payment.Party": {
+            "type": "object",
+            "properties": {
+                "document": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "person_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "payment.Payment": {
+            "type": "object",
+            "properties": {
+                "awaiting_confirmation": {
+                    "type": "boolean"
+                },
+                "charge_barcode": {
+                    "type": "string"
+                },
+                "charge_id": {
+                    "type": "string"
+                },
+                "charge_link": {
+                    "type": "string"
+                },
+                "charge_method": {
+                    "type": "string"
+                },
+                "charge_qrcode": {
+                    "type": "string"
+                },
+                "competency": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "discount_amount": {
+                    "type": "number"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "gross_amount": {
+                    "type": "number"
+                },
+                "has_proof": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "interest_amount": {
+                    "type": "number"
+                },
+                "irrf_amount": {
+                    "type": "number"
+                },
+                "late_fee_amount": {
+                    "type": "number"
+                },
+                "lease_id": {
+                    "type": "string"
+                },
+                "net_amount": {
+                    "type": "number"
+                },
+                "organization_id": {
+                    "type": "string"
+                },
+                "original_due_date": {
+                    "type": "string"
+                },
+                "paid_date": {
+                    "type": "string"
+                },
+                "payment_method": {
+                    "description": "Dados do pagamento manual, do acordo e do recibo (migration 000049).",
+                    "type": "string"
+                },
+                "payment_note": {
+                    "type": "string"
+                },
+                "payout_id": {
+                    "type": "string"
+                },
+                "payout_status": {
+                    "type": "string"
+                },
+                "receipt_number": {
+                    "type": "integer"
+                },
+                "receipt_year": {
+                    "type": "integer"
+                },
+                "reported_amount": {
+                    "type": "number"
+                },
+                "reported_at": {
+                    "description": "Aviso \"já paguei\" do inquilino (migration 000050). AwaitingConfirmation e HasProof são calculados na leitura.",
+                    "type": "string"
+                },
+                "reported_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "payment.PixCode": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "payload": {
+                    "type": "string"
+                }
+            }
+        },
+        "payment.PublicView": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "competency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "landlord_name": {
+                    "type": "string"
+                },
+                "paid_date": {
+                    "type": "string"
+                },
+                "receipt_number": {
+                    "type": "string"
+                },
+                "reported_amount": {
+                    "type": "number"
+                },
+                "reported_at": {
+                    "type": "string"
+                },
+                "reported_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "PENDING | LATE | AWAITING_CONFIRMATION | PAID",
+                    "type": "string"
+                },
+                "unit_label": {
+                    "type": "string"
+                }
+            }
+        },
+        "payment.Receipt": {
+            "type": "object",
+            "properties": {
+                "amounts": {
+                    "$ref": "#/definitions/payment.Amounts"
+                },
+                "competency": {
+                    "type": "string"
+                },
+                "issued_at": {
+                    "type": "string"
+                },
+                "legal_note": {
+                    "type": "string"
+                },
+                "number": {
+                    "description": "Number é o número sequencial por organização e ano, no formato 0001/2026.",
+                    "type": "string"
+                },
+                "owner": {
+                    "$ref": "#/definitions/payment.Party"
+                },
+                "paid_date": {
+                    "type": "string"
+                },
+                "payment_id": {
+                    "type": "string"
+                },
+                "payment_method": {
+                    "type": "string"
+                },
+                "payment_note": {
+                    "type": "string"
+                },
+                "tenant": {
+                    "$ref": "#/definitions/payment.Party"
+                },
+                "unit": {
+                    "$ref": "#/definitions/payment.UnitRef"
                 }
             }
         },
@@ -4588,6 +5226,17 @@
                 },
                 "to_receive": {
                     "$ref": "#/definitions/payment.Bucket"
+                }
+            }
+        },
+        "payment.UnitRef": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string"
+                },
+                "property_address": {
+                    "type": "string"
                 }
             }
         },

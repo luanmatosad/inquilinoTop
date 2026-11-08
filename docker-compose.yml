@@ -46,6 +46,7 @@ services:
       JWT_PUBLIC_KEY_PATH: /app/keys/public.pem
       APP_ENV: development
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
       PORT: 8080
       SENTRY_DSN: ${BACKEND_SENTRY_DSN:-}
     depends_on:

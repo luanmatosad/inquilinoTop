@@ -3,6 +3,7 @@ package payment_test
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -677,3 +678,105 @@ func TestRepository_ApplyAgreement_PagaEOutraOrganizaçãoNãoMudam(t *testing.T
 	_, err = repo.ApplyAgreement(ctx, p.ID, orgID, ap)
 	assert.ErrorIs(t, err, apierr.ErrNotFound, "paga não aceita acordo")
 }
+
+func TestRepository_Links_UmAtivoPorCobrançaEHashÚnico(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	links := payment.NewLinkStore(d)
+	orgID, ownerID, leaseID := seedLease(t, d)
+	p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT"})
+	require.NoError(t, err)
+
+	exp := time.Now().Add(48 * time.Hour)
+	h1 := strings.Repeat("a", 64)
+	h2 := strings.Repeat("b", 64)
+	require.NoError(t, links.RotateLink(ctx, orgID, p.ID, &ownerID, h1, exp))
+	require.NoError(t, links.RotateLink(ctx, orgID, p.ID, &ownerID, h2, exp))
+
+	first, err := links.GetLinkByHash(ctx, h1)
+	require.NoError(t, err)
+	assert.NotNil(t, first.RevokedAt, "o link anterior foi revogado")
+	second, err := links.GetLinkByHash(ctx, h2)
+	require.NoError(t, err)
+	assert.Nil(t, second.RevokedAt)
+	assert.Equal(t, p.ID, second.PaymentID)
+	assert.Equal(t, orgID, second.OrganizationID)
+
+	_, err = links.GetLinkByHash(ctx, strings.Repeat("c", 64))
+	assert.ErrorIs(t, err, apierr.ErrNotFound)
+
+	other := uuid.New()
+	assert.Error(t, links.RotateLink(ctx, other, p.ID, nil, strings.Repeat("d", 64), exp), "organização que não é dona da cobrança")
+}
+
+func TestRepository_Report_SalvaLimpaEGravaEventos(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	reports := payment.NewReportStore(d)
+	store := payment.NewEventStore(d)
+	orgID, ownerID, leaseID := seedLease(t, d)
+	p, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{LeaseID: leaseID, DueDate: time.Now(), GrossAmount: 1000, Type: "RENT"})
+	require.NoError(t, err)
+
+	proof := "org/comp.png"
+	old, err := reports.SaveReport(ctx, orgID, p.ID, payment.ReportApply{Amount: 1000, PaidDate: time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC), ProofPath: &proof})
+	require.NoError(t, err)
+	assert.Nil(t, old)
+
+	got, err := repo.GetByID(ctx, p.ID, orgID)
+	require.NoError(t, err)
+	require.NotNil(t, got.ReportedAt)
+	assert.Equal(t, 1000.0, *got.ReportedAmount)
+	assert.Equal(t, "2026-11-02", got.ReportedDate.Format("2006-01-02"))
+	require.NotNil(t, got.ProofPath)
+	assert.Equal(t, "PENDING", got.Status)
+
+	proof2 := "org/comp2.pdf"
+	old, err = reports.SaveReport(ctx, orgID, p.ID, payment.ReportApply{Amount: 990, PaidDate: time.Date(2026, 11, 3, 0, 0, 0, 0, time.UTC), ProofPath: &proof2})
+	require.NoError(t, err)
+	require.NotNil(t, old)
+	assert.Equal(t, proof, *old)
+
+	old, err = reports.ClearReport(ctx, orgID, p.ID, &ownerID)
+	require.NoError(t, err)
+	assert.Equal(t, proof2, *old)
+	got, err = repo.GetByID(ctx, p.ID, orgID)
+	require.NoError(t, err)
+	assert.Nil(t, got.ReportedAt)
+	assert.Nil(t, got.ProofPath)
+
+	evs, err := store.ListEvents(ctx, p.ID, orgID)
+	require.NoError(t, err)
+	kinds := []string{}
+	for _, e := range evs {
+		kinds = append(kinds, e.Kind)
+	}
+	assert.Equal(t, []string{"REPORTED", "REPORTED", "REJECTED"}, kinds)
+
+	_, err = reports.SaveReport(ctx, uuid.New(), p.ID, payment.ReportApply{Amount: 1, PaidDate: time.Now()})
+	assert.ErrorIs(t, err, apierr.ErrNotFound, "outra organização")
+}
+
+func TestPaymentRepository_List_FiltroAguardandoConfirmação(t *testing.T) {
+	ctx := context.Background()
+	d := testDB(t)
+	repo := payment.NewRepository(d)
+	reports := payment.NewReportStore(d)
+	orgID, ownerID, leaseID := seedLease(t, d)
+	today := time.Date(2026, 11, 7, 0, 0, 0, 0, time.UTC)
+	a, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{LeaseID: leaseID, DueDate: today.AddDate(0, 0, 3), GrossAmount: 1000, Type: "RENT", Competency: strptr("2026-11")})
+	require.NoError(t, err)
+	_, err = repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{LeaseID: leaseID, DueDate: today.AddDate(0, 0, 3), GrossAmount: 500, Type: "OTHER"})
+	require.NoError(t, err)
+	_, err = reports.SaveReport(ctx, orgID, a.ID, payment.ReportApply{Amount: 1000, PaidDate: today})
+	require.NoError(t, err)
+
+	list, err := repo.List(ctx, orgID, payment.PaymentFilter{Status: "AWAITING_CONFIRMATION"}, today)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, a.ID, list[0].ID)
+}
+
+func strptr(s string) *string { return &s }

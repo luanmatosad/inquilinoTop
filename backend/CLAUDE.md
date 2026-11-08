@@ -26,6 +26,7 @@ docs/                    # gerado por swag init — não editar manualmente
 | `TEST_DATABASE_URL` | DB para testes de integração (default: localhost:5433) |
 | `CORS_ALLOWED_ORIGINS` | Lista separada por vírgula de origens CORS (default: vazio) |
 | `APP_TIMEZONE` | Fuso para "hoje"/mês corrente nas métricas (default: `America/Sao_Paulo`) |
+| `APP_PUBLIC_URL` | URL pública do frontend; base do link `/p/<token>` da cobrança (sem ela, `POST /payments/{id}/link` dá 422) |
 | `PAYMENT_PROVIDER` | Provider de pagamento: `asaas`, `sicoob`, `bradesco`, `itau`, `mock` |
 
 ## Rotas Públicas
@@ -39,6 +40,10 @@ POST /api/v1/auth/refresh
 POST /api/v1/auth/logout
 POST /api/v1/auth/2fa/verify
 POST /api/v1/payments/webhook   # webhook do provider de pagamento
+GET  /api/v1/public/payments/{token}          # cobrança pelo link (sem login)
+GET  /api/v1/public/payments/{token}/pix      # Pix do dia
+GET  /api/v1/public/payments/{token}/receipt  # recibo (só paga), sem documentos nem endereço
+POST /api/v1/public/payments/{token}/report   # "já paguei" (multipart, comprovante opcional)
 ```
 
 ## Middlewares Globais (aplicados em main.go)
@@ -67,9 +72,9 @@ Sempre via `httputil`. Envelope: `{"data": ..., "error": null}` ou `{"data": nul
 
 ## Migrations
 
-Numeradas `000001_..._name.up.sql` / `.down.sql`. Rodam automaticamente na startup via `db.RunMigrations`. Última: `000049_payment_events_and_receipts`.
+Numeradas `000001_..._name.up.sql` / `.down.sql`. Rodam automaticamente na startup via `db.RunMigrations`. Última: `000050_payment_links_and_reports`.
 
-Tabelas e alterações adicionadas (000009–000045): `tenant.person_type`, `lease.fiscal_fields`, `payment.breakdown`, `lease_readjustments`, `irrf_brackets`, `financial_config`, `payment.charge_fields`, `lease.payment_day`, `support_tickets`, `audit_logs`, `user_roles`, `2fa_fields`, `temp_2fa_tokens`, `documents`, `notifications`, `index_values`, `import_history`, `user_profiles`, `user_notification_preferences`, `organizations` (+ `organization_id` em `support_tickets` e `audit_logs`, FK NOT NULL), índices do dashboard, campos de unidade/endereço/notas, sem sobreposição de contratos, campos de despesa, `organization_id` em `financial_config` e reajustes, `inspections`, `inspection_items`, `inspection_photos`, `properties` (tipo COMMERCIAL, `number`, `complement`), `units.reference_rent`, `leases` (`adjustment_index`, `adjustment_month`, `end_reason`), `payment_events`, `receipt_counters` e colunas de pagamento manual/recibo em `payments`.
+Tabelas e alterações adicionadas (000009–000045): `tenant.person_type`, `lease.fiscal_fields`, `payment.breakdown`, `lease_readjustments`, `irrf_brackets`, `financial_config`, `payment.charge_fields`, `lease.payment_day`, `support_tickets`, `audit_logs`, `user_roles`, `2fa_fields`, `temp_2fa_tokens`, `documents`, `notifications`, `index_values`, `import_history`, `user_profiles`, `user_notification_preferences`, `organizations` (+ `organization_id` em `support_tickets` e `audit_logs`, FK NOT NULL), índices do dashboard, campos de unidade/endereço/notas, sem sobreposição de contratos, campos de despesa, `organization_id` em `financial_config` e reajustes, `inspections`, `inspection_items`, `inspection_photos`, `properties` (tipo COMMERCIAL, `number`, `complement`), `units.reference_rent`, `leases` (`adjustment_index`, `adjustment_month`, `end_reason`), `payment_events`, `receipt_counters` colunas de pagamento manual/recibo em `payments`, `payment_links` (hash do token) e colunas do aviso `reported_*`/`proof_path` em `payments`.
 
 ## Módulos
 

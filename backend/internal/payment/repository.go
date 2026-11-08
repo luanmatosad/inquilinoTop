@@ -21,6 +21,16 @@ func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
 }
 
+// NewLinkStore devolve o armazenamento dos links públicos.
+func NewLinkStore(database *db.DB) LinkStore {
+	return &pgRepository{db: database}
+}
+
+// NewReportStore devolve o armazenamento do aviso "já paguei".
+func NewReportStore(database *db.DB) ReportStore {
+	return &pgRepository{db: database}
+}
+
 // NewEventStore devolve o armazenamento dos eventos da cobrança.
 func NewEventStore(database *db.DB) EventStore {
 	return &pgRepository{db: database}
@@ -29,20 +39,23 @@ func NewEventStore(database *db.DB) EventStore {
 const paymentCols = `id, organization_id, lease_id, due_date, paid_date,
   gross_amount, late_fee_amount, interest_amount, irrf_amount, net_amount,
   competency, description, status, type, created_at, updated_at,
-  payment_method, discount_amount, payment_note, original_due_date, receipt_number, receipt_year`
+  payment_method, discount_amount, payment_note, original_due_date, receipt_number, receipt_year,
+  reported_at, reported_amount, reported_date, proof_path`
 
 func scanPayment(row pgx.Row, p *Payment) error {
 	return row.Scan(&p.ID, &p.OrganizationID, &p.LeaseID, &p.DueDate, &p.PaidDate,
 		&p.GrossAmount, &p.LateFeeAmount, &p.InterestAmount, &p.IRRFAmount, &p.NetAmount,
 		&p.Competency, &p.Description, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt,
-		&p.PaymentMethod, &p.DiscountAmount, &p.PaymentNote, &p.OriginalDueDate, &p.ReceiptNumber, &p.ReceiptYear)
+		&p.PaymentMethod, &p.DiscountAmount, &p.PaymentNote, &p.OriginalDueDate, &p.ReceiptNumber, &p.ReceiptYear,
+		&p.ReportedAt, &p.ReportedAmount, &p.ReportedDate, &p.ProofPath)
 }
 
 func scanPaymentRows(rows pgx.Rows, p *Payment) error {
 	return rows.Scan(&p.ID, &p.OrganizationID, &p.LeaseID, &p.DueDate, &p.PaidDate,
 		&p.GrossAmount, &p.LateFeeAmount, &p.InterestAmount, &p.IRRFAmount, &p.NetAmount,
 		&p.Competency, &p.Description, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt,
-		&p.PaymentMethod, &p.DiscountAmount, &p.PaymentNote, &p.OriginalDueDate, &p.ReceiptNumber, &p.ReceiptYear)
+		&p.PaymentMethod, &p.DiscountAmount, &p.PaymentNote, &p.OriginalDueDate, &p.ReceiptNumber, &p.ReceiptYear,
+		&p.ReportedAt, &p.ReportedAmount, &p.ReportedDate, &p.ProofPath)
 }
 
 func (r *pgRepository) Create(ctx context.Context, userID, orgID uuid.UUID, in CreatePaymentInput) (*Payment, error) {
@@ -141,6 +154,8 @@ func (r *pgRepository) List(ctx context.Context, orgID uuid.UUID, f PaymentFilte
 		query += ` AND status<>'PAID' AND due_date < $2`
 	case "PAID":
 		query += ` AND status='PAID'`
+	case statusAwaiting:
+		query += ` AND status<>'PAID' AND reported_at IS NOT NULL`
 	}
 	if f.From != nil {
 		args = append(args, *f.From)
