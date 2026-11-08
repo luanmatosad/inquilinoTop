@@ -62,6 +62,7 @@ Integração exige `-p 1` (um pacote por vez) para não paralelizar acesso ao DB
 | tenant | [backend/internal/tenant/CLAUDE.md](backend/internal/tenant/CLAUDE.md) | **MIGRADO** — Go API |
 | lease | [backend/internal/lease/CLAUDE.md](backend/internal/lease/CLAUDE.md) | **MIGRADO** — Go API |
 | payment | [backend/internal/payment/CLAUDE.md](backend/internal/payment/CLAUDE.md) | **MIGRADO** — Go API |
+| closing (fechamento mensal) | [backend/internal/closing/CLAUDE.md](backend/internal/closing/CLAUDE.md) | Go API |
 | expense | [backend/internal/expense/CLAUDE.md](backend/internal/expense/CLAUDE.md) | **MIGRADO** — Go API |
 | inspection (laudo de vistoria) | [backend/internal/inspection/CLAUDE.md](backend/internal/inspection/CLAUDE.md) | Go API |
 | organization (org, filiais, membros, convites) | [backend/internal/organization/CLAUDE.md](backend/internal/organization/CLAUDE.md) | — |

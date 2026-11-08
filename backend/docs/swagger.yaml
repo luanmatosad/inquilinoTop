@@ -1519,6 +1519,104 @@ paths:
       summary: Registrar novo usuário
       tags:
       - auth
+  /closings:
+    get:
+      parameters:
+      - description: Mês AAAA-MM
+        in: query
+        name: month
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Estado do mês (aberto com retrato ao vivo, ou fechado com o retrato
+        gravado) e histórico
+      tags:
+      - closings
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 'month: AAAA-MM'
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Fecha um mês já encerrado
+      tags:
+      - closings
+  /closings/{month}/reopen:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Mês AAAA-MM
+        in: path
+        name: month
+        required: true
+        type: string
+      - description: reason
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reabre um mês fechado (motivo obrigatório)
+      tags:
+      - closings
   /dashboard/metrics:
     get:
       produces:
