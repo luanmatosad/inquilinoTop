@@ -84,3 +84,14 @@ func TestBuild_NormalizaChaveComPontuacao(t *testing.T) {
 		assert.Contains(t, code, "01"+fmt.Sprintf("%02d", len(want))+want, in)
 	}
 }
+
+func TestReceiverName_ComoEntraNoCodigo(t *testing.T) {
+	assert.Equal(t, "LUAN MATOS DE ABREU DIAS", pix.ReceiverName("Luan Matos de Abreu Dias"))
+	assert.Equal(t, "JOAO DA CONCEICAO", pix.ReceiverName("  João da Conceição "))
+	assert.Equal(t, 25, len(pix.ReceiverName("Nome muito mais longo que vinte e cinco letras")))
+	assert.Equal(t, "RECEBEDOR", pix.ReceiverName("   "), "vazio usa a reserva do BR Code")
+	// o mesmo valor vai no campo 59 do código
+	code, err := pix.Build(pix.Params{Key: "a@b.com", Name: "João da Conceição", City: "Manaus", Amount: 10})
+	require.NoError(t, err)
+	assert.Contains(t, code, "5917"+pix.ReceiverName("João da Conceição"))
+}

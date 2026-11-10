@@ -128,7 +128,10 @@ func main() {
 	leaseSvc.WithPayments(payment.NewLeaseHooks(paymentSvc))
 	closingSvc := closing.NewService(closing.NewRepository(database), closing.NewPaymentSource(paymentSvc, leaseRepo, tenantRepo), closing.NewNameReader(identityRepoForPayment)).WithLocation(appLoc)
 	closingHandler := closing.NewHandler(closingSvc)
-	settingsHandler := settings.NewHandler(settings.NewService(settings.NewRepository(database)))
+	settingsSvc := settings.NewService(settings.NewRepository(database))
+	settingsHandler := settings.NewHandler(settingsSvc)
+	// A cobrança escolhe a conta Pix pela unidade, depois pela organização (Configurações > Recebimento).
+	paymentSvc.WithPixAccounts(&payment.PixAccountAdapter{Svc: settingsSvc})
 	reportHandler := report.NewHandler(report.NewService(report.NewRepository(database)).WithLocation(appLoc))
 
 	dashboardRepo := dashboard.NewRepository(database)

@@ -270,6 +270,21 @@ type UnitSummary struct {
 type PixCode struct {
 	Payload string  `json:"payload"`
 	Amount  float64 `json:"amount"`
+	// ReceiverName é o nome de quem recebe, como entra no código (o pagador vê para quem está pagando).
+	ReceiverName string `json:"receiver_name"`
+}
+
+// PixAccount é a conta Pix escolhida para uma cobrança (da unidade ou da organização). Nome e cidade vazios
+// valem o nome do perfil do dono e a cidade do imóvel.
+type PixAccount struct {
+	Key          string
+	ReceiverName string
+	City         string
+}
+
+// PixAccountReader escolhe a conta Pix de uma unidade: a própria, senão a da organização, senão nil.
+type PixAccountReader interface {
+	ResolvePixAccount(ctx context.Context, orgID, unitID uuid.UUID) (*PixAccount, error)
 }
 
 type Receipt struct {

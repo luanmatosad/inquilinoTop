@@ -958,6 +958,10 @@ definitions:
         type: number
       payload:
         type: string
+      receiver_name:
+        description: ReceiverName é o nome de quem recebe, como entra no código (o
+          pagador vê para quem está pagando).
+        type: string
     type: object
   payment.PublicView:
     properties:
@@ -1211,6 +1215,28 @@ definitions:
         type: number
       readjust_notice_days:
         type: integer
+    type: object
+  settings.PixInput:
+    properties:
+      city:
+        type: string
+      key:
+        type: string
+      key_type:
+        type: string
+      receiver_name:
+        type: string
+    type: object
+  settings.UnitPixInput:
+    properties:
+      confirmed:
+        type: boolean
+      key:
+        type: string
+      key_type:
+        type: string
+      receiver_name:
+        type: string
     type: object
   support.CreateTicketInput:
     properties:
@@ -3626,6 +3652,113 @@ paths:
       security:
       - BearerAuth: []
       summary: Grava as regras financeiras da organização
+      tags:
+      - settings
+  /settings/pix:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Chave Pix da organização e contas Pix por unidade
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chave, tipo, nome e cidade
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/settings.PixInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Grava a chave Pix padrão da organização
+      tags:
+      - settings
+  /settings/pix/units/{unitId}:
+    delete:
+      parameters:
+      - description: ID da unidade
+        in: path
+        name: unitId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Volta a unidade para a chave padrão (a conta fica no histórico)
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da unidade
+        in: path
+        name: unitId
+        required: true
+        type: string
+      - description: Chave, tipo, nome e confirmação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/settings.UnitPixInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Grava a conta Pix de uma unidade (exige confirmed=true)
       tags:
       - settings
   /tenants:

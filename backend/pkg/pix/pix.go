@@ -41,6 +41,15 @@ func clean(s string, max int) string {
 	return strings.TrimSpace(string(r))
 }
 
+// ReceiverName devolve o nome do recebedor como entra no código (sem acento, maiúsculas, até 25 caracteres), com a
+// reserva "RECEBEDOR" se vier vazio. Serve para mostrar ao pagador exatamente para quem ele está pagando.
+func ReceiverName(name string) string {
+	if n := clean(name, 25); n != "" {
+		return n
+	}
+	return "RECEBEDOR"
+}
+
 // CRC16 calcula o CRC16-CCITT (polinômio 0x1021, valor inicial 0xFFFF) em hexadecimal maiúsculo de 4 dígitos.
 func CRC16(s string) string {
 	crc := uint16(0xFFFF)
@@ -81,10 +90,7 @@ func Build(p Params) (string, error) {
 	if key == "" || len(key) > 77 || p.Amount < 0 {
 		return "", ErrInvalid
 	}
-	name := clean(p.Name, 25)
-	if name == "" {
-		name = "RECEBEDOR"
-	}
+	name := ReceiverName(p.Name)
 	city := clean(p.City, 15)
 	if city == "" {
 		city = "BRASIL"

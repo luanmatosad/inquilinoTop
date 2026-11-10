@@ -2,6 +2,7 @@ package payment
 
 import (
 	"context"
+	"github.com/inquilinotop/api/internal/settings"
 	"strings"
 
 	"github.com/google/uuid"
@@ -50,4 +51,19 @@ func (a *OwnerReaderAdapter) GetByID(ctx context.Context, id uuid.UUID) (*OwnerS
 		}
 	}
 	return summary, nil
+}
+
+// PixAccountAdapter liga a escolha da conta Pix (módulo settings) à cobrança sem `payment` conhecer as tabelas.
+type PixAccountAdapter struct {
+	Svc interface {
+		ResolvePixAccount(ctx context.Context, orgID, unitID uuid.UUID) (*settings.PixAccount, error)
+	}
+}
+
+func (a *PixAccountAdapter) ResolvePixAccount(ctx context.Context, orgID, unitID uuid.UUID) (*PixAccount, error) {
+	acct, err := a.Svc.ResolvePixAccount(ctx, orgID, unitID)
+	if err != nil || acct == nil {
+		return nil, err
+	}
+	return &PixAccount{Key: acct.Key, ReceiverName: acct.ReceiverName, City: acct.City}, nil
 }

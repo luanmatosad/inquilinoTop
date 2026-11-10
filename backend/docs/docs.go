@@ -3638,6 +3638,174 @@ const docTemplate = `{
                 }
             }
         },
+        "/settings/pix": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Chave Pix da organização e contas Pix por unidade",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Grava a chave Pix padrão da organização",
+                "parameters": [
+                    {
+                        "description": "Chave, tipo, nome e cidade",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/settings.PixInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/settings/pix/units/{unitId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Grava a conta Pix de uma unidade (exige confirmed=true)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da unidade",
+                        "name": "unitId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Chave, tipo, nome e confirmação",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/settings.UnitPixInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Volta a unidade para a chave padrão (a conta fica no histórico)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da unidade",
+                        "name": "unitId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/tenants": {
             "get": {
                 "security": [
@@ -5526,6 +5694,10 @@ const docTemplate = `{
                 },
                 "payload": {
                     "type": "string"
+                },
+                "receiver_name": {
+                    "description": "ReceiverName é o nome de quem recebe, como entra no código (o pagador vê para quem está pagando).",
+                    "type": "string"
                 }
             }
         },
@@ -5885,6 +6057,40 @@ const docTemplate = `{
                 },
                 "readjust_notice_days": {
                     "type": "integer"
+                }
+            }
+        },
+        "settings.PixInput": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "key_type": {
+                    "type": "string"
+                },
+                "receiver_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "settings.UnitPixInput": {
+            "type": "object",
+            "properties": {
+                "confirmed": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "key_type": {
+                    "type": "string"
+                },
+                "receiver_name": {
+                    "type": "string"
                 }
             }
         },

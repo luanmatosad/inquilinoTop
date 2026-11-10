@@ -28,6 +28,7 @@ type Service struct {
 	publicURL    string
 	reports      ReportStore
 	proofs       ProofStorage
+	pixAccounts  PixAccountReader
 	loc          *time.Location
 	now          func() time.Time
 }
@@ -39,6 +40,12 @@ func NewService(repo Repository, lr LeaseReader, tr TenantReader, ur UnitReader,
 // WithEvents habilita a linha do tempo e o registro de envio da cobrança.
 func (s *Service) WithEvents(e EventStore) *Service {
 	s.events = e
+	return s
+}
+
+// WithPixAccounts liga a escolha da conta Pix por unidade e por organização (Configurações > Recebimento).
+func (s *Service) WithPixAccounts(r PixAccountReader) *Service {
+	s.pixAccounts = r
 	return s
 }
 
@@ -734,28 +741,56 @@ func (s *Service) PixPayload(ctx context.Context, id, orgID, userID uuid.UUID) (
 	if p.Status == "PAID" {
 		return nil, errAlreadyPaid
 	}
-	fc, err := s.repo.GetActiveFinancialConfig(ctx, orgID)
-	if err != nil || fc == nil || fc.PixKey == nil || strings.TrimSpace(*fc.PixKey) == "" {
+
+	var unitID uuid.UUID
+	if l, err := s.leaseReader.GetByID(ctx, p.LeaseID, orgID); err == nil {
+		unitID = l.UnitID
+	}
+
+	// Conta Pix: a da unidade, senão a da organização (Configurações), senão a chave antiga da configuração financeira.
+	// Se escolher a conta falhar, o erro sobe: cair na chave da organização poderia mandar o dinheiro para a conta errada.
+	var acct *PixAccount
+	if s.pixAccounts != nil && unitID != uuid.Nil {
+		if acct, err = s.pixAccounts.ResolvePixAccount(ctx, orgID, unitID); err != nil {
+			return nil, fmt.Errorf("payment.svc: conta pix: %w", err)
+		}
+	}
+	key := ""
+	if acct != nil {
+		key = strings.TrimSpace(acct.Key)
+	} else if fc, err := s.repo.GetActiveFinancialConfig(ctx, orgID); err == nil && fc != nil && fc.PixKey != nil {
+		key = strings.TrimSpace(*fc.PixKey)
+	}
+	if key == "" {
 		return nil, ErrPixKeyNotConfigured
 	}
+
 	enriched := s.Enrich(ctx, *p)
 	amount := round2(enriched.GrossAmount + enriched.LateFeeAmount + enriched.InterestAmount)
 
 	name := ""
-	if owner, err := s.ownerReader.GetByID(ctx, userID); err == nil && owner != nil {
-		name = owner.Name
+	if acct != nil {
+		name = strings.TrimSpace(acct.ReceiverName)
+	}
+	if name == "" {
+		if owner, err := s.ownerReader.GetByID(ctx, userID); err == nil && owner != nil {
+			name = owner.Name
+		}
 	}
 	city := ""
-	if l, err := s.leaseReader.GetByID(ctx, p.LeaseID, orgID); err == nil {
-		if u, err := s.unitReader.GetByID(ctx, l.UnitID, orgID); err == nil && u.PropertyCity != nil {
+	if acct != nil {
+		city = strings.TrimSpace(acct.City)
+	}
+	if city == "" && unitID != uuid.Nil {
+		if u, err := s.unitReader.GetByID(ctx, unitID, orgID); err == nil && u.PropertyCity != nil {
 			city = *u.PropertyCity
 		}
 	}
-	payload, err := pix.Build(pix.Params{Key: *fc.PixKey, Name: name, City: city, Amount: amount, TxID: pix.TxIDFromID(id.String())})
+	payload, err := pix.Build(pix.Params{Key: key, Name: name, City: city, Amount: amount, TxID: pix.TxIDFromID(id.String())})
 	if err != nil {
 		return nil, fmt.Errorf("payment.svc: pix: %w", err)
 	}
-	return &PixCode{Payload: payload, Amount: amount}, nil
+	return &PixCode{Payload: payload, Amount: amount, ReceiverName: pix.ReceiverName(name)}, nil
 }
 
 // Erros do acordo de atraso.

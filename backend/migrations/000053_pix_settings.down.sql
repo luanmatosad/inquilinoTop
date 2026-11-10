@@ -1,0 +1,9 @@
+DROP TABLE unit_pix_accounts;
+ALTER TABLE organization_settings
+    DROP CONSTRAINT organization_settings_pix_pair,
+    DROP COLUMN pix_updated_at,
+    DROP COLUMN pix_updated_by,
+    DROP COLUMN pix_city,
+    DROP COLUMN pix_receiver_name,
+    DROP COLUMN pix_key_type,
+    DROP COLUMN pix_key;

@@ -94,3 +94,119 @@ func TestHandler_SemOrganizacao(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, do(h, http.MethodGet, "/settings/financial-rules", nil).Code)
 	assert.Equal(t, http.StatusUnauthorized, do(h, http.MethodPut, "/settings/financial-rules", map[string]any{}).Code)
 }
+
+// ---------- Pix ----------
+
+type pixEnv struct {
+	Data  json.RawMessage `json:"data"`
+	Error struct {
+		Code string `json:"code"`
+	} `json:"error"`
+}
+
+func decodePix(t *testing.T, rr *httptest.ResponseRecorder) pixEnv {
+	t.Helper()
+	var e pixEnv
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &e), rr.Body.String())
+	return e
+}
+
+func pixRouter(t *testing.T) (http.Handler, *mockRepo, uuid.UUID) {
+	t.Helper()
+	repo := newMock()
+	unit := uuid.New()
+	repo.unitOrg[unit] = org
+	return router(t, repo, true), repo, unit
+}
+
+func TestHandler_Pix_GetVazio(t *testing.T) {
+	h, _, _ := pixRouter(t)
+	rr := do(h, http.MethodGet, "/settings/pix", nil)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var p settings.PixSettings
+	require.NoError(t, json.Unmarshal(decodePix(t, rr).Data, &p))
+	assert.False(t, p.Default.Configured)
+	assert.NotNil(t, p.Units)
+}
+
+func TestHandler_Pix_PutNormalizaEGrava(t *testing.T) {
+	h, _, _ := pixRouter(t)
+	rr := do(h, http.MethodPut, "/settings/pix", map[string]any{"key_type": "CPF", "key": "529.982.247-25", "receiver_name": "Luan Matos", "city": "Manaus"})
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var d settings.PixDefault
+	require.NoError(t, json.Unmarshal(decodePix(t, rr).Data, &d))
+	assert.Equal(t, "52998224725", d.Key)
+
+	var p settings.PixSettings
+	require.NoError(t, json.Unmarshal(decodePix(t, do(h, http.MethodGet, "/settings/pix", nil)).Data, &p))
+	assert.True(t, p.Default.Configured)
+}
+
+func TestHandler_Pix_PutErros(t *testing.T) {
+	h, repo, _ := pixRouter(t)
+	cases := []struct {
+		body   any
+		status int
+		code   string
+	}{
+		{map[string]any{"key_type": "CPF", "key": "123"}, http.StatusBadRequest, "INVALID_PIX_KEY"},
+		{map[string]any{"key_type": "EMAIL", "key": "a@b.com", "receiver_name": "Nome muito mais longo que 25 letras"}, http.StatusBadRequest, "INVALID_PIX"},
+		{"{", http.StatusBadRequest, "INVALID_BODY"},
+	}
+	for _, c := range cases {
+		rr := do(h, http.MethodPut, "/settings/pix", c.body)
+		assert.Equal(t, c.status, rr.Code)
+		assert.Equal(t, c.code, decodePix(t, rr).Error.Code)
+	}
+	assert.Empty(t, repo.pixDefault)
+}
+
+func TestHandler_PixUnidade_ConfirmacaoObrigatoria(t *testing.T) {
+	h, repo, unit := pixRouter(t)
+	path := "/settings/pix/units/" + unit.String()
+	rr := do(h, http.MethodPut, path, map[string]any{"key_type": "CNPJ", "key": "11.222.333/0001-81", "receiver_name": "Centro Ltda"})
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Equal(t, "CONFIRMATION_REQUIRED", decodePix(t, rr).Error.Code)
+	assert.Empty(t, repo.unitPix)
+
+	rr = do(h, http.MethodPut, path, map[string]any{"key_type": "CNPJ", "key": "11.222.333/0001-81", "receiver_name": "Centro Ltda", "confirmed": true})
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var u settings.UnitPix
+	require.NoError(t, json.Unmarshal(decodePix(t, rr).Data, &u))
+	assert.Equal(t, "11222333000181", u.Key)
+	assert.Equal(t, unit, u.UnitID)
+}
+
+func TestHandler_PixUnidade_ErrosDeIdEUnidade(t *testing.T) {
+	h, repo, _ := pixRouter(t)
+	rr := do(h, http.MethodPut, "/settings/pix/units/nao-e-uuid", map[string]any{"confirmed": true})
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Equal(t, "INVALID_ID", decodePix(t, rr).Error.Code)
+
+	outra := uuid.New()
+	repo.unitOrg[outra] = uuid.New() // de outra organização
+	body := map[string]any{"key_type": "EMAIL", "key": "a@b.com", "confirmed": true}
+	assert.Equal(t, http.StatusNotFound, do(h, http.MethodPut, "/settings/pix/units/"+outra.String(), body).Code)
+	assert.Equal(t, http.StatusNotFound, do(h, http.MethodPut, "/settings/pix/units/"+uuid.NewString(), body).Code)
+
+	rr = do(h, http.MethodPut, "/settings/pix/units/"+uuid.NewString(), map[string]any{"key_type": "CPF", "key": "x", "confirmed": true})
+	assert.Equal(t, http.StatusBadRequest, rr.Code, "chave inválida vale antes de procurar a unidade")
+}
+
+func TestHandler_PixUnidade_Remover(t *testing.T) {
+	h, _, unit := pixRouter(t)
+	path := "/settings/pix/units/" + unit.String()
+	assert.Equal(t, http.StatusNotFound, do(h, http.MethodDelete, path, nil).Code, "sem conta ativa")
+	require.Equal(t, http.StatusOK, do(h, http.MethodPut, path, map[string]any{"key_type": "EMAIL", "key": "a@b.com", "confirmed": true}).Code)
+	assert.Equal(t, http.StatusOK, do(h, http.MethodDelete, path, nil).Code)
+	assert.Equal(t, http.StatusNotFound, do(h, http.MethodDelete, path, nil).Code)
+}
+
+func TestHandler_Pix_SemOrganizacao(t *testing.T) {
+	h := router(t, newMock(), false)
+	id := uuid.NewString()
+	assert.Equal(t, http.StatusUnauthorized, do(h, http.MethodGet, "/settings/pix", nil).Code)
+	assert.Equal(t, http.StatusUnauthorized, do(h, http.MethodPut, "/settings/pix", map[string]any{}).Code)
+	assert.Equal(t, http.StatusUnauthorized, do(h, http.MethodPut, "/settings/pix/units/"+id, map[string]any{}).Code)
+	assert.Equal(t, http.StatusUnauthorized, do(h, http.MethodDelete, "/settings/pix/units/"+id, nil).Code)
+}

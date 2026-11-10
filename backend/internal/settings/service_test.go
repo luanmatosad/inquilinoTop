@@ -3,9 +3,11 @@ package settings_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/settings"
+	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,9 +16,67 @@ var org = uuid.New()
 
 type mockRepo struct {
 	rows map[uuid.UUID]settings.FinancialRules
+	// Pix
+	pixDefault map[uuid.UUID]*settings.PixDefault
+	unitPix    map[uuid.UUID]*settings.UnitPix // por unidade (conta ativa)
+	unitOrg    map[uuid.UUID]uuid.UUID         // unidade -> organização dona
+	confirmers map[uuid.UUID]uuid.UUID         // unidade -> quem confirmou
 }
 
-func newMock() *mockRepo { return &mockRepo{rows: map[uuid.UUID]settings.FinancialRules{}} }
+func newMock() *mockRepo {
+	return &mockRepo{
+		rows:       map[uuid.UUID]settings.FinancialRules{},
+		pixDefault: map[uuid.UUID]*settings.PixDefault{},
+		unitPix:    map[uuid.UUID]*settings.UnitPix{},
+		unitOrg:    map[uuid.UUID]uuid.UUID{},
+		confirmers: map[uuid.UUID]uuid.UUID{},
+	}
+}
+
+func (m *mockRepo) GetPixDefault(_ context.Context, orgID uuid.UUID) (*settings.PixDefault, error) {
+	return m.pixDefault[orgID], nil
+}
+
+func (m *mockRepo) SavePixDefault(_ context.Context, orgID, _ uuid.UUID, a settings.PixAccount) (*settings.PixDefault, error) {
+	d := &settings.PixDefault{Configured: true, KeyType: a.KeyType, Key: a.Key, ReceiverName: a.ReceiverName, City: a.City}
+	m.pixDefault[orgID] = d
+	return d, nil
+}
+
+func (m *mockRepo) GetUnitPix(_ context.Context, orgID, unitID uuid.UUID) (*settings.UnitPix, error) {
+	if m.unitOrg[unitID] != orgID {
+		return nil, nil
+	}
+	return m.unitPix[unitID], nil
+}
+
+func (m *mockRepo) ListUnitPix(_ context.Context, orgID uuid.UUID) ([]settings.UnitPix, error) {
+	var out []settings.UnitPix
+	for unit, u := range m.unitPix {
+		if m.unitOrg[unit] == orgID {
+			out = append(out, *u)
+		}
+	}
+	return out, nil
+}
+
+func (m *mockRepo) SaveUnitPix(_ context.Context, orgID, unitID, userID uuid.UUID, a settings.PixAccount) (*settings.UnitPix, error) {
+	if m.unitOrg[unitID] != orgID {
+		return nil, apierr.ErrNotFound
+	}
+	u := &settings.UnitPix{UnitID: unitID, KeyType: a.KeyType, Key: a.Key, ReceiverName: a.ReceiverName, ConfirmedAt: time.Now()}
+	m.unitPix[unitID] = u
+	m.confirmers[unitID] = userID
+	return u, nil
+}
+
+func (m *mockRepo) RemoveUnitPix(_ context.Context, orgID, unitID uuid.UUID) error {
+	if m.unitOrg[unitID] != orgID || m.unitPix[unitID] == nil {
+		return apierr.ErrNotFound
+	}
+	delete(m.unitPix, unitID)
+	return nil
+}
 
 func (m *mockRepo) GetFinancialRules(_ context.Context, orgID uuid.UUID) (*settings.FinancialRules, error) {
 	r, ok := m.rows[orgID]
