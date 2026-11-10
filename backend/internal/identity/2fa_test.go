@@ -136,6 +136,29 @@ func (m *mock2FARepo) UpsertNotificationPreferences(_ context.Context, userID uu
 	return nil, nil
 }
 
+
+func (m *mock2FARepo) SaveTOTPSecret(_ context.Context, userID uuid.UUID, secret string) error {
+	for _, u := range m.users {
+		if u.ID == userID {
+			u.TotpSecret = secret
+			u.BackupCodes = nil
+			u.TwoFactorEnabled = false
+			return nil
+		}
+	}
+	return nil
+}
+
+func (m *mock2FARepo) SetPassword(_ context.Context, userID uuid.UUID, hash string) error {
+	for _, u := range m.users {
+		if u.ID == userID {
+			u.PasswordHash = hash
+			return nil
+		}
+	}
+	return nil
+}
+
 func TestService_Setup2FA(t *testing.T) {
 	privKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 	jwtSvc := auth.NewJWTService(privKey, &privKey.PublicKey, 15*time.Minute)
@@ -143,24 +166,26 @@ func TestService_Setup2FA(t *testing.T) {
 
 	user, _ := svc.Register(context.Background(), "2fa@test.com", "senha123")
 
-	setup, err := svc.Setup2FA(context.Background(), user.GetUserID(), "2fa@test.com")
+	setup, err := svc.Setup2FA(context.Background(), user.GetUserID())
 	require.NoError(t, err)
 	assert.NotEmpty(t, setup.Secret)
 	assert.NotEmpty(t, setup.QRCodeURL)
 }
 
-func TestService_Verify2FA(t *testing.T) {
-	t.Skip("go-totp library validation needs review - skipping for now")
-}
-
 func TestService_Disable2FA(t *testing.T) {
 	privKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 	jwtSvc := auth.NewJWTService(privKey, &privKey.PublicKey, 15*time.Minute)
-	svc := identity.NewService(newMock2FARepo(), jwtSvc)
+	repo := newMock2FARepo()
+	svc := identity.NewService(repo, jwtSvc)
 
 	user, _ := svc.Register(context.Background(), "disable@test.com", "senha123")
 
-	_, _ = svc.Setup2FA(context.Background(), user.GetUserID(), "disable@test.com")
-	err := svc.Disable2FA(context.Background(), user.GetUserID(), "senha123")
+	_, err := svc.Setup2FA(context.Background(), user.GetUserID())
 	require.NoError(t, err)
+	_, err = svc.VerifyAndEnable2FA(context.Background(), user.GetUserID(), validCode(t, secretOf(t, repo, user.GetUserID())))
+	require.NoError(t, err)
+
+	err = svc.Disable2FA(context.Background(), user.GetUserID(), "senha123")
+	require.NoError(t, err)
+	assert.False(t, repo.users[user.GetUserID()].TwoFactorEnabled)
 }

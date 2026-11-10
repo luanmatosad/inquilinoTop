@@ -2,9 +2,19 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+)
+
+var (
+	ErrTwoFactorAlreadyEnabled = errors.New("identity: 2fa já está ativo")
+	ErrTwoFactorNotConfigured  = errors.New("identity: 2fa não foi configurado")
+	ErrInvalidTwoFactorCode    = errors.New("identity: código 2fa inválido")
+	ErrInvalidPassword         = errors.New("identity: senha atual incorreta")
+	ErrWeakPassword            = errors.New("identity: senha deve ter no mínimo 8 caracteres")
+	ErrSamePassword            = errors.New("identity: a nova senha deve ser diferente da atual")
 )
 
 type User struct {
@@ -39,6 +49,14 @@ type UserProfile struct {
 	State       *string   `json:"state,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// ProfileView é o que `GET /auth/profile` devolve: o perfil (se já existir) mais o e-mail e se o 2FA está ligado.
+// Nunca inclui o segredo nem os códigos de recuperação.
+type ProfileView struct {
+	*UserProfile
+	Email            string `json:"email"`
+	TwoFactorEnabled bool   `json:"two_factor_enabled"`
 }
 
 type UpsertProfileInput struct {
@@ -81,6 +99,9 @@ type Repository interface {
 	GetRefreshToken(ctx context.Context, tokenHash string) (*RefreshToken, error)
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
 	Enable2FA(ctx context.Context, userID uuid.UUID, secret string, backupCodes []string) error
+	// SaveTOTPSecret guarda um segredo pendente: o 2FA continua desativado até a confirmação do código.
+	SaveTOTPSecret(ctx context.Context, userID uuid.UUID, secret string) error
+	SetPassword(ctx context.Context, userID uuid.UUID, passwordHash string) error
 	Disable2FA(ctx context.Context, userID uuid.UUID) error
 	GetUserWith2FA(ctx context.Context, userID uuid.UUID) (*User, error)
 	UseBackupCode(ctx context.Context, userID uuid.UUID, code string) (bool, error)
@@ -95,9 +116,8 @@ type Repository interface {
 }
 
 type TwoFactorSetup struct {
-	Secret      string   `json:"secret"`
-	QRCodeURL   string   `json:"qr_code_url"`
-	BackupCodes []string `json:"backup_codes"`
+	Secret    string `json:"secret"`
+	QRCodeURL string `json:"qr_code_url"`
 }
 
 type AuditLogger interface {

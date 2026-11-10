@@ -92,8 +92,10 @@ const docTemplate = `{
         },
         "/auth/2fa/setup": {
             "post": {
-                "consumes": [
-                    "application/json"
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
                 ],
                 "produces": [
                     "application/json"
@@ -101,21 +103,17 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Configurar 2FA",
-                "parameters": [
-                    {
-                        "description": "Email",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/identity.twoFactorSetupInput"
-                        }
-                    }
-                ],
+                "summary": "Configurar 2FA (segredo pendente do usuário autenticado)",
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -126,6 +124,11 @@ const docTemplate = `{
         },
         "/auth/2fa/verify": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -135,7 +138,7 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Verificar e ativar 2FA",
+                "summary": "Confirmar o código e ativar o 2FA (devolve os códigos de recuperação uma única vez)",
                 "parameters": [
                     {
                         "description": "Código TOTP",
@@ -150,6 +153,20 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -308,6 +325,52 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/password": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Trocar a senha do usuário autenticado",
+                "parameters": [
+                    {
+                        "description": "Senha atual e nova",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/identity.changePasswordInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4286,6 +4349,17 @@ const docTemplate = `{
                 }
             }
         },
+        "identity.changePasswordInput": {
+            "type": "object",
+            "properties": {
+                "current_password": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string"
+                }
+            }
+        },
         "identity.credentialsInput": {
             "type": "object",
             "properties": {
@@ -4320,14 +4394,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "temp_token": {
-                    "type": "string"
-                }
-            }
-        },
-        "identity.twoFactorSetupInput": {
-            "type": "object",
-            "properties": {
-                "email": {
                     "type": "string"
                 }
             }

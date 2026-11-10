@@ -10,13 +10,13 @@ import (
 
 func (h *Handler) getProfile(w http.ResponseWriter, r *http.Request) {
 	userID := auth.OwnerIDFromCtx(r.Context())
-	profile, err := h.svc.GetProfile(r.Context(), userID)
+	view, err := h.svc.ProfileView(r.Context(), userID)
 	if err != nil {
 		httputil.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Erro ao buscar perfil")
 		return
 	}
-	
-	httputil.OK(w, profile)
+
+	httputil.OK(w, view)
 }
 
 func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) {

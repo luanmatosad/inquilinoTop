@@ -157,6 +157,29 @@ func (m *mockRepo) UpsertNotificationPreferences(_ context.Context, userID uuid.
 	return nil, nil
 }
 
+
+func (m *mockRepo) SaveTOTPSecret(_ context.Context, userID uuid.UUID, secret string) error {
+	for _, u := range m.users {
+		if u.ID == userID {
+			u.TotpSecret = secret
+			u.BackupCodes = nil
+			u.TwoFactorEnabled = false
+			return nil
+		}
+	}
+	return nil
+}
+
+func (m *mockRepo) SetPassword(_ context.Context, userID uuid.UUID, hash string) error {
+	for _, u := range m.users {
+		if u.ID == userID {
+			u.PasswordHash = hash
+			return nil
+		}
+	}
+	return nil
+}
+
 func newTestService(t *testing.T) *identity.Service {
 	t.Helper()
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)

@@ -186,6 +186,13 @@ definitions:
       notify_payment_received:
         type: boolean
     type: object
+  identity.changePasswordInput:
+    properties:
+      current_password:
+        type: string
+      new_password:
+        type: string
+    type: object
   identity.credentialsInput:
     properties:
       email:
@@ -208,11 +215,6 @@ definitions:
       code:
         type: string
       temp_token:
-        type: string
-    type: object
-  identity.twoFactorSetupInput:
-    properties:
-      email:
         type: string
     type: object
   identity.twoFactorVerifyInput:
@@ -1316,15 +1318,6 @@ paths:
       - auth
   /auth/2fa/setup:
     post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Email
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/identity.twoFactorSetupInput'
       produces:
       - application/json
       responses:
@@ -1333,7 +1326,14 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: Configurar 2FA
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Configurar 2FA (segredo pendente do usuário autenticado)
       tags:
       - auth
   /auth/2fa/verify:
@@ -1355,7 +1355,20 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: Verificar e ativar 2FA
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Confirmar o código e ativar o 2FA (devolve os códigos de recuperação
+        uma única vez)
       tags:
       - auth
   /auth/login:
@@ -1460,6 +1473,35 @@ paths:
       summary: Atualizar preferências de notificação
       tags:
       - identity
+  /auth/password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Senha atual e nova
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/identity.changePasswordInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Trocar a senha do usuário autenticado
+      tags:
+      - auth
   /auth/refresh:
     post:
       consumes:

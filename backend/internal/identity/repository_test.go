@@ -82,3 +82,41 @@ func TestRepository_CreateUser_EmailDuplicado(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, apierr.ErrConflict)
 }
+
+func TestRepository_SaveTOTPSecret_FicaPendente(t *testing.T) {
+	repo := identity.NewRepository(testDB(t))
+	ctx := context.Background()
+	user, err := repo.CreateUser(ctx, "pending2fa@test.com", "hash123")
+	require.NoError(t, err)
+
+	require.NoError(t, repo.SaveTOTPSecret(ctx, user.ID, "SEGREDOPENDENTE"))
+	got, err := repo.GetUserWith2FA(ctx, user.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "SEGREDOPENDENTE", got.TotpSecret)
+	assert.False(t, got.TwoFactorEnabled, "segredo pendente não liga o 2FA")
+	assert.Empty(t, got.BackupCodes)
+
+	// A confirmação liga e guarda os códigos; um novo setup volta a pendente e apaga os códigos.
+	require.NoError(t, repo.Enable2FA(ctx, user.ID, "SEGREDOPENDENTE", []string{"1111111111"}))
+	got, _ = repo.GetUserWith2FA(ctx, user.ID)
+	assert.True(t, got.TwoFactorEnabled)
+	require.NoError(t, repo.SaveTOTPSecret(ctx, user.ID, "OUTROSEGREDO"))
+	got, _ = repo.GetUserWith2FA(ctx, user.ID)
+	assert.False(t, got.TwoFactorEnabled)
+	assert.Empty(t, got.BackupCodes)
+}
+
+func TestRepository_SetPassword(t *testing.T) {
+	repo := identity.NewRepository(testDB(t))
+	ctx := context.Background()
+	user, err := repo.CreateUser(ctx, "setpass@test.com", "hash-antigo")
+	require.NoError(t, err)
+	other, err := repo.CreateUser(ctx, "outro@test.com", "hash-outro")
+	require.NoError(t, err)
+
+	require.NoError(t, repo.SetPassword(ctx, user.ID, "hash-novo"))
+	got, _ := repo.GetUserByID(ctx, user.ID)
+	assert.Equal(t, "hash-novo", got.PasswordHash)
+	untouched, _ := repo.GetUserByID(ctx, other.ID)
+	assert.Equal(t, "hash-outro", untouched.PasswordHash, "só o usuário informado muda")
+}

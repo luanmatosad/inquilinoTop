@@ -36,6 +36,7 @@ func (h *Handler) RegisterProtected(r chi.Router, authMW func(http.Handler) http
 	r.With(authMW).Post("/auth/2fa/setup", h.setup2FA)
 	r.With(authMW).Post("/auth/2fa/verify", h.verify2FA)
 	r.With(authMW).Post("/auth/2fa/disable", h.disable2FA)
+	r.With(authMW).Post("/auth/password", h.changePassword)
 	r.With(authMW).Get("/auth/notification-preferences", h.getNotificationPreferences)
 	r.With(authMW).Put("/auth/notification-preferences", h.updateNotificationPreferences)
 }
@@ -190,10 +191,6 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, map[string]bool{"logged_out": true})
 }
 
-type twoFactorSetupInput struct {
-	Email string `json:"email"`
-}
-
 type twoFactorVerifyInput struct {
 	Code string `json:"code"`
 }
@@ -202,34 +199,41 @@ type twoFactorDisableInput struct {
 	Password string `json:"password"`
 }
 
-// @Summary Configurar 2FA
+// @Summary Configurar 2FA (segredo pendente do usuário autenticado)
 // @Tags auth
-// @Accept json
+// @Security BearerAuth
 // @Produce json
-// @Param body body twoFactorSetupInput true "Email"
 // @Success 200 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{}
 // @Router /auth/2fa/setup [post]
 func (h *Handler) setup2FA(w http.ResponseWriter, r *http.Request) {
-	var in twoFactorSetupInput
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Email == "" {
-		httputil.Err(w, http.StatusBadRequest, "MISSING_EMAIL", "email é obrigatório")
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+	if ownerID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "não autorizado")
 		return
 	}
-
-	setup, err := h.svc.Setup2FAByEmail(r.Context(), in.Email)
+	setup, err := h.svc.Setup2FA(r.Context(), ownerID)
 	if err != nil {
+		if errors.Is(err, ErrTwoFactorAlreadyEnabled) {
+			httputil.Err(w, http.StatusConflict, "ALREADY_ENABLED", "a verificação em duas etapas já está ativa")
+			return
+		}
+		slog.ErrorContext(r.Context(), "identity: falha ao configurar 2fa", "error", err)
 		httputil.Err(w, http.StatusInternalServerError, "2FA_SETUP_FAILED", "falha ao configurar 2FA")
 		return
 	}
 	httputil.OK(w, setup)
 }
 
-// @Summary Verificar e ativar 2FA
+// @Summary Confirmar o código e ativar o 2FA (devolve os códigos de recuperação uma única vez)
 // @Tags auth
+// @Security BearerAuth
 // @Accept json
 // @Produce json
 // @Param body body twoFactorVerifyInput true "Código TOTP"
 // @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{}
 // @Router /auth/2fa/verify [post]
 func (h *Handler) verify2FA(w http.ResponseWriter, r *http.Request) {
 	var in twoFactorVerifyInput
@@ -237,19 +241,65 @@ func (h *Handler) verify2FA(w http.ResponseWriter, r *http.Request) {
 		httputil.Err(w, http.StatusBadRequest, "MISSING_CODE", "código é obrigatório")
 		return
 	}
-
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	if ownerID == uuid.Nil {
 		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "não autorizado")
 		return
 	}
-
-	err := h.svc.VerifyAndEnable2FA(r.Context(), ownerID, in.Code)
-	if err != nil {
+	codes, err := h.svc.VerifyAndEnable2FA(r.Context(), ownerID, in.Code)
+	switch {
+	case err == nil:
+		httputil.OK(w, map[string]any{"two_factor_enabled": true, "backup_codes": codes})
+	case errors.Is(err, ErrInvalidTwoFactorCode):
 		httputil.Err(w, http.StatusBadRequest, "INVALID_CODE", "código inválido")
+	case errors.Is(err, ErrTwoFactorNotConfigured):
+		httputil.Err(w, http.StatusConflict, "NOT_CONFIGURED", "inicie a configuração antes de confirmar o código")
+	case errors.Is(err, ErrTwoFactorAlreadyEnabled):
+		httputil.Err(w, http.StatusConflict, "ALREADY_ENABLED", "a verificação em duas etapas já está ativa")
+	default:
+		slog.ErrorContext(r.Context(), "identity: falha ao ativar 2fa", "error", err)
+		httputil.Err(w, http.StatusInternalServerError, "2FA_VERIFY_FAILED", "falha ao ativar 2FA")
+	}
+}
+
+type changePasswordInput struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+// @Summary Trocar a senha do usuário autenticado
+// @Tags auth
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body changePasswordInput true "Senha atual e nova"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /auth/password [post]
+func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) {
+	var in changePasswordInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.CurrentPassword == "" || in.NewPassword == "" {
+		httputil.Err(w, http.StatusBadRequest, "MISSING_FIELDS", "informe a senha atual e a nova")
 		return
 	}
-	httputil.OK(w, map[string]bool{"two_factor_enabled": true})
+	ownerID := auth.OwnerIDFromCtx(r.Context())
+	if ownerID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "não autorizado")
+		return
+	}
+	switch err := h.svc.ChangePassword(r.Context(), ownerID, in.CurrentPassword, in.NewPassword); {
+	case err == nil:
+		httputil.OK(w, map[string]bool{"password_changed": true})
+	case errors.Is(err, ErrInvalidPassword):
+		httputil.Err(w, http.StatusBadRequest, "INVALID_PASSWORD", "senha atual incorreta")
+	case errors.Is(err, ErrWeakPassword):
+		httputil.Err(w, http.StatusBadRequest, "WEAK_PASSWORD", "senha deve ter no mínimo 8 caracteres")
+	case errors.Is(err, ErrSamePassword):
+		httputil.Err(w, http.StatusBadRequest, "SAME_PASSWORD", "a nova senha deve ser diferente da atual")
+	default:
+		slog.ErrorContext(r.Context(), "identity: falha ao trocar a senha", "error", err)
+		httputil.Err(w, http.StatusInternalServerError, "PASSWORD_CHANGE_FAILED", "não foi possível trocar a senha")
+	}
 }
 
 // @Summary Desativar 2FA

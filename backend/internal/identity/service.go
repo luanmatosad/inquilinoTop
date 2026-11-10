@@ -216,24 +216,25 @@ func tokenHash(raw string) string {
 	return fmt.Sprintf("%x", sum)
 }
 
-func (s *Service) Setup2FAByEmail(ctx context.Context, email string) (*TwoFactorSetup, error) {
-	user, err := s.repo.GetUserByEmail(ctx, email)
-	if err != nil {
-		return nil, fmt.Errorf("identity.svc: setup 2fa: %w", err)
+// Setup2FA gera um segredo novo para o usuário autenticado e o guarda como pendente: o 2FA só liga em
+// VerifyAndEnable2FA. Com o 2FA já ativo recusa (é preciso desativar com a senha antes).
+func (s *Service) Setup2FA(ctx context.Context, userID uuid.UUID) (*TwoFactorSetup, error) {
+	user, err := s.repo.GetUserWith2FA(ctx, userID)
+	if err != nil || user == nil {
+		return nil, fmt.Errorf("identity.svc: setup 2fa: usuário não encontrado: %w", err)
 	}
-	return s.Setup2FA(ctx, user.ID, email)
-}
-
-func (s *Service) Setup2FA(ctx context.Context, userID uuid.UUID, email string) (*TwoFactorSetup, error) {
+	if user.TwoFactorEnabled {
+		return nil, ErrTwoFactorAlreadyEnabled
+	}
 	secret := generateSecret()
 
 	t, err := totp.New(totp.TOTP{
-		AccountName: email,
-		Issuer:     "InquilinoTop",
-		Algorithm:  totp.AlgorithmSHA1,
-		Digits:     6,
-		Period:    30,
-		Secret:    secret,
+		AccountName: user.Email,
+		Issuer:      "InquilinoTop",
+		Algorithm:   totp.AlgorithmSHA1,
+		Digits:      6,
+		Period:      30,
+		Secret:      secret,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("identity.svc: create totp: %w", err)
@@ -242,43 +243,71 @@ func (s *Service) Setup2FA(ctx context.Context, userID uuid.UUID, email string) 
 	if err != nil {
 		return nil, fmt.Errorf("identity.svc: get url: %w", err)
 	}
-
-	err = s.repo.Enable2FA(ctx, userID, secret, nil)
-	if err != nil {
+	if err := s.repo.SaveTOTPSecret(ctx, userID, secret); err != nil {
 		return nil, fmt.Errorf("identity.svc: save temp secret: %w", err)
 	}
-
-	return &TwoFactorSetup{
-		Secret:    secret,
-		QRCodeURL: otpAuthURL,
-	}, nil
+	return &TwoFactorSetup{Secret: secret, QRCodeURL: otpAuthURL}, nil
 }
 
-func (s *Service) VerifyAndEnable2FA(ctx context.Context, userID uuid.UUID, code string) error {
+// VerifyAndEnable2FA liga o 2FA se o código TOTP bate com o segredo pendente e devolve os códigos de
+// recuperação, que só aparecem aqui. Código de recuperação não serve para ativar.
+func (s *Service) VerifyAndEnable2FA(ctx context.Context, userID uuid.UUID, code string) ([]string, error) {
 	user, err := s.repo.GetUserWith2FA(ctx, userID)
-	if err != nil {
-		return fmt.Errorf("identity.svc: get user: %w", err)
+	if err != nil || user == nil {
+		return nil, fmt.Errorf("identity.svc: get user: %w", err)
+	}
+	if user.TwoFactorEnabled {
+		return nil, ErrTwoFactorAlreadyEnabled
 	}
 	if user.TotpSecret == "" {
-		return fmt.Errorf("identity.svc: 2fa não configurado")
+		return nil, ErrTwoFactorNotConfigured
 	}
-
-	valid := verifyTOTP(user.TotpSecret, code)
-	backupUsed := false
-
-	if !valid {
-		valid, err = s.repo.UseBackupCode(ctx, userID, code)
-		if err != nil {
-			return fmt.Errorf("identity.svc: verificar backup code: %w", err)
-		}
-		backupUsed = valid
+	if !verifyTOTP(user.TotpSecret, code) {
+		return nil, ErrInvalidTwoFactorCode
 	}
-
-	if !valid && !backupUsed {
-		return fmt.Errorf("identity.svc: código 2fa inválido")
+	codes := generateBackupCodes(10)
+	if err := s.repo.Enable2FA(ctx, userID, user.TotpSecret, codes); err != nil {
+		return nil, fmt.Errorf("identity.svc: enable 2fa: %w", err)
 	}
+	return codes, nil
+}
 
-	return s.repo.Enable2FA(ctx, userID, user.TotpSecret, generateBackupCodes(10))
+// ChangePassword troca a senha do usuário autenticado depois de conferir a atual (mesma regra de tamanho do cadastro).
+func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, current, next string) error {
+	user, err := s.repo.GetUserWith2FA(ctx, userID)
+	if err != nil || user == nil {
+		return fmt.Errorf("identity.svc: get user: %w", err)
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(current)); err != nil {
+		return ErrInvalidPassword
+	}
+	if len(next) < 8 {
+		return ErrWeakPassword
+	}
+	if next == current {
+		return ErrSamePassword
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(next), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("identity.svc: hash password: %w", err)
+	}
+	if err := s.repo.SetPassword(ctx, userID, string(hash)); err != nil {
+		return fmt.Errorf("identity.svc: set password: %w", err)
+	}
+	return nil
+}
+
+// ProfileView junta o perfil ao e-mail e ao estado do 2FA (sem segredos).
+func (s *Service) ProfileView(ctx context.Context, userID uuid.UUID) (*ProfileView, error) {
+	user, err := s.repo.GetUserWith2FA(ctx, userID)
+	if err != nil || user == nil {
+		return nil, fmt.Errorf("identity.svc: get user: %w", err)
+	}
+	profile, err := s.repo.GetProfile(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return &ProfileView{UserProfile: profile, Email: user.Email, TwoFactorEnabled: user.TwoFactorEnabled}, nil
 }
 
 func (s *Service) Disable2FA(ctx context.Context, userID uuid.UUID, password string) error {
@@ -316,7 +345,7 @@ func generateSecret() string {
 func generateBackupCodes(count int) []string {
 	codes := make([]string, count)
 	for i := 0; i < count; i++ {
-		code := make([]byte, 4)
+		code := make([]byte, 10)
 		if _, err := io.ReadFull(rand.Reader, code); err != nil {
 			panic(fmt.Sprintf("identity: generateBackupCodes: %v", err))
 		}
@@ -340,6 +369,7 @@ func verifyTOTP(secret, code string) bool {
 		Period:   30,
 		Secret:   secret,
 	}
-	_, err := v.Validate(code)
-	return err == nil
+	// Validate devolve (false, nil) para um código errado: é preciso olhar o booleano, não só o erro.
+	ok, err := v.Validate(code)
+	return err == nil && ok
 }

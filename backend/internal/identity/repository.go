@@ -115,6 +115,26 @@ func (r *pgRepository) Enable2FA(ctx context.Context, userID uuid.UUID, secret s
 	return nil
 }
 
+// SaveTOTPSecret guarda um segredo pendente: o 2FA fica desativado e sem códigos de recuperação até a confirmação.
+func (r *pgRepository) SaveTOTPSecret(ctx context.Context, userID uuid.UUID, secret string) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE users SET totp_secret = $1, backup_codes = NULL, two_factor_enabled = false WHERE id = $2`,
+		secret, userID,
+	)
+	if err != nil {
+		return fmt.Errorf("identity.repo: save totp secret: %w", err)
+	}
+	return nil
+}
+
+func (r *pgRepository) SetPassword(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+	_, err := r.db.Pool.Exec(ctx, `UPDATE users SET password_hash = $1 WHERE id = $2`, passwordHash, userID)
+	if err != nil {
+		return fmt.Errorf("identity.repo: set password: %w", err)
+	}
+	return nil
+}
+
 func (r *pgRepository) Disable2FA(ctx context.Context, userID uuid.UUID) error {
 	_, err := r.db.Pool.Exec(ctx,
 		`UPDATE users SET totp_secret = NULL, backup_codes = NULL, two_factor_enabled = false WHERE id = $1`,

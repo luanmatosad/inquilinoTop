@@ -119,6 +119,14 @@ func (r *benchRepo) Enable2FA(ctx context.Context, userID uuid.UUID, secret stri
 	return nil
 }
 
+func (r *benchRepo) SaveTOTPSecret(ctx context.Context, userID uuid.UUID, secret string) error {
+	return nil
+}
+
+func (r *benchRepo) SetPassword(ctx context.Context, userID uuid.UUID, hash string) error {
+	return nil
+}
+
 func (r *benchRepo) Disable2FA(ctx context.Context, userID uuid.UUID) error {
 	return nil
 }

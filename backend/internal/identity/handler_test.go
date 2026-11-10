@@ -95,36 +95,6 @@ func TestHandler_Login_InvalidCredentials(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
-func TestHandler_Setup2FA_DoesNotExposeUserExistence(t *testing.T) {
-	router, svc := newTestHandler(t)
-	user, _ := svc.Register(context.Background(), "exists@test.com", "senha123")
-
-	body, _ := json.Marshal(map[string]string{"email": "naoexiste@test.com"})
-	req := httptest.NewRequest(http.MethodPost, "/auth/2fa/setup", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+user.AccessToken)
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, req)
-
-	assert.NotEqual(t, http.StatusNotFound, w.Code, "não deve revelar que usuário não existe")
-}
-
-func TestHandler_Setup2FA_EmailVálido(t *testing.T) {
-	router, svc := newTestHandler(t)
-	user, _ := svc.Register(context.Background(), "setup2fa@test.com", "senha123")
-
-	body, _ := json.Marshal(map[string]string{"email": "setup2fa@test.com"})
-	req := httptest.NewRequest(http.MethodPost, "/auth/2fa/setup", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+user.AccessToken)
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-}
-
 func TestHandler_Verify2FA_RequiresAuth(t *testing.T) {
 	repo := newMockRepo()
 	privKey, _ := rsa.GenerateKey(rand.Reader, 2048)
