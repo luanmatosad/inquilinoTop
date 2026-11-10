@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 import { ComingSoon } from '@/components/ComingSoon'
-import ReportsPage from '@/app/reports/page'
 import IntegrationsPage from '@/app/integrations/page'
 
 describe('ComingSoon', () => {
@@ -15,7 +14,6 @@ describe('ComingSoon', () => {
 })
 
 describe.each([
-  ['Relatórios', ReportsPage],
   ['Integrações', IntegrationsPage],
 ])('página %s', (title, Page) => {
   it('é um placeholder: título, aviso e nenhuma chamada à API', () => {

@@ -35,7 +35,8 @@ src/middleware.ts             # Auth: redireciona não-autenticados para /login
 | `/financial/receivables/[id]` | Detalhe da cobrança (Go API): linha do tempo, valor atualizado, enviar cobrança (`?enviar=1`), registrar pagamento (`?pagar=1`), negociar atraso (`?acordo=1`); `/receipt` é o recibo numerado |
 | `/financeiro/dashboard` | Dashboard financeiro (stub) |
 | `/financeiro/receber`, `/pagar`, `/repasses`, `/comissoes`, `/conciliacao` | Financeiro (stub) |
-| `/reports`, `/integrations` | Placeholders (`ComingSoon`), com item de menu no canvas e sem tela ainda |
+| `/reports`, `/reports/por-imovel` | **Relatórios** (Go `GET /reports/overview` e `/reports/by-property`, base de caixa: por data de pagamento, líquido; só meses completos): hub com seletor de ano (`?ano=`, 2020 até o corrente), Recebido/Despesas/Resultado, gráfico mensal (`MonthlyChart`, `ui/chart`; no celular sem gráfico) e cards Por imóvel e Inadimplência (→ `/financial/receivables?situacao=LATE`); Por imóvel com tabela e total (cards no celular) e **Exportar planilha** (`GET /api/reports/por-imovel?ano=`, CSV UTF-8 com BOM, `;` e vírgula decimal). Rótulo "Unidade · Imóvel" vem de `/properties` (`—` se falhar). Regras em `lib/report-overview.ts`. O card Carnê-leão entra na change `relatorios-carne-leao`. Pode diferir do Fechamento (por vencimento, bruto) |
+| `/integrations` | Placeholder (`ComingSoon`), com item de menu no canvas e sem tela ainda |
 | `/support`, `/support/tickets`, `/support/tickets/[id]`, `/support/new-ticket`, `/support/contacts` | Suporte |
 
 ## Medidas do canvas nos componentes base
