@@ -23,8 +23,14 @@ export function ProfileForm({ initialData }: { initialData: UserProfile | null }
   return (
     <form action={action} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="email">E-mail</Label>
+          <Input id="email" value={initialData?.email ?? ''} readOnly disabled aria-describedby="email-hint" />
+          <p id="email-hint" className="text-xs text-muted-foreground">É o e-mail que você usa para entrar.</p>
+        </div>
+
         <div className="space-y-2">
-          <Label htmlFor="full_name">Nome Completo / Razão Social</Label>
+          <Label htmlFor="full_name">Nome completo / Razão social</Label>
           <Input 
             id="full_name" 
             name="full_name" 
@@ -35,7 +41,7 @@ export function ProfileForm({ initialData }: { initialData: UserProfile | null }
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="person_type">Tipo de Pessoa</Label>
+          <Label htmlFor="person_type">Tipo de conta</Label>
           <select 
             id="person_type" 
             name="person_type" 
@@ -48,6 +54,20 @@ export function ProfileForm({ initialData }: { initialData: UserProfile | null }
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="phone">Celular (WhatsApp)</Label>
+          <Input 
+            id="phone" 
+            name="phone" 
+            defaultValue={initialData?.phone || ''} 
+            placeholder="(00) 00000-0000" 
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <h3 className="text-sm font-medium">Dados para contratos e recibos</h3>
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="document">CPF / CNPJ</Label>
           <Input 
             id="document" 
@@ -55,16 +75,6 @@ export function ProfileForm({ initialData }: { initialData: UserProfile | null }
             defaultValue={initialData?.document || ''} 
             placeholder="000.000.000-00" 
             required 
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone">Telefone</Label>
-          <Input 
-            id="phone" 
-            name="phone" 
-            defaultValue={initialData?.phone || ''} 
-            placeholder="(00) 00000-0000" 
           />
         </div>
 

@@ -69,7 +69,7 @@ describe('Sidebar', () => {
       '/financial/payables',
       '/reports',
       '/integrations',
-      '/settings',
+      '/settings/profile',
     ])
     expect(screen.getByText('Integrações')).toBeInTheDocument()
     for (const label of ['Laudos', 'Importar', 'Suporte']) {
@@ -91,12 +91,12 @@ describe('Sidebar', () => {
     expect(current.map((a) => a.getAttribute('href'))).toEqual(['/financial/receivables'])
   })
 
-  it.each(['/settings/profile', '/settings/team', '/owner/settings'])(
+  it.each(['/settings', '/settings/profile', '/settings/team', '/settings/security', '/owner/settings'])(
     '%s destaca Configurações',
     (path) => {
       renderSidebar(path)
       const current = screen.getAllByRole('link').filter((a) => a.getAttribute('aria-current') === 'page')
-      expect(current.map((a) => a.getAttribute('href'))).toEqual(['/settings'])
+      expect(current.map((a) => a.getAttribute('href'))).toEqual(['/settings/profile'])
     },
   )
 

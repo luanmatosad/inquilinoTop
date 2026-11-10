@@ -11,7 +11,7 @@ import {
   Settings,
   Sun,
   Ticket,
-  UserCircle,
+  ShieldCheck,
   Users,
   Wallet,
   type LucideIcon,
@@ -64,10 +64,10 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: '/integrations', label: 'Integrações', icon: Plug },
       {
-        href: '/settings',
+        // Abre o Perfil; `/settings` (a lista de seções) é a volta no celular. `/owner/settings` só redireciona.
+        href: '/settings/profile',
         label: 'Configurações',
         icon: Settings,
-        // Notificações vive em /owner/settings mas é uma configuração.
         match: ['/settings', '/owner/settings'],
       },
     ],
@@ -82,12 +82,12 @@ export const mobileTabs: NavItem[] = allNavItems.filter((i) => i.mobileTab)
 /** Itens listados na aba "Mais" do mobile: todos que não são aba. */
 export const moreItems: NavItem[] = allNavItems.filter((i) => !i.mobileTab)
 
-// Destinos extras da paleta de comandos (⌘K): só navegação entre páginas.
+// Destinos extras da paleta de comandos (⌘K): só navegação entre páginas. O Perfil já é o item "Configurações" (hrefs únicos).
 const settingsPages: NavItem[] = [
-  { href: '/settings/profile', label: 'Meu Perfil', icon: UserCircle },
-  { href: '/settings/team', label: 'Equipe', icon: Users },
-  { href: '/settings/financial', label: 'Config. Financeira', icon: Settings },
-  { href: '/owner/settings', label: 'Notificações', icon: Bell },
+  { href: '/settings/team', label: 'Equipe e permissões', icon: Users },
+  { href: '/settings/financial', label: 'Recebimento (Pix)', icon: Settings },
+  { href: '/settings/notifications', label: 'Notificações', icon: Bell },
+  { href: '/settings/security', label: 'Segurança', icon: ShieldCheck },
 ]
 
 const supportPages: NavItem[] = [

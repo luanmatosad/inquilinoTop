@@ -69,12 +69,12 @@ export function TeamClient({ organization, members, invites }: TeamClientProps) 
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Equipe</h1>
-          <p className="text-muted-foreground mt-2">
-            Gerencie os membros da organização: <strong>{organization.name}</strong>
+    <section aria-label="Equipe e permissões" className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-base font-semibold">Equipe e permissões</h2>
+          <p className="text-sm text-muted-foreground">
+            Convide quem ajuda na administração de <strong>{organization.name}</strong>.
           </p>
         </div>
         
@@ -222,6 +222,6 @@ export function TeamClient({ organization, members, invites }: TeamClientProps) 
           </div>
         )}
       </div>
-    </div>
+    </section>
   )
 }

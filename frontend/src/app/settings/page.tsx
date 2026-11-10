@@ -1,73 +1,39 @@
 import Link from 'next/link'
-import { Bell, ChevronRight, Settings, UserCircle, Users } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { SETTINGS_SECTIONS } from '@/lib/settings-nav'
 
-export const metadata = {
-  title: 'Configurações | Inquilino Top',
-}
-
-const sections = [
-  {
-    href: '/settings/profile',
-    title: 'Meu Perfil',
-    description: 'Dados pessoais, documento e endereço.',
-    icon: UserCircle,
-  },
-  {
-    href: '/settings/team',
-    title: 'Equipe',
-    description: 'Membros da organização, papéis e convites.',
-    icon: Users,
-  },
-  {
-    href: '/settings/financial',
-    title: 'Config. Financeira',
-    description: 'Dados bancários e preferências financeiras.',
-    icon: Settings,
-  },
-  {
-    href: '/owner/settings',
-    title: 'Notificações',
-    description: 'Escolha quais alertas você quer receber.',
-    icon: Bell,
-  },
-]
-
-export default function SettingsPage() {
+/** Lista de seções (o `M-Config-lista` do canvas). No desktop o menu lateral faz o mesmo papel. */
+export default function SettingsIndexPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Configurações</h1>
-        <p className="mt-1 text-muted-foreground">Gerencie seu perfil, equipe e preferências.</p>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1 md:hidden">
+        <h1 className="text-2xl font-semibold leading-[1.2]">Configurações</h1>
+        <p className="text-sm text-muted-foreground">Ajuste o ImoviFlow do seu jeito.</p>
       </div>
-
-      <nav aria-label="Seções de configurações">
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {sections.map(({ href, title, description, icon: Icon }) => (
-            <li key={href}>
-              <Link
-                href={href}
-                className="group block rounded-xl outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Card className="transition-colors group-hover:bg-accent">
-                  <CardHeader className="flex flex-row items-center gap-3">
-                    <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    <div className="min-w-0 flex-1">
-                      <CardTitle>{title}</CardTitle>
-                      <CardDescription>{description}</CardDescription>
-                    </div>
-                    <ChevronRight
-                      className="size-4 shrink-0 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                  </CardHeader>
-                </Card>
+      <ul className="flex flex-col divide-y rounded-xl border bg-card">
+        {SETTINGS_SECTIONS.map((s) => (
+          <li key={s.key}>
+            {s.href ? (
+              <Link href={s.href} className="flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-accent/40">
+                <span className="flex flex-1 flex-col">
+                  <span className="text-sm font-medium">{s.label}</span>
+                  <span className="text-xs text-muted-foreground">{s.description}</span>
+                </span>
+                <ChevronRight className="size-4 text-muted-foreground" aria-hidden="true" />
               </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+            ) : (
+              <div aria-disabled="true" className="flex min-h-14 items-center gap-3 px-4 py-3 text-muted-foreground">
+                <span className="flex flex-1 flex-col">
+                  <span className="text-sm font-medium">{s.label}</span>
+                  <span className="text-xs">{s.description}</span>
+                </span>
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-foreground">Em breve</span>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

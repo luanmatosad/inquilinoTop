@@ -46,7 +46,7 @@ describe('TopBar', () => {
     renderBar()
     expect(screen.getByRole('button', { name: 'Abrir menu' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Pesquisar no sistema' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Notificações' })).toHaveAttribute('href', '/owner/settings')
+    expect(screen.getByRole('link', { name: 'Notificações' })).toHaveAttribute('href', '/settings/notifications')
     expect(screen.getByRole('link', { name: 'Ajuda e suporte' })).toHaveAttribute('href', '/support')
   })
 

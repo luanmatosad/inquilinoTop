@@ -84,7 +84,7 @@ describe('MobileTabBar', () => {
       ['Despesas', '/financial/payables'],
       ['Relatórios', '/reports'],
       ['Integrações', '/integrations'],
-      ['Configurações', '/settings'],
+      ['Configurações', '/settings/profile'],
     ])
     expect(within(dialog).getByText('Luan Matos')).toBeInTheDocument()
     expect(within(dialog).getByText('luan@example.com')).toBeInTheDocument()

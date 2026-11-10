@@ -79,7 +79,10 @@ export interface Expense {
 }
 
 export interface UserProfile {
-  user_id: string
+  user_id?: string
+  /** E-mail de acesso (somente leitura) e estado do 2FA, devolvidos junto com o perfil. */
+  email?: string
+  two_factor_enabled?: boolean
   full_name?: string | null
   document?: string | null
   person_type?: 'PF' | 'PJ' | null
@@ -87,8 +90,8 @@ export interface UserProfile {
   address_line?: string | null
   city?: string | null
   state?: string | null
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface UpsertProfileInput {

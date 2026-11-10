@@ -54,7 +54,7 @@ export function TopBar() {
 
       <div className="flex shrink-0 items-center gap-2">
         <Button asChild variant="outline" size="icon">
-          <Link href="/owner/settings" aria-label="Notificações">
+          <Link href="/settings/notifications" aria-label="Notificações">
             <Bell aria-hidden="true" />
           </Link>
         </Button>

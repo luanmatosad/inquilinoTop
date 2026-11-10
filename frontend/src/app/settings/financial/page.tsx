@@ -5,17 +5,14 @@ export default async function FinancialSettingsPage() {
   const config = await getFinancialConfig()
 
   return (
-    <div className="max-w-3xl mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Configurações Financeiras</h1>
-        <p className="text-muted-foreground mt-2">
-          Gerencie como você recebe pagamentos e as regras padrões de juros e multas.
-        </p>
+    <section aria-label="Recebimento (Pix)" className="flex flex-col gap-5">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-base font-semibold">Recebimento (Pix)</h2>
+        <p className="text-sm text-muted-foreground">Onde seus inquilinos pagam e as regras padrão de juros e multa.</p>
       </div>
-
-      <div className="bg-background border border-border rounded-xl p-6 shadow-sm">
+      <div className="rounded-xl border bg-card p-6">
         <FinancialForm initialData={config} />
       </div>
-    </div>
+    </section>
   )
 }

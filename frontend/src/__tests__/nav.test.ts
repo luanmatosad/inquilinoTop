@@ -34,7 +34,7 @@ describe('navGroups', () => {
     ])
     expect(navGroups[2].items.map((i) => [i.label, i.href])).toEqual([
       ['Integrações', '/integrations'],
-      ['Configurações', '/settings'],
+      ['Configurações', '/settings/profile'],
     ])
   })
 
@@ -91,11 +91,9 @@ describe('isNavItemActive', () => {
   })
 
   it('/settings/* e /owner/settings destacam Configurações', () => {
-    expect(activeHrefs('/settings')).toEqual(['/settings'])
-    expect(activeHrefs('/settings/profile')).toEqual(['/settings'])
-    expect(activeHrefs('/settings/team')).toEqual(['/settings'])
-    expect(activeHrefs('/settings/financial')).toEqual(['/settings'])
-    expect(activeHrefs('/owner/settings')).toEqual(['/settings'])
+    for (const path of ['/settings', '/settings/profile', '/settings/team', '/settings/financial', '/settings/notifications', '/settings/security', '/owner/settings']) {
+      expect(activeHrefs(path)).toEqual(['/settings/profile'])
+    }
   })
 
   it('rotas fora da sidebar não destacam nada', () => {
@@ -149,7 +147,8 @@ describe('commandGroups', () => {
       '/settings/profile',
       '/settings/team',
       '/settings/financial',
-      '/owner/settings',
+      '/settings/notifications',
+      '/settings/security',
       '/support',
       '/support/tickets',
       '/support/new-ticket',

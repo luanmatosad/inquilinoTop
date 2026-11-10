@@ -5,17 +5,12 @@ export default async function ProfilePage() {
   const profile = await getProfile()
 
   return (
-    <div className="max-w-2xl mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Meu Perfil</h1>
-        <p className="text-muted-foreground mt-2">
-          Gerencie suas informações pessoais e de contato. Estes dados são necessários para geração de contratos e recebimentos.
-        </p>
+    <section aria-label="Perfil" className="flex flex-col gap-5">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-base font-semibold">Perfil</h2>
+        <p className="text-sm text-muted-foreground">Seus dados de acesso e contato. Também entram nos contratos e nos recibos.</p>
       </div>
-
-      <div className="bg-background border border-border rounded-xl p-6 shadow-sm">
-        <ProfileForm initialData={profile} />
-      </div>
-    </div>
+      <ProfileForm initialData={profile} />
+    </section>
   )
 }
