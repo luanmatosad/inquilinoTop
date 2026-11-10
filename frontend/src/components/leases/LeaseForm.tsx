@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react'
 import { createLease, updateLease } from '@/app/leases/actions'
 import { leaseSchema, type LeaseFormValues } from '@/lib/lease-schemas'
 import { dailyToMonthly } from '@/lib/interest'
+import { contractDefaults } from '@/lib/financial-rules'
 import { MONTHS } from '@/lib/date-format'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,6 +45,8 @@ type LeaseFormProps = {
   defaultTenantId?: string
   /** Presente = edição: unidade, inquilino e início viram texto. */
   lease?: LeaseEditData
+  /** Padrões das Regras financeiras para um contrato **novo** (multa, juros e índice). Sem isso: 2%, 1% e nenhum índice. */
+  defaults?: ReturnType<typeof contractDefaults>
   onSuccess?: () => void
   onCancel?: () => void
 }
@@ -53,7 +56,8 @@ const dec = (n?: number | null) => (n == null || n === 0 ? '' : String(n).replac
 const todayLocal = () => new Date().toLocaleDateString('en-CA')
 const monthOf = (ymd: string) => (/^\d{4}-\d{2}/.test(ymd) ? String(Number(ymd.slice(5, 7))) : '')
 
-export function LeaseForm({ units, tenants, defaultUnitId, defaultTenantId, lease, onSuccess, onCancel }: LeaseFormProps) {
+export function LeaseForm({ units, tenants, defaultUnitId, defaultTenantId, lease, defaults, onSuccess, onCancel }: LeaseFormProps) {
+  const rules = defaults ?? contractDefaults(null)
   const [loading, setLoading] = useState(false)
   const editing = !!lease
   const initialUnit = units.find((u) => u.id === defaultUnitId)
@@ -87,10 +91,10 @@ export function LeaseForm({ units, tenants, defaultUnitId, defaultTenantId, leas
           end_date: '',
           rent_amount: initialUnit?.referenceRent ? dec(initialUnit.referenceRent) : '',
           payment_day: '5',
-          adjustment_index: '',
+          adjustment_index: rules.adjustment_index,
           adjustment_month: monthOf(start),
-          late_fee_percent: '2',
-          monthly_interest_percent: '1',
+          late_fee_percent: rules.late_fee_percent,
+          monthly_interest_percent: rules.monthly_interest_percent,
           iptu_reimbursable: false,
           annual_iptu_amount: '',
           notes: '',
@@ -362,7 +366,7 @@ export function LeaseForm({ units, tenants, defaultUnitId, defaultTenantId, leas
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Padrão: multa de 2% e juros de 1% ao mês.{' '}
+            Padrão: multa de {rules.late_fee_percent || '0'}% e juros de {rules.monthly_interest_percent || '0'}% ao mês.{' '}
             <button type="button" className="underline" onClick={() => setShowCharges(true)}>
               Alterar neste contrato
             </button>

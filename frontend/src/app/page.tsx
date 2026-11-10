@@ -8,6 +8,7 @@ import { TodayLists } from '@/components/today/TodayLists'
 import { Button } from '@/components/ui/button'
 import { monthRange, parseMonth, type OverviewPayment } from '@/lib/financial-overview'
 import { goFetch } from '@/lib/go/client'
+import { noticeDaysOf, type FinancialRules } from '@/lib/financial-rules'
 import { MONTHS } from '@/lib/date-format'
 import { SESSION_EXPIRED_LOGIN_URL } from '@/lib/session'
 import { buildChecklist, buildToday, dateLabel, greeting, headline, type TodayLease } from '@/lib/today-overview'
@@ -24,7 +25,7 @@ export default async function TodayPage() {
   const { from, to } = monthRange(ym)
 
   // Cobranças são obrigatórias; o resto só enriquece (ou alimenta os primeiros passos) e degrada.
-  const [monthRes, lateRes, leasesRes, tenantsRes, propertiesRes, configRes, profile] = await Promise.allSettled([
+  const [monthRes, lateRes, leasesRes, tenantsRes, propertiesRes, configRes, profile, rulesRes] = await Promise.allSettled([
     goFetch<OverviewPayment[]>(`/api/v1/payments?from=${from}&to=${to}`, {}),
     goFetch<OverviewPayment[]>('/api/v1/payments?status=LATE', {}),
     goFetch<TodayLease[]>('/api/v1/leases', {}),
@@ -32,6 +33,7 @@ export default async function TodayPage() {
     goFetch<ApiProperty[]>('/api/v1/properties', {}),
     goFetch<{ pix_key?: string | null }>('/api/v1/payments/config', {}),
     getProfile(),
+    goFetch<FinancialRules>('/api/v1/settings/financial-rules', {}),
   ])
 
   const failed = monthRes.status === 'rejected' ? monthRes : lateRes.status === 'rejected' ? lateRes : null
@@ -64,6 +66,7 @@ export default async function TodayPage() {
     leases,
     tenants,
     properties,
+    readjustNoticeDays: noticeDaysOf(rulesRes.status === 'fulfilled' ? rulesRes.value : null),
     now,
   })
 

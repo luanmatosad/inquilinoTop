@@ -2,6 +2,7 @@
 // Funções puras; as buscas ficam na página. Reaproveita as regras de Recebimentos e de Contratos para os números
 // baterem entre as telas.
 import { buildReceivableRows, receivableIndicators, type OverviewPayment } from './financial-overview'
+import { DEFAULT_RULES } from './financial-rules'
 import { buildLeaseRows, isReadjustmentPending, todaySaoPaulo, type OverviewLeaseItem } from './lease-overview'
 
 const SP = 'America/Sao_Paulo'
@@ -36,7 +37,6 @@ export function headline(count: number): string {
 // ---------- Listas do dia ----------
 
 export const COLLECT_WINDOW_DAYS = 7
-export const READJUST_WINDOW_DAYS = 30
 export const ENDING_WINDOW_DAYS = 60
 
 const day = (iso: string) => iso.slice(0, 10)
@@ -85,9 +85,12 @@ export function buildToday(input: {
   leases: TodayLease[]
   tenants: { id: string; name: string }[]
   properties: { id: string; name: string; units?: { id: string; label: string }[] | null }[]
+  /** Dias de aviso do reajuste (Regras financeiras). Sem o valor: 60, o padrão das regras. */
+  readjustNoticeDays?: number
   now?: Date
 }) {
   const now = input.now ?? new Date()
+  const readjustNoticeDays = input.readjustNoticeDays ?? DEFAULT_RULES.readjust_notice_days
   const today = todaySaoPaulo(now)
   const rows = buildReceivableRows(input)
 
@@ -143,7 +146,7 @@ export function buildToday(input: {
     if (l.next_readjustment) {
       const date = day(l.next_readjustment)
       const pending = isReadjustmentPending(l, now)
-      if (pending || (date >= today && date <= addDays(today, READJUST_WINDOW_DAYS))) {
+      if (pending || (date >= today && date <= addDays(today, readjustNoticeDays))) {
         readjust.push({ kind: 'READJUST', leaseId: l.id, where, date, index: l.adjustment_index ?? undefined, pending })
       }
     }

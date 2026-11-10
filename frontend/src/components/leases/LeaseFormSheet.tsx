@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ComponentProps } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import { LeaseForm, type LeaseEditData, type LeaseTenantOption, type LeaseUnitOption } from '@/components/leases/LeaseForm'
@@ -15,9 +15,11 @@ type LeaseFormSheetProps = {
   defaultTenantId?: string
   /** Presente = edição. */
   lease?: LeaseEditData
+  /** Padrões das Regras financeiras para contrato novo. */
+  defaults?: ComponentProps<typeof LeaseForm>['defaults']
 }
 
-export function LeaseFormSheet({ open, units, tenants, defaultUnitId, defaultTenantId, lease }: LeaseFormSheetProps) {
+export function LeaseFormSheet({ open, units, tenants, defaultUnitId, defaultTenantId, lease, defaults }: LeaseFormSheetProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -54,6 +56,7 @@ export function LeaseFormSheet({ open, units, tenants, defaultUnitId, defaultTen
             defaultUnitId={defaultUnitId}
             defaultTenantId={defaultTenantId}
             lease={lease}
+            defaults={defaults}
             onSuccess={close}
             onCancel={close}
           />

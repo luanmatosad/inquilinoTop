@@ -40,9 +40,9 @@ const properties = [
   { id: 'p5', name: 'Rua Sete', units: [{ id: 'u5', label: 'Kitnet 4' }] },
 ]
 
-type Opts = { mo?: unknown; la?: unknown; ls?: unknown; ts?: unknown; ps?: unknown; cfg?: unknown }
+type Opts = { mo?: unknown; la?: unknown; ls?: unknown; ts?: unknown; ps?: unknown; cfg?: unknown; rules?: unknown }
 function mockApi(o: Opts = {}) {
-  const { mo = month, la = late, ls = leases, ts = tenants, ps = properties, cfg = { pix_key: '11999998888' } } = o
+  const { mo = month, la = late, ls = leases, ts = tenants, ps = properties, cfg = { pix_key: '11999998888' }, rules } = o
   goFetch.mockImplementation(async (path: string) => {
     const v =
       path.startsWith('/api/v1/payments?status=LATE') ? la
@@ -51,6 +51,7 @@ function mockApi(o: Opts = {}) {
       : path === '/api/v1/tenants' ? ts
       : path === '/api/v1/properties' ? ps
       : path === '/api/v1/payments/config' ? cfg
+      : path === '/api/v1/settings/financial-rules' ? rules
       : undefined
     if (v === undefined) throw new Error('rota inesperada ' + path)
     if (v instanceof Error) throw v
@@ -139,6 +140,31 @@ describe('Hoje', () => {
     expect(within(s).getByRole('link', { name: 'Revisar reajuste' })).toHaveAttribute('href', '/leases/l1?reajustar=1')
     expect(within(s).getByText('Contrato do Sala 3 · Centro Empresarial termina em 23 dias')).toBeInTheDocument()
     expect(within(s).getByRole('link', { name: 'Ver contrato' })).toHaveAttribute('href', '/leases/l3')
+  })
+
+  describe('aviso do reajuste vem das Regras financeiras', () => {
+    // hoje 07/11: o reajuste do l1 é em 15/11 (8 dias)
+    const rules = (days: number) => ({ late_fee_percent: 2, monthly_interest_percent: 1, default_adjustment_index: 'IGP-M', readjust_notice_days: days })
+
+    it('janela curta esconde o reajuste que ainda está longe', async () => {
+      mockApi({ rules: rules(5) })
+      await renderPage()
+      expect(goFetch).toHaveBeenCalledWith('/api/v1/settings/financial-rules', {})
+      expect(within(region('Fique de olho')).queryByText(/Reajuste do Ap 302/)).not.toBeInTheDocument()
+      expect(screen.getByText('Você tem 4 coisas para resolver hoje.')).toBeInTheDocument()
+    })
+
+    it('janela que alcança mostra o reajuste', async () => {
+      mockApi({ rules: rules(8) })
+      await renderPage()
+      expect(within(region('Fique de olho')).getByText('Reajuste do Ap 302 · Ed. Aurora chega em 15/11')).toBeInTheDocument()
+    })
+
+    it('regras indisponíveis: janela de 60 dias e a tela carrega normalmente', async () => {
+      mockApi() // a rota das regras não responde (rota inesperada)
+      await renderPage()
+      expect(within(region('Fique de olho')).getByText('Reajuste do Ap 302 · Ed. Aurora chega em 15/11')).toBeInTheDocument()
+    })
   })
 
   it('dia vazio: nada para resolver e estado vazio do Confirmar', async () => {

@@ -18,8 +18,6 @@ export async function updateFinancialConfig(prevState: unknown, formData: FormDa
   try {
     const provider = formData.get('provider') as string
     const pixKey = (formData.get('pix_key') as string) || null
-    const defaultLateFee = formData.get('default_late_fee') as string
-    const defaultInterest = formData.get('default_interest') as string
 
     // For BankInfo
     const bankCode = formData.get('bank_code') as string
@@ -30,9 +28,7 @@ export async function updateFinancialConfig(prevState: unknown, formData: FormDa
     const document = formData.get('document') as string
 
     const config: Record<string, unknown> = {}
-    if (defaultLateFee) config['default_late_fee'] = parseFloat(defaultLateFee)
-    if (defaultInterest) config['default_interest'] = parseFloat(defaultInterest)
-    
+    // Multa e juros padrão vivem agora em Regras financeiras (/settings/rules).
     // Add provider API keys if present
     const asaasApiKey = formData.get('asaas_api_key') as string
     if (asaasApiKey) config['api_key'] = asaasApiKey

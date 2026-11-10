@@ -108,7 +108,7 @@ describe('Fique de olho', () => {
     ...over,
   })
 
-  it('reajuste nos próximos 30 dias, reajuste pendente e término em 60 dias', () => {
+  it('reajuste na janela padrão (60 dias), reajuste pendente e término em 60 dias', () => {
     const t = build([], [
       l('r1', { next_readjustment: '2026-11-15T00:00:00Z', adjustment_index: 'IGPM' }),
       l('r2', { next_readjustment: '2027-03-01T00:00:00Z' }),
@@ -122,6 +122,32 @@ describe('Fique de olho', () => {
     expect(r1).toMatchObject({ where: 'Ap 302 · Ed. Aurora', date: '2026-11-15', index: 'IGPM', pending: false })
     expect(t.watch.find((w) => w.leaseId === 'r3')).toMatchObject({ pending: true })
     expect(t.watch.find((w) => w.leaseId === 'e1')).toMatchObject({ date: '2026-11-30', days: 23 })
+  })
+
+  describe('dias de aviso do reajuste (Regras financeiras)', () => {
+    // hoje é 07/11/2026: 26/12 está a 49 dias e 06/01/2027 a 60
+    const withDays = (days: number | undefined, next: string) =>
+      buildToday({ payments: [], leases: [l('r', { next_readjustment: `${next}T00:00:00Z` })] as never, tenants, properties, now: NOW, readjustNoticeDays: days })
+        .watch.filter((w) => w.kind === 'READJUST').length
+
+    it('sem o parâmetro vale 60 dias (e não mais 30)', () => {
+      expect(withDays(undefined, '2026-12-26')).toBe(1)
+      expect(withDays(undefined, '2027-01-06')).toBe(1)
+      expect(withDays(undefined, '2027-01-07')).toBe(0)
+    })
+    it('usa os dias informados, com o limite inclusive', () => {
+      expect(withDays(45, '2026-12-26')).toBe(0)
+      expect(withDays(49, '2026-12-26')).toBe(1)
+      expect(withDays(30, '2026-12-08')).toBe(0)
+      expect(withDays(30, '2026-12-07')).toBe(1)
+    })
+    it('o reajuste pendente aparece com qualquer janela', () => {
+      expect(withDays(1, '2026-10-01')).toBe(1)
+    })
+    it('o término continua em 60 dias, independente do aviso do reajuste', () => {
+      const t = buildToday({ payments: [], leases: [l('e', { end_date: '2027-01-05T00:00:00Z' })] as never, tenants, properties, now: NOW, readjustNoticeDays: 5 })
+      expect(t.watch.map((w) => w.kind)).toEqual(['ENDING'])
+    })
   })
 
   it('a contagem soma todas as listas', () => {

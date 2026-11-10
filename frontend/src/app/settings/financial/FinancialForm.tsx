@@ -20,43 +20,10 @@ export function FinancialForm({ initialData }: { initialData: FinancialConfig | 
     }
   }, [state])
 
-  const defaultLateFee = (initialData?.config?.default_late_fee as string | number | undefined) ?? ''
-  const defaultInterest = (initialData?.config?.default_interest as string | number | undefined) ?? ''
   const asaasApiKey = (initialData?.config?.api_key as string | number | undefined) ?? ''
 
   return (
     <form action={action} className="space-y-8">
-      {/* Defaults Section */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-foreground border-b pb-2">Padrões de Cobrança</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="default_late_fee">Multa Padrão por Atraso (%)</Label>
-            <Input 
-              id="default_late_fee" 
-              name="default_late_fee" 
-              type="number"
-              step="0.01"
-              defaultValue={defaultLateFee} 
-              placeholder="Ex: 2.0" 
-            />
-            <p className="text-xs text-muted-foreground">Multa fixa aplicada um dia após o vencimento.</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="default_interest">Juros Padrão de Mora (% ao mês)</Label>
-            <Input 
-              id="default_interest" 
-              name="default_interest" 
-              type="number"
-              step="0.01"
-              defaultValue={defaultInterest} 
-              placeholder="Ex: 1.0" 
-            />
-             <p className="text-xs text-muted-foreground">Juros cobrados proporcionalmente por dia de atraso.</p>
-          </div>
-        </div>
-      </div>
-
       {/* Gateway Section */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-foreground border-b pb-2">Meio de Recebimento</h2>

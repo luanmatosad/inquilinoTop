@@ -100,6 +100,37 @@ describe('LeaseFormSheet · criação', () => {
     expect(screen.getByLabelText('Juros (% ao mês)')).toHaveValue('1')
   })
 
+  describe('padrões das Regras financeiras', () => {
+    const defaults = { late_fee_percent: '3', monthly_interest_percent: '0,5', adjustment_index: 'IPCA' as const }
+
+    it('contrato novo já vem com multa, juros e índice das regras', async () => {
+      render(<LeaseFormSheet open units={units} tenants={tenants} defaults={defaults} />)
+      expect(screen.getByText(/Padrão: multa de 3% e juros de 0,5% ao mês/)).toBeInTheDocument()
+      expect(screen.getByLabelText('Índice de reajuste')).toHaveTextContent('IPCA')
+      await userEvent.click(screen.getByRole('button', { name: 'Alterar neste contrato' }))
+      expect(screen.getByLabelText('Multa por atraso (%)')).toHaveValue('3')
+      expect(screen.getByLabelText('Juros (% ao mês)')).toHaveValue('0,5')
+    })
+
+    it('envia os padrões das regras', async () => {
+      render(<LeaseFormSheet open units={units} tenants={tenants} defaultTenantId={T1} defaultUnitId={U1} defaults={defaults} />)
+      await userEvent.click(screen.getByRole('button', { name: 'Criar contrato' }))
+      await waitFor(() => expect(createLease).toHaveBeenCalled())
+      expect(createLease.mock.calls[0][0]).toMatchObject({ late_fee_percent: '3', monthly_interest_percent: '0,5', adjustment_index: 'IPCA' })
+    })
+
+    it('multa zero nas regras vira campo vazio (sem multa) e o texto diz 0%', () => {
+      render(<LeaseFormSheet open units={units} tenants={tenants} defaults={{ late_fee_percent: '', monthly_interest_percent: '', adjustment_index: '' }} />)
+      expect(screen.getByText(/Padrão: multa de 0% e juros de 0% ao mês/)).toBeInTheDocument()
+    })
+
+    it('a edição continua com os valores do contrato, não os das regras', () => {
+      nav.search = 'editar=1'
+      render(<LeaseFormSheet open units={units} tenants={tenants} lease={lease} defaults={{ late_fee_percent: '9', monthly_interest_percent: '4', adjustment_index: 'IPCA' }} />)
+      expect(screen.getByLabelText('Multa por atraso (%)')).toHaveValue('2')
+    })
+  })
+
   it('envia generate_payments, juros diários e fecha', async () => {
     render(<LeaseFormSheet open units={units} tenants={tenants} defaultTenantId={T1} defaultUnitId={U1} />)
     await userEvent.click(screen.getByRole('button', { name: 'Criar contrato' }))

@@ -15,7 +15,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   { key: 'plan', label: 'Plano e cobrança', description: 'O que você paga ao ImoviFlow.', soon: true },
   { key: 'pix', label: 'Recebimento (Pix)', description: 'Onde seus inquilinos pagam.', href: '/settings/financial' },
   { key: 'messages', label: 'Mensagens e cobrança', description: 'Quando lembrar e o que dizer.', soon: true },
-  { key: 'rules', label: 'Regras financeiras', description: 'Multa, juros e reajuste padrão.', soon: true },
+  { key: 'rules', label: 'Regras financeiras', description: 'Multa, juros e reajuste padrão.', href: '/settings/rules' },
   { key: 'categories', label: 'Categorias de despesa', description: 'Organizam despesas e relatórios.', soon: true },
   { key: 'notifications', label: 'Notificações', description: 'Escolha o que avisar.', href: '/settings/notifications' },
   { key: 'security', label: 'Segurança', description: 'Senha e verificação em duas etapas.', href: '/settings/security' },

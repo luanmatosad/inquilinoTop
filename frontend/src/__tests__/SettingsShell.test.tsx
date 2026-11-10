@@ -28,10 +28,11 @@ describe('SettingsNav', () => {
     const current = within(nav).getByRole('link', { current: 'page' })
     expect(current.textContent).toBe('Segurança')
     expect(within(nav).getByRole('link', { name: 'Recebimento (Pix)' }).getAttribute('href')).toBe('/settings/financial')
-    const soon = within(nav).getByText('Regras financeiras')
+    const soon = within(nav).getByText('Mensagens e cobrança')
     expect(soon.closest('[aria-disabled="true"]')).toBeTruthy()
-    expect(within(nav).queryByRole('link', { name: /Regras financeiras/ })).toBeNull()
-    expect(within(nav).getAllByText('Em breve')).toHaveLength(6)
+    expect(within(nav).queryByRole('link', { name: /Mensagens e cobrança/ })).toBeNull()
+    expect(within(nav).getByRole('link', { name: 'Regras financeiras' }).getAttribute('href')).toBe('/settings/rules')
+    expect(within(nav).getAllByText('Em breve')).toHaveLength(5)
   })
 
   it('no celular, as subpáginas têm o voltar para a lista', () => {
@@ -55,10 +56,11 @@ describe('Lista de seções (/settings)', () => {
       '/settings/profile',
       '/settings/team',
       '/settings/financial',
+      '/settings/rules',
       '/settings/notifications',
       '/settings/security',
     ])
-    expect(within(list).getAllByText('Em breve')).toHaveLength(6)
+    expect(within(list).getAllByText('Em breve')).toHaveLength(5)
   })
 })
 

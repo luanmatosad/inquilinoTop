@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { LeaseFilters } from "@/components/leases/LeaseFilters"
 import { LeaseFormSheet } from "@/components/leases/LeaseFormSheet"
+import { contractDefaults, type FinancialRules } from "@/lib/financial-rules"
 import { LeaseKpis } from "@/components/leases/LeaseKpis"
 import { LeaseTable, type LeaseTableRow } from "@/components/leases/LeaseTable"
 import { plural } from "@/lib/property-format"
@@ -37,10 +38,12 @@ export default async function LeasesPage({ searchParams }: { searchParams: Promi
   const { q, situacao, novo, inquilino, unidade } = await searchParams
 
   // Contratos é obrigatório; inquilinos e imóveis só enriquecem a lista.
-  const [leasesRes, tenantsRes, propertiesRes] = await Promise.allSettled([
+  // As regras financeiras só interessam ao painel de novo contrato; sem elas ele usa os padrões fixos de sempre.
+  const [leasesRes, tenantsRes, propertiesRes, rulesRes] = await Promise.allSettled([
     goFetch<OverviewLeaseItem[]>("/api/v1/leases", {}),
     goFetch<ApiTenant[]>("/api/v1/tenants", {}),
     goFetch<ApiProperty[]>("/api/v1/properties", {}),
+    novo === "1" ? goFetch<FinancialRules>("/api/v1/settings/financial-rules", {}) : Promise.resolve(null),
   ])
 
   const heading = (
@@ -119,6 +122,7 @@ export default async function LeasesPage({ searchParams }: { searchParams: Promi
       tenants={tenantOptions}
       defaultUnitId={unidade}
       defaultTenantId={inquilino}
+      defaults={contractDefaults(rulesRes.status === "fulfilled" ? rulesRes.value : null)}
     />
   )
 
