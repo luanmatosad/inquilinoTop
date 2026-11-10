@@ -3426,6 +3426,38 @@ paths:
       summary: Recebido, despesas e resultado por unidade no ano
       tags:
       - reports
+  /reports/carne-leao:
+    get:
+      parameters:
+      - description: Mês AAAA-MM (já encerrado)
+        in: query
+        name: month
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 'Carnê-leão do mês: rendimentos de pessoas físicas, despesas que entram,
+        base estimada e prazo'
+      tags:
+      - reports
   /reports/overview:
     get:
       parameters:

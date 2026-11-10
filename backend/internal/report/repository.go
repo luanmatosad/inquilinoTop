@@ -84,3 +84,51 @@ func (r *pgRepository) UnitExpenses(ctx context.Context, orgID uuid.UUID, from, 
 	return r.byUnit(ctx,
 		`SELECT e.unit_id, COALESCE(SUM(e.paid_amount),0)::float8 `+paidExpenses+` GROUP BY e.unit_id`, orgID, from, to)
 }
+
+// CarneIncome: aluguéis pagos no período por inquilino pessoa física, do mais antigo ao mais recente.
+func (r *pgRepository) CarneIncome(ctx context.Context, orgID uuid.UUID, from, to time.Time) ([]IncomeLine, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT t.name, l.unit_id, to_char(p.paid_date,'YYYY-MM-DD'), COALESCE(p.net_amount, p.gross_amount)::float8
+		   FROM payments p
+		   JOIN leases l ON l.id=p.lease_id AND l.organization_id=p.organization_id
+		   JOIN tenants t ON t.id=l.tenant_id AND t.organization_id=p.organization_id
+		  WHERE p.organization_id=$1 AND p.is_active AND p.type='RENT' AND p.status='PAID'
+		    AND p.paid_date BETWEEN $2::date AND $3::date AND t.person_type='PF'
+		  ORDER BY p.paid_date, t.name, p.id`, orgID, from.Format(day), to.Format(day))
+	if err != nil {
+		return nil, fmt.Errorf("report.repo: carnê rendimentos: %w", err)
+	}
+	defer rows.Close()
+	out := []IncomeLine{}
+	for rows.Next() {
+		var l IncomeLine
+		if err := rows.Scan(&l.Payer, &l.UnitID, &l.PaidDate, &l.Amount); err != nil {
+			return nil, fmt.Errorf("report.repo: carnê rendimentos: scan: %w", err)
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
+}
+
+// CarneDeductions: despesas pagas no período nas categorias informadas, do mais antigo ao mais recente.
+func (r *pgRepository) CarneDeductions(ctx context.Context, orgID uuid.UUID, from, to time.Time, categories []string) ([]DeductionLine, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT e.description, e.unit_id, e.category, e.paid_amount::float8
+		   FROM expenses e
+		  WHERE e.organization_id=$1 AND e.is_active AND e.status='PAID'
+		    AND e.paid_date BETWEEN $2::date AND $3::date AND e.category = ANY($4)
+		  ORDER BY e.paid_date, e.description, e.id`, orgID, from.Format(day), to.Format(day), categories)
+	if err != nil {
+		return nil, fmt.Errorf("report.repo: carnê despesas: %w", err)
+	}
+	defer rows.Close()
+	out := []DeductionLine{}
+	for rows.Next() {
+		var l DeductionLine
+		if err := rows.Scan(&l.Description, &l.UnitID, &l.Category, &l.Amount); err != nil {
+			return nil, fmt.Errorf("report.repo: carnê despesas: scan: %w", err)
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"regexp"
 	"sort"
 	"time"
 
@@ -145,4 +146,58 @@ func (s *Service) ByProperty(ctx context.Context, orgID uuid.UUID, year int) (*B
 	out.Totals.Expenses = round2(out.Totals.Expenses)
 	out.Totals.Result = round2(out.Totals.Received - out.Totals.Expenses)
 	return out, nil
+}
+
+var monthRe = regexp.MustCompile(`^\d{4}-(0[1-9]|1[0-2])$`)
+
+// lastBusinessDay devolve o último dia útil (segunda a sexta, sem feriados) do mês de first.
+func lastBusinessDay(first time.Time) time.Time {
+	d := first.AddDate(0, 1, -1)
+	for d.Weekday() == time.Saturday || d.Weekday() == time.Sunday {
+		d = d.AddDate(0, 0, -1)
+	}
+	return d
+}
+
+// CarneLeao monta o relatório de um mês encerrado: rendimentos de pessoas físicas, despesas que entram,
+// base estimada e prazo (último dia útil do mês seguinte).
+func (s *Service) CarneLeao(ctx context.Context, orgID uuid.UUID, month string) (*CarneLeao, error) {
+	if !monthRe.MatchString(month) {
+		return nil, ErrInvalidMonth
+	}
+	first, err := time.ParseInLocation("2006-01", month, s.loc)
+	if err != nil || first.Year() < minYear {
+		return nil, ErrInvalidMonth
+	}
+	if month >= s.now().In(s.loc).Format("2006-01") {
+		return nil, ErrMonthNotEnded
+	}
+	from, to := first, first.AddDate(0, 1, -1)
+
+	income, err := s.repo.CarneIncome(ctx, orgID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("report.svc: rendimentos: %w", err)
+	}
+	deductions, err := s.repo.CarneDeductions(ctx, orgID, from, to, DeductibleCategories)
+	if err != nil {
+		return nil, fmt.Errorf("report.svc: despesas: %w", err)
+	}
+	c := &CarneLeao{
+		Month:      month,
+		DueDate:    lastBusinessDay(first.AddDate(0, 1, 0)).Format("2006-01-02"),
+		Income:     IncomeSection{Lines: []IncomeLine{}},
+		Deductions: DeductionSection{Lines: []DeductionLine{}},
+	}
+	for _, l := range income {
+		c.Income.Lines = append(c.Income.Lines, l)
+		c.Income.Total += l.Amount
+	}
+	for _, l := range deductions {
+		c.Deductions.Lines = append(c.Deductions.Lines, l)
+		c.Deductions.Total += l.Amount
+	}
+	c.Income.Count, c.Deductions.Count = len(c.Income.Lines), len(c.Deductions.Lines)
+	c.Income.Total, c.Deductions.Total = round2(c.Income.Total), round2(c.Deductions.Total)
+	c.Base = math.Max(0, round2(c.Income.Total-c.Deductions.Total))
+	return c, nil
 }

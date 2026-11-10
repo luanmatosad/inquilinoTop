@@ -21,6 +21,9 @@ type mockRepo struct {
 	expenses []report.MonthAmount
 	unitRecv []report.UnitAmount
 	unitExp  []report.UnitAmount
+	income   []report.IncomeLine
+	deducts  []report.DeductionLine
+	cats     []string
 	from, to time.Time
 	calls    int
 }
@@ -38,6 +41,15 @@ func (m *mockRepo) UnitReceived(_ context.Context, _ uuid.UUID, _, _ time.Time) 
 }
 func (m *mockRepo) UnitExpenses(_ context.Context, _ uuid.UUID, _, _ time.Time) ([]report.UnitAmount, error) {
 	return m.unitExp, nil
+}
+
+func (m *mockRepo) CarneIncome(_ context.Context, _ uuid.UUID, from, to time.Time) ([]report.IncomeLine, error) {
+	m.from, m.to = from, to
+	return m.income, nil
+}
+func (m *mockRepo) CarneDeductions(_ context.Context, _ uuid.UUID, _, _ time.Time, cats []string) ([]report.DeductionLine, error) {
+	m.cats = cats
+	return m.deducts, nil
 }
 
 func svcAt(repo *mockRepo, y int, mo time.Month, d int) *report.Service {

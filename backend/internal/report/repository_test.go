@@ -188,3 +188,91 @@ func TestRepository_IsolamentoPorOrganizacao(t *testing.T) {
 		assert.Equal(t, 0, n, name)
 	}
 }
+
+// leaseFor cria unidade, inquilino (com tipo e nome) e contrato.
+func (w world) leaseFor(t *testing.T, d *db.DB, label, name, personType string) (uuid.UUID, uuid.UUID) {
+	t.Helper()
+	ctx := context.Background()
+	var unit, tenant, lease uuid.UUID
+	require.NoError(t, d.Pool.QueryRow(ctx, `INSERT INTO units (property_id, label) VALUES ($1,$2) RETURNING id`, w.propertyID, label).Scan(&unit))
+	require.NoError(t, d.Pool.QueryRow(ctx, `INSERT INTO tenants (organization_id, owner_id, name, person_type) VALUES ($1,$2,$3,$4) RETURNING id`, w.org, w.owner, name, personType).Scan(&tenant))
+	require.NoError(t, d.Pool.QueryRow(ctx,
+		`INSERT INTO leases (organization_id, owner_id, unit_id, tenant_id, start_date, rent_amount) VALUES ($1,$2,$3,$4,'2025-01-01',1000) RETURNING id`,
+		w.org, w.owner, unit, tenant).Scan(&lease))
+	return unit, lease
+}
+
+func (w world) expenseIn(t *testing.T, d *db.DB, unit uuid.UUID, category, desc string, paid *string, amount float64) {
+	t.Helper()
+	_, err := d.Pool.Exec(context.Background(),
+		`INSERT INTO expenses (organization_id, owner_id, unit_id, description, amount, due_date, category, status, paid_date, paid_amount)
+		 VALUES ($1,$2,$3,$4,$5::float8,'2026-10-05',$6, CASE WHEN $7::date IS NULL THEN 'PENDING' ELSE 'PAID' END, $7::date, CASE WHEN $7::date IS NULL THEN NULL ELSE $5::float8 END)`,
+		w.org, w.owner, unit, desc, amount, category, paid)
+	require.NoError(t, err)
+}
+
+var (
+	oct1 = time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+)
+
+func TestRepository_CarneIncome_SoPessoaFisicaPorDataDePagamento(t *testing.T) {
+	d := testDB(t)
+	repo := report.NewRepository(d)
+	w := seedWorld(t, d)
+	u1, l1 := w.leaseFor(t, d, "Ap 302", "Marina Souza", "PF")
+	_, l2 := w.leaseFor(t, d, "Sala 3", "Empresa Ltda", "PJ")
+	w.payment(t, d, l1, "RENT", "PAID", s("2026-10-05"), 1850, f(1850))
+	w.payment(t, d, l1, "RENT", "PAID", s("2026-10-02"), 500, nil)         // sem líquido: bruto; mais cedo
+	w.payment(t, d, l2, "RENT", "PAID", s("2026-10-05"), 3000, f(3000))    // PJ fora
+	w.payment(t, d, l1, "RENT", "PAID", s("2026-09-30"), 999, f(999))      // fora do mês
+	w.payment(t, d, l1, "RENT", "PAID", s("2026-11-01"), 999, f(999))      // fora do mês
+	w.payment(t, d, l1, "DEPOSIT", "PAID", s("2026-10-05"), 5000, f(5000)) // não é aluguel
+	w.payment(t, d, l1, "RENT", "PENDING", nil, 1000, nil)                 // não paga
+
+	got, err := repo.CarneIncome(context.Background(), w.org, oct1, oct31)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.Equal(t, "2026-10-02", got[0].PaidDate, "ordenado por data")
+	assert.Equal(t, 500.0, got[0].Amount)
+	assert.Equal(t, "Marina Souza", got[0].Payer)
+	assert.Equal(t, u1, got[1].UnitID)
+	assert.Equal(t, 1850.0, got[1].Amount)
+}
+
+func TestRepository_CarneDeductions_SoCategoriasQueEntram(t *testing.T) {
+	d := testDB(t)
+	repo := report.NewRepository(d)
+	w := seedWorld(t, d)
+	unit, _ := w.leaseFor(t, d, "Ap 12", "Carla Dias", "PF")
+	w.expenseIn(t, d, unit, "CONDO", "Condomínio de outubro", s("2026-10-10"), 680)
+	w.expenseIn(t, d, unit, "TAX", "IPTU · parcela 10", s("2026-10-03"), 420)
+	w.expenseIn(t, d, unit, "MAINTENANCE", "Reforma", s("2026-10-04"), 900)  // categoria não entra
+	w.expenseIn(t, d, unit, "TAX", "IPTU pendente", nil, 100)                // não paga
+	w.expenseIn(t, d, unit, "TAX", "IPTU de novembro", s("2026-11-02"), 100) // fora do mês
+
+	got, err := repo.CarneDeductions(context.Background(), w.org, oct1, oct31, report.DeductibleCategories)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.Equal(t, "IPTU · parcela 10", got[0].Description, "ordenado por data de pagamento")
+	assert.Equal(t, "TAX", got[0].Category)
+	assert.Equal(t, 420.0, got[0].Amount)
+	assert.Equal(t, unit, got[0].UnitID)
+	assert.Equal(t, "CONDO", got[1].Category)
+}
+
+func TestRepository_Carne_IsolamentoPorOrganizacao(t *testing.T) {
+	d := testDB(t)
+	repo := report.NewRepository(d)
+	a := seedWorld(t, d)
+	b := seedWorld(t, d)
+	ua, la := a.leaseFor(t, d, "Ap A", "Pagador A", "PF")
+	a.payment(t, d, la, "RENT", "PAID", s("2026-10-05"), 1000, f(1000))
+	a.expenseIn(t, d, ua, "TAX", "IPTU", s("2026-10-05"), 100)
+
+	inc, err := repo.CarneIncome(context.Background(), b.org, oct1, oct31)
+	require.NoError(t, err)
+	assert.Empty(t, inc)
+	ded, err := repo.CarneDeductions(context.Background(), b.org, oct1, oct31, report.DeductibleCategories)
+	require.NoError(t, err)
+	assert.Empty(t, ded)
+}

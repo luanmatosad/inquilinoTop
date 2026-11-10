@@ -21,6 +21,7 @@ func (h *Handler) Register(r chi.Router, authMW, readMw func(http.Handler) http.
 		r.Use(authMW)
 		r.With(readMw).Get("/reports/overview", h.overview)
 		r.With(readMw).Get("/reports/by-property", h.byProperty)
+		r.With(readMw).Get("/reports/carne-leao", h.carneLeao)
 	})
 }
 
@@ -40,8 +41,15 @@ func params(w http.ResponseWriter, r *http.Request) (uuid.UUID, int, bool) {
 }
 
 func fail(w http.ResponseWriter, err error) {
-	if errors.Is(err, ErrInvalidYear) {
+	switch {
+	case errors.Is(err, ErrInvalidYear):
 		httputil.Err(w, http.StatusBadRequest, "INVALID_YEAR", "ano inválido")
+		return
+	case errors.Is(err, ErrInvalidMonth):
+		httputil.Err(w, http.StatusBadRequest, "INVALID_MONTH", "mês inválido, use AAAA-MM")
+		return
+	case errors.Is(err, ErrMonthNotEnded):
+		httputil.Err(w, http.StatusUnprocessableEntity, "MONTH_NOT_ENDED", "o mês ainda não terminou")
 		return
 	}
 	slog.Error("report: consulta falhou", "error", err)
@@ -88,4 +96,27 @@ func (h *Handler) byProperty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.OK(w, b)
+}
+
+// @Summary Carnê-leão do mês: rendimentos de pessoas físicas, despesas que entram, base estimada e prazo
+// @Tags reports
+// @Security BearerAuth
+// @Produce json
+// @Param month query string true "Mês AAAA-MM (já encerrado)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 422 {object} map[string]interface{}
+// @Router /reports/carne-leao [get]
+func (h *Handler) carneLeao(w http.ResponseWriter, r *http.Request) {
+	orgID := auth.OrganizationIDFromCtx(r.Context())
+	if orgID == uuid.Nil {
+		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
+		return
+	}
+	c, err := h.svc.CarneLeao(r.Context(), orgID, r.URL.Query().Get("month"))
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	httputil.OK(w, c)
 }

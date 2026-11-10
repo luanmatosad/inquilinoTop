@@ -75,3 +75,38 @@ func TestHandler_AnoInvalido(t *testing.T) {
 func TestHandler_SemOrganizacao(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, get(router(t, &mockRepo{}, false), "/reports/overview?year=2026").Code)
 }
+
+func TestHandler_CarneLeao(t *testing.T) {
+	rr := get(router(t, october(), true), "/reports/carne-leao?month=2026-10")
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var env struct {
+		Data report.CarneLeao `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
+	assert.Equal(t, 7200.0, env.Data.Base)
+	assert.Equal(t, "2026-11-30", env.Data.DueDate)
+	assert.Len(t, env.Data.Income.Lines, 5)
+	assert.Len(t, env.Data.Deductions.Lines, 2)
+}
+
+func TestHandler_CarneLeao_Erros(t *testing.T) {
+	h := router(t, &mockRepo{}, true)
+	cases := map[string]struct {
+		status int
+		code   string
+	}{
+		"/reports/carne-leao":               {http.StatusBadRequest, "INVALID_MONTH"},
+		"/reports/carne-leao?month=2026-13": {http.StatusBadRequest, "INVALID_MONTH"},
+		"/reports/carne-leao?month=2026-11": {http.StatusUnprocessableEntity, "MONTH_NOT_ENDED"},
+		"/reports/carne-leao?month=2027-02": {http.StatusUnprocessableEntity, "MONTH_NOT_ENDED"},
+	}
+	for path, want := range cases {
+		rr := get(h, path)
+		assert.Equal(t, want.status, rr.Code, path)
+		assert.Contains(t, rr.Body.String(), want.code, path)
+	}
+}
+
+func TestHandler_CarneLeao_SemOrganizacao(t *testing.T) {
+	assert.Equal(t, http.StatusUnauthorized, get(router(t, &mockRepo{}, false), "/reports/carne-leao?month=2026-10").Code)
+}
