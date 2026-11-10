@@ -181,3 +181,45 @@ func (r *pgRepository) RemoveUnitPix(ctx context.Context, orgID, unitID uuid.UUI
 	}
 	return nil
 }
+
+func (r *pgRepository) ListReminders(ctx context.Context, orgID uuid.UUID) ([]Reminder, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT name, offset_days, body FROM reminder_templates WHERE organization_id=$1 AND is_active ORDER BY offset_days`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("settings.repo: list reminders: %w", err)
+	}
+	defer rows.Close()
+	out := []Reminder{}
+	for rows.Next() {
+		var m Reminder
+		if err := rows.Scan(&m.Name, &m.OffsetDays, &m.Body); err != nil {
+			return nil, fmt.Errorf("settings.repo: list reminders: scan: %w", err)
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+// ReplaceReminders troca a lista ativa numa transação: se qualquer INSERT falhar, os lembretes atuais continuam.
+func (r *pgRepository) ReplaceReminders(ctx context.Context, orgID, userID uuid.UUID, list []Reminder) error {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("settings.repo: replace reminders: begin: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	if _, err := tx.Exec(ctx, `UPDATE reminder_templates SET is_active=false, deactivated_at=NOW() WHERE organization_id=$1 AND is_active`, orgID); err != nil {
+		return fmt.Errorf("settings.repo: replace reminders: desativar: %w", err)
+	}
+	for _, m := range list {
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO reminder_templates (organization_id, name, offset_days, body, created_by) VALUES ($1,$2,$3,$4,$5)`,
+			orgID, m.Name, m.OffsetDays, m.Body, userID); err != nil {
+			return fmt.Errorf("settings.repo: replace reminders: inserir: %w", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("settings.repo: replace reminders: commit: %w", err)
+	}
+	return nil
+}

@@ -3806,6 +3806,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/settings/reminders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Lembretes de cobrança da organização (modelos de mensagem por dias em relação ao vencimento)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Substitui a lista de lembretes da organização",
+                "parameters": [
+                    {
+                        "description": "Lembretes",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/settings.RemindersInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/tenants": {
             "get": {
                 "security": [
@@ -6074,6 +6143,31 @@ const docTemplate = `{
                 },
                 "receiver_name": {
                     "type": "string"
+                }
+            }
+        },
+        "settings.Reminder": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "offset_days": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settings.RemindersInput": {
+            "type": "object",
+            "properties": {
+                "reminders": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/settings.Reminder"
+                    }
                 }
             }
         },

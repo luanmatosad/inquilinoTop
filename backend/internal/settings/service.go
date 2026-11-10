@@ -128,3 +128,27 @@ func (s *Service) ResolvePixAccount(ctx context.Context, orgID, unitID uuid.UUID
 	}
 	return &PixAccount{KeyType: d.KeyType, Key: d.Key, ReceiverName: d.ReceiverName, City: d.City}, nil
 }
+
+// GetReminders devolve os lembretes da organização, ou os quatro padrões se ela ainda não configurou.
+func (s *Service) GetReminders(ctx context.Context, orgID uuid.UUID) ([]Reminder, error) {
+	list, err := s.repo.ListReminders(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("settings.svc: ler lembretes: %w", err)
+	}
+	if len(list) == 0 {
+		return DefaultReminders(), nil
+	}
+	return list, nil
+}
+
+// SaveReminders valida a lista inteira e a grava no lugar da anterior.
+func (s *Service) SaveReminders(ctx context.Context, orgID, userID uuid.UUID, in RemindersInput) ([]Reminder, error) {
+	list, err := ValidateReminders(in.Reminders)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.ReplaceReminders(ctx, orgID, userID, list); err != nil {
+		return nil, fmt.Errorf("settings.svc: gravar lembretes: %w", err)
+	}
+	return list, nil
+}

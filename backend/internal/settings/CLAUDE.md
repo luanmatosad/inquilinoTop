@@ -1,6 +1,6 @@
 # settings — Configurações da organização
 
-Regras e preferências por organização (`organization_settings`, uma linha por organização): **regras financeiras** e **Pix** (chave padrão da organização e conta por unidade). As próximas ondas (mensagens, etc.) estendem a mesma tabela.
+Regras e preferências por organização (`organization_settings`, uma linha por organização): **regras financeiras**, **Pix** (chave padrão da organização e conta por unidade) e **lembretes de cobrança** (modelos de mensagem). As próximas ondas (mensagens, etc.) estendem a mesma tabela.
 
 ## Modelo
 
@@ -35,3 +35,15 @@ Regras e preferências por organização (`organization_settings`, uma linha por
 - Nome e cidade acima do limite do BR Code são **recusados**, não cortados. Vazios valem o nome do perfil e a cidade do imóvel.
 - `ResolvePixAccount(org, unit)`: conta da unidade (sem cidade: vale a do imóvel), senão a da organização, senão nil. `payment.PixAccountAdapter` a entrega à cobrança.
 - O upsert do Pix e o das regras mexem em colunas diferentes da mesma linha (um não apaga o outro).
+
+## Lembretes de cobrança (migration 000054)
+
+Tabela `reminder_templates` (`name`, `offset_days`, `body`, `is_active`, `created_by`): índice único parcial `(organization_id, offset_days)` ativo. Salvar a lista **desativa** os ativos e cria os novos numa transação (nada muda se um INSERT falhar; sem DELETE).
+
+| Método | Rota | Permissão | Retorna |
+|---|---|---|---|
+| GET | /api/v1/settings/reminders | `org:read` | `{reminders: [{name, offset_days, body}]}` ordenado por dias; sem lista gravada, os 4 padrões do canvas (-3, 0, +3, +10), sem gravar |
+| PUT | /api/v1/settings/reminders | `org:update` | substitui a lista inteira (`{reminders: [...]}`) e devolve a salva; 400 `INVALID_REMINDERS` (a mensagem diz o problema) ou `INVALID_BODY` |
+
+- Validação (`ValidateReminders`): 1 a 8 lembretes; nome de 1 a 40 caracteres; dias de -30 a 60 e **únicos**; texto de 1 a 1000 (conta letras, não bytes); só as variáveis `{nome} {valor} {vencimento} {imóvel} {mês} {pix} {link}` (outra, como `{nom}` ou `{Nome}`, é recusada citando o nome; chave sem fechar é texto comum). Devolve a lista aparada e ordenada.
+- O backend só guarda: **quem escolhe o modelo** (maior `offset_days` menor ou igual aos dias desde o vencimento) e **quem preenche as variáveis** é o frontend (`lib/message-templates.ts`).

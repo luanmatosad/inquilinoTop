@@ -22,6 +22,8 @@ func (h *Handler) Register(r chi.Router, authMW, readMw, writeMw func(http.Handl
 		r.Use(authMW)
 		r.With(readMw).Get("/settings/financial-rules", h.getFinancialRules)
 		r.With(writeMw).Put("/settings/financial-rules", h.putFinancialRules)
+		r.With(readMw).Get("/settings/reminders", h.getReminders)
+		r.With(writeMw).Put("/settings/reminders", h.putReminders)
 		r.With(readMw).Get("/settings/pix", h.getPix)
 		r.With(writeMw).Put("/settings/pix", h.putPix)
 		r.With(writeMw).Put("/settings/pix/units/{unitId}", h.putUnitPix)
@@ -219,4 +221,57 @@ func (h *Handler) deleteUnitPix(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.OK(w, map[string]bool{"removed": true})
+}
+
+// @Summary Lembretes de cobrança da organização (modelos de mensagem por dias em relação ao vencimento)
+// @Tags settings
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /settings/reminders [get]
+func (h *Handler) getReminders(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := pixOrg(w, r)
+	if !ok {
+		return
+	}
+	list, err := h.svc.GetReminders(r.Context(), orgID)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "settings: ler lembretes", "error", err)
+		httputil.Err(w, http.StatusInternalServerError, "SETTINGS_FAILED", "não foi possível ler os lembretes")
+		return
+	}
+	httputil.OK(w, map[string][]Reminder{"reminders": list})
+}
+
+// @Summary Substitui a lista de lembretes da organização
+// @Tags settings
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body RemindersInput true "Lembretes"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /settings/reminders [put]
+func (h *Handler) putReminders(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := pixOrg(w, r)
+	if !ok {
+		return
+	}
+	var in RemindersInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
+		return
+	}
+	list, err := h.svc.SaveReminders(r.Context(), orgID, auth.OwnerIDFromCtx(r.Context()), in)
+	if err != nil {
+		var re *ReminderError
+		if errors.As(err, &re) {
+			httputil.Err(w, http.StatusBadRequest, "INVALID_REMINDERS", re.Msg)
+			return
+		}
+		slog.ErrorContext(r.Context(), "settings: gravar lembretes", "error", err)
+		httputil.Err(w, http.StatusInternalServerError, "SETTINGS_FAILED", "não foi possível gravar os lembretes")
+		return
+	}
+	httputil.OK(w, map[string][]Reminder{"reminders": list})
 }

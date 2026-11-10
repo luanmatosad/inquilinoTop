@@ -24,7 +24,7 @@ func testDB(t *testing.T) *db.DB {
 	require.NoError(t, err)
 	require.NoError(t, db.RunMigrations(url, "../../migrations"))
 	t.Cleanup(func() {
-		d.Pool.Exec(context.Background(), "TRUNCATE unit_pix_accounts, organization_settings, financial_config, units, properties, organization_members, organizations, users RESTART IDENTITY CASCADE")
+		d.Pool.Exec(context.Background(), "TRUNCATE reminder_templates, unit_pix_accounts, organization_settings, financial_config, units, properties, organization_members, organizations, users RESTART IDENTITY CASCADE")
 		d.Close()
 	})
 	return d
@@ -315,4 +315,77 @@ func TestRepository_UnitPix_UnidadeDeOutraOrganizacao(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, got, "a B não enxerga a conta da A")
 	assert.ErrorIs(t, repo.RemoveUnitPix(ctx, orgB, unitA), apierr.ErrNotFound)
+}
+
+func TestRepository_Reminders_SemLinhasDevolveVazio(t *testing.T) {
+	d := testDB(t)
+	orgID, _ := seedOrg(t, d)
+	got, err := settings.NewRepository(d).ListReminders(context.Background(), orgID)
+	require.NoError(t, err)
+	assert.Empty(t, got)
+}
+
+func TestRepository_Reminders_SubstituiDesativandoOsAntigos(t *testing.T) {
+	d := testDB(t)
+	repo := settings.NewRepository(d)
+	orgID, userID := seedOrg(t, d)
+	ctx := context.Background()
+
+	first := []settings.Reminder{{Name: "Antes", OffsetDays: -3, Body: "Oi {nome}"}, {Name: "No dia", OffsetDays: 0, Body: "Hoje {valor}"}}
+	require.NoError(t, repo.ReplaceReminders(ctx, orgID, userID, first))
+	got, err := repo.ListReminders(ctx, orgID)
+	require.NoError(t, err)
+	assert.Equal(t, first, got, "ordenado por dias")
+
+	second := []settings.Reminder{{Name: "Atraso", OffsetDays: 5, Body: "Atrasou {valor}"}, {Name: "No dia", OffsetDays: 0, Body: "Hoje {valor} no {pix}"}}
+	require.NoError(t, repo.ReplaceReminders(ctx, orgID, userID, second))
+	got, _ = repo.ListReminders(ctx, orgID)
+	assert.Equal(t, []settings.Reminder{second[1], second[0]}, got)
+
+	var total, active int
+	require.NoError(t, d.Pool.QueryRow(ctx, `SELECT COUNT(*), COUNT(*) FILTER (WHERE is_active) FROM reminder_templates WHERE organization_id=$1`, orgID).Scan(&total, &active))
+	assert.Equal(t, 4, total, "os dois primeiros ficam no histórico")
+	assert.Equal(t, 2, active)
+	var by uuid.UUID
+	require.NoError(t, d.Pool.QueryRow(ctx, `SELECT created_by FROM reminder_templates WHERE organization_id=$1 AND is_active LIMIT 1`, orgID).Scan(&by))
+	assert.Equal(t, userID, by)
+}
+
+func TestRepository_Reminders_IsolamentoPorOrganizacao(t *testing.T) {
+	d := testDB(t)
+	repo := settings.NewRepository(d)
+	a, ua := seedOrg(t, d)
+	b, _ := seedOrg(t, d)
+	require.NoError(t, repo.ReplaceReminders(context.Background(), a, ua, []settings.Reminder{{Name: "A", OffsetDays: 0, Body: "x"}}))
+	got, err := repo.ListReminders(context.Background(), b)
+	require.NoError(t, err)
+	assert.Empty(t, got)
+}
+
+func TestRepository_Reminders_BancoRecusaDiasRepetidosEForaDaFaixa(t *testing.T) {
+	d := testDB(t)
+	orgID, userID := seedOrg(t, d)
+	ctx := context.Background()
+	ins := `INSERT INTO reminder_templates (organization_id, name, offset_days, body, created_by) VALUES ($1,'x',$2,'y',$3)`
+	_, err := d.Pool.Exec(ctx, ins, orgID, 0, userID)
+	require.NoError(t, err)
+	_, err = d.Pool.Exec(ctx, ins, orgID, 0, userID)
+	assert.Error(t, err, "dias repetidos entre ativos")
+	_, err = d.Pool.Exec(ctx, ins, orgID, 99, userID)
+	assert.Error(t, err, "fora da faixa")
+}
+
+func TestRepository_Reminders_FalhaNaSubstituicaoNaoPerdeOsAtuais(t *testing.T) {
+	d := testDB(t)
+	repo := settings.NewRepository(d)
+	orgID, userID := seedOrg(t, d)
+	ctx := context.Background()
+	good := []settings.Reminder{{Name: "Atual", OffsetDays: 0, Body: "ok"}}
+	require.NoError(t, repo.ReplaceReminders(ctx, orgID, userID, good))
+
+	// dias fora da faixa quebram o INSERT no meio: a transação volta e os atuais continuam ativos
+	err := repo.ReplaceReminders(ctx, orgID, userID, []settings.Reminder{{Name: "Novo", OffsetDays: 0, Body: "ok"}, {Name: "Quebra", OffsetDays: 99, Body: "x"}})
+	require.Error(t, err)
+	got, _ := repo.ListReminders(ctx, orgID)
+	assert.Equal(t, good, got)
 }

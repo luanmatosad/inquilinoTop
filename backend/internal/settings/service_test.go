@@ -21,6 +21,7 @@ type mockRepo struct {
 	unitPix    map[uuid.UUID]*settings.UnitPix // por unidade (conta ativa)
 	unitOrg    map[uuid.UUID]uuid.UUID         // unidade -> organização dona
 	confirmers map[uuid.UUID]uuid.UUID         // unidade -> quem confirmou
+	reminders  map[uuid.UUID][]settings.Reminder
 }
 
 func newMock() *mockRepo {
@@ -30,7 +31,17 @@ func newMock() *mockRepo {
 		unitPix:    map[uuid.UUID]*settings.UnitPix{},
 		unitOrg:    map[uuid.UUID]uuid.UUID{},
 		confirmers: map[uuid.UUID]uuid.UUID{},
+		reminders:  map[uuid.UUID][]settings.Reminder{},
 	}
+}
+
+func (m *mockRepo) ListReminders(_ context.Context, orgID uuid.UUID) ([]settings.Reminder, error) {
+	return m.reminders[orgID], nil
+}
+
+func (m *mockRepo) ReplaceReminders(_ context.Context, orgID, _ uuid.UUID, list []settings.Reminder) error {
+	m.reminders[orgID] = list
+	return nil
 }
 
 func (m *mockRepo) GetPixDefault(_ context.Context, orgID uuid.UUID) (*settings.PixDefault, error) {

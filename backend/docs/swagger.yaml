@@ -1227,6 +1227,22 @@ definitions:
       receiver_name:
         type: string
     type: object
+  settings.Reminder:
+    properties:
+      body:
+        type: string
+      name:
+        type: string
+      offset_days:
+        type: integer
+    type: object
+  settings.RemindersInput:
+    properties:
+      reminders:
+        items:
+          $ref: '#/definitions/settings.Reminder'
+        type: array
+    type: object
   settings.UnitPixInput:
     properties:
       confirmed:
@@ -3759,6 +3775,50 @@ paths:
       security:
       - BearerAuth: []
       summary: Grava a conta Pix de uma unidade (exige confirmed=true)
+      tags:
+      - settings
+  /settings/reminders:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lembretes de cobrança da organização (modelos de mensagem por dias
+        em relação ao vencimento)
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Lembretes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/settings.RemindersInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Substitui a lista de lembretes da organização
       tags:
       - settings
   /tenants:

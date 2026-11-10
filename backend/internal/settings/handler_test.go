@@ -210,3 +210,65 @@ func TestHandler_Pix_SemOrganizacao(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, do(h, http.MethodPut, "/settings/pix/units/"+id, map[string]any{}).Code)
 	assert.Equal(t, http.StatusUnauthorized, do(h, http.MethodDelete, "/settings/pix/units/"+id, nil).Code)
 }
+
+// ---------- Lembretes ----------
+
+type remindersEnv struct {
+	Data struct {
+		Reminders []settings.Reminder `json:"reminders"`
+	} `json:"data"`
+	Error struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+func decodeReminders(t *testing.T, rr *httptest.ResponseRecorder) remindersEnv {
+	t.Helper()
+	var e remindersEnv
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &e), rr.Body.String())
+	return e
+}
+
+func TestHandler_Reminders_GetPadroes(t *testing.T) {
+	rr := do(router(t, newMock(), true), http.MethodGet, "/settings/reminders", nil)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	assert.Equal(t, settings.DefaultReminders(), decodeReminders(t, rr).Data.Reminders)
+}
+
+func TestHandler_Reminders_PutGravaEDevolveOrdenado(t *testing.T) {
+	h := router(t, newMock(), true)
+	body := map[string]any{"reminders": []map[string]any{
+		{"name": "Atraso", "offset_days": 5, "body": "Atrasou {valor}"},
+		{"name": "Antes", "offset_days": -2, "body": "Vence {vencimento}"},
+	}}
+	rr := do(h, http.MethodPut, "/settings/reminders", body)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	saved := decodeReminders(t, rr).Data.Reminders
+	require.Len(t, saved, 2)
+	assert.Equal(t, -2, saved[0].OffsetDays)
+	assert.Equal(t, saved, decodeReminders(t, do(h, http.MethodGet, "/settings/reminders", nil)).Data.Reminders)
+}
+
+func TestHandler_Reminders_PutInvalidoTrazAMensagem(t *testing.T) {
+	repo := newMock()
+	h := router(t, repo, true)
+	rr := do(h, http.MethodPut, "/settings/reminders", map[string]any{"reminders": []map[string]any{{"name": "X", "offset_days": 0, "body": "Oi {nom}!"}}})
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	e := decodeReminders(t, rr)
+	assert.Equal(t, "INVALID_REMINDERS", e.Error.Code)
+	assert.Contains(t, e.Error.Message, "{nom}")
+	assert.Empty(t, repo.reminders)
+
+	rr = do(h, http.MethodPut, "/settings/reminders", map[string]any{"reminders": []map[string]any{}})
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Equal(t, "INVALID_REMINDERS", decodeReminders(t, rr).Error.Code)
+
+	assert.Equal(t, "INVALID_BODY", decodeReminders(t, do(h, http.MethodPut, "/settings/reminders", "{")).Error.Code)
+}
+
+func TestHandler_Reminders_SemOrganizacao(t *testing.T) {
+	h := router(t, newMock(), false)
+	assert.Equal(t, http.StatusUnauthorized, do(h, http.MethodGet, "/settings/reminders", nil).Code)
+	assert.Equal(t, http.StatusUnauthorized, do(h, http.MethodPut, "/settings/reminders", map[string]any{}).Code)
+}

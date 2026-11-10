@@ -94,6 +94,10 @@ type Repository interface {
 	// SaveUnitPix desativa a conta ativa (se houver) e cria a nova numa transação; apierr.ErrNotFound se a
 	// unidade não é da organização. userID fica como quem confirmou.
 	SaveUnitPix(ctx context.Context, orgID, unitID, userID uuid.UUID, a PixAccount) (*UnitPix, error)
+	// ListReminders devolve os lembretes ativos ordenados por dias (vazio se a organização nunca salvou).
+	ListReminders(ctx context.Context, orgID uuid.UUID) ([]Reminder, error)
+	// ReplaceReminders desativa os ativos e cria os novos numa transação (nada muda se algo falhar).
+	ReplaceReminders(ctx context.Context, orgID, userID uuid.UUID, list []Reminder) error
 	// RemoveUnitPix desativa a conta ativa; apierr.ErrNotFound se não há.
 	RemoveUnitPix(ctx context.Context, orgID, unitID uuid.UUID) error
 }
