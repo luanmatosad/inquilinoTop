@@ -4,7 +4,7 @@
 TBD - created by archiving change cobranca-manual. Update Purpose after archive.
 ## Requirements
 ### Requirement: Pix copia-e-cola da cobrança
-O sistema SHALL gerar em `GET /api/v1/payments/{id}/pix` o código Pix copia-e-cola estático (BR Code) com a chave Pix da configuração financeira da organização, o nome do dono, a cidade do imóvel e o valor atualizado do dia, incluindo o CRC16 correto, sem usar provedor de pagamento.
+O sistema SHALL gerar em `GET /api/v1/payments/{id}/pix` o código Pix copia-e-cola estático (BR Code) com a chave Pix da unidade do contrato, ou da organização, ou da configuração financeira antiga (nessa ordem), o nome e a cidade da conta escolhida (ou, se vazios, o nome do dono e a cidade do imóvel) e o valor atualizado do dia, incluindo o CRC16 correto, sem usar provedor de pagamento. A resposta SHALL informar também o nome do recebedor (`receiver_name`).
 
 #### Scenario: Cobrança em dia
 - **WHEN** a cobrança de R$ 1.850,00 está a vencer e a chave Pix está cadastrada
@@ -22,11 +22,7 @@ O sistema SHALL gerar em `GET /api/v1/payments/{id}/pix` o código Pix copia-e-c
 - **WHEN** a cobrança já está `PAID`
 - **THEN** o sistema retorna 409
 
-#### Scenario: Nome e cidade longos
-- **WHEN** o nome do dono tem mais de 25 caracteres ou a cidade mais de 15
-- **THEN** o payload os trunca e os escreve sem acento e em maiúsculas
-
-#### Scenario: Vetor de referência
-- **WHEN** o CRC16-CCITT é calculado sobre "123456789"
-- **THEN** o resultado é 29B1
+#### Scenario: Conta própria da unidade
+- **WHEN** a unidade do contrato tem conta Pix ativa
+- **THEN** o payload usa a chave e o nome dessa conta, e `receiver_name` traz esse nome
 
