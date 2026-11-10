@@ -3400,6 +3400,58 @@ paths:
       summary: Inquilino avisa que pagou
       tags:
       - public-payments
+  /reports/by-property:
+    get:
+      parameters:
+      - description: Ano (AAAA)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Recebido, despesas e resultado por unidade no ano
+      tags:
+      - reports
+  /reports/overview:
+    get:
+      parameters:
+      - description: Ano (AAAA)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Totais do ano e série mensal de recebido e despesas (por data de pagamento)
+      tags:
+      - reports
   /roles:
     delete:
       consumes:
