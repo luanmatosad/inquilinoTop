@@ -70,8 +70,9 @@ describe('Relatórios: hub', () => {
     expect(screen.getByText('40 pagamentos')).toBeTruthy()
     expect(screen.getByTestId('chart')).toBeTruthy()
     expect(goFetch).toHaveBeenCalledWith('/api/v1/reports/overview?year=2026', {})
-    expect(screen.getAllByRole('link', { name: /Abrir/ })[0].getAttribute('href')).toBe('/reports/por-imovel?ano=2026')
-    expect(screen.getAllByRole('link', { name: /Abrir/ })[1].getAttribute('href')).toBe('/financial/receivables?situacao=LATE')
+    const links = screen.getAllByRole('link', { name: /Abrir/ }).map((a) => a.getAttribute('href'))
+    expect(links).toEqual(['/reports/carne-leao?mes=2026-10', '/reports/por-imovel?ano=2026', '/financial/receivables?situacao=LATE'])
+    expect(screen.getByText('Carnê-leão e DIRPF')).toBeTruthy()
   })
 
   it('troca de ano pela URL', async () => {

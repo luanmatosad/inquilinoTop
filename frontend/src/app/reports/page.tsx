@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react'
 
 import { goFetch } from '@/lib/go/client'
 import { formatCurrency } from '@/lib/utils'
+import { defaultMonth } from '@/lib/carne-leao'
 import { parseYear, periodLabel, yearOptions, type Overview } from '@/lib/report-overview'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -97,7 +98,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </Card>
       )}
 
-      <section aria-label="Relatórios" className="grid gap-4 md:grid-cols-2">
+      <section aria-label="Relatórios" className="grid gap-4 md:grid-cols-3">
+        <ReportCard title="Carnê-leão e DIRPF" text="Rendimentos e despesas do mês, prontos para o carnê-leão." href={`/reports/carne-leao?mes=${defaultMonth()}`} />
         <ReportCard title="Resultado por imóvel" text="Quanto cada imóvel rendeu depois das despesas." href={`/reports/por-imovel?ano=${year}`} />
         <ReportCard title="Inadimplência" text="Quem atrasa, quanto e há quanto tempo." href="/financial/receivables?situacao=LATE" />
       </section>

@@ -37,12 +37,14 @@ export const monthShort = (ym: string) => MONTHS[Number(ym.slice(5, 7)) - 1].sli
 
 type Property = { id: string; name: string; units?: { id: string; label: string }[] | null }
 
-/** Acrescenta "Unidade · Imóvel" (ou "—") a cada linha. */
-export function buildUnitRows(rows: UnitApiRow[], properties: Property[]): UnitRow[] {
+/** Acrescenta "Unidade · Imóvel" (ou "—") a cada item com `unit_id`. */
+export function labelUnits<T extends { unit_id: string }>(rows: T[], properties: Property[]): (T & { label: string })[] {
   const index = new Map<string, string>()
   for (const p of properties) for (const u of p.units ?? []) index.set(u.id, `${u.label} · ${p.name}`)
   return rows.map((r) => ({ ...r, label: index.get(r.unit_id) ?? '—' }))
 }
+
+export const buildUnitRows = (rows: UnitApiRow[], properties: Property[]): UnitRow[] => labelUnits(rows, properties)
 
 const num = (n: number) => n.toFixed(2).replace('.', ',')
 const cell = (s: string) => (/[;"\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s)
