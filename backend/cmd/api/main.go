@@ -39,6 +39,7 @@ import (
 	"github.com/inquilinotop/api/internal/ratelimit"
 	"github.com/inquilinotop/api/internal/report"
 	"github.com/inquilinotop/api/internal/rbac"
+	"github.com/inquilinotop/api/internal/settings"
 	"github.com/inquilinotop/api/internal/support"
 	"github.com/inquilinotop/api/internal/tenant"
 	"github.com/inquilinotop/api/pkg/auth"
@@ -127,6 +128,7 @@ func main() {
 	leaseSvc.WithPayments(payment.NewLeaseHooks(paymentSvc))
 	closingSvc := closing.NewService(closing.NewRepository(database), closing.NewPaymentSource(paymentSvc, leaseRepo, tenantRepo), closing.NewNameReader(identityRepoForPayment)).WithLocation(appLoc)
 	closingHandler := closing.NewHandler(closingSvc)
+	settingsHandler := settings.NewHandler(settings.NewService(settings.NewRepository(database)))
 	reportHandler := report.NewHandler(report.NewService(report.NewRepository(database)).WithLocation(appLoc))
 
 	dashboardRepo := dashboard.NewRepository(database)
@@ -192,6 +194,7 @@ func main() {
 	expenseReadMw := rbac.PermissionMiddleware(rbac.PermissionExpenseRead)
 	expenseWriteMw := rbac.PermissionMiddleware(rbac.PermissionExpenseWrite)
 	orgReadMw := rbac.PermissionMiddleware(rbac.PermissionOrgRead)
+	orgUpdateMw := rbac.PermissionMiddleware(rbac.PermissionOrgUpdate)
 
 	importRepo := importexport.NewRepository(database)
 	importSvc := importexport.NewService(importRepo, propertyRepo, tenantSvc)
@@ -239,6 +242,7 @@ func main() {
 	paymentHandler.Register(r, authMW, paymentReadMw, paymentWriteMw)
 	closingHandler.Register(r, authMW, paymentReadMw, paymentWriteMw)
 	reportHandler.Register(r, authMW, paymentReadMw)
+	settingsHandler.Register(r, authMW, orgReadMw, orgUpdateMw)
 	paymentHandler.RegisterPublic(r)
 	expenseHandler.Register(r, authMW, expenseReadMw, expenseWriteMw)
 	// Laudos pertencem ao contrato: reaproveitam as permissões de lease.

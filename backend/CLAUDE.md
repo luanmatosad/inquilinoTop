@@ -72,7 +72,7 @@ Sempre via `httputil`. Envelope: `{"data": ..., "error": null}` ou `{"data": nul
 
 ## Migrations
 
-Numeradas `000001_..._name.up.sql` / `.down.sql`. Rodam automaticamente na startup via `db.RunMigrations`. Última: `000050_payment_links_and_reports`.
+Numeradas `000001_..._name.up.sql` / `.down.sql`. Rodam automaticamente na startup via `db.RunMigrations`. Última: `000052_organization_settings`.
 
 Tabelas e alterações adicionadas (000009–000045): `tenant.person_type`, `lease.fiscal_fields`, `payment.breakdown`, `lease_readjustments`, `irrf_brackets`, `financial_config`, `payment.charge_fields`, `lease.payment_day`, `support_tickets`, `audit_logs`, `user_roles`, `2fa_fields`, `temp_2fa_tokens`, `documents`, `notifications`, `index_values`, `import_history`, `user_profiles`, `user_notification_preferences`, `organizations` (+ `organization_id` em `support_tickets` e `audit_logs`, FK NOT NULL), índices do dashboard, campos de unidade/endereço/notas, sem sobreposição de contratos, campos de despesa, `organization_id` em `financial_config` e reajustes, `inspections`, `inspection_items`, `inspection_photos`, `properties` (tipo COMMERCIAL, `number`, `complement`), `units.reference_rent`, `leases` (`adjustment_index`, `adjustment_month`, `end_reason`), `payment_events`, `receipt_counters` colunas de pagamento manual/recibo em `payments`, `payment_links` (hash do token) e colunas do aviso `reported_*`/`proof_path` em `payments`.
 
@@ -96,5 +96,6 @@ Tabelas e alterações adicionadas (000009–000045): `tenant.person_type`, `lea
 | notification | [internal/notification/CLAUDE.md](internal/notification/CLAUDE.md) |
 | support | [internal/support/CLAUDE.md](internal/support/CLAUDE.md) |
 | document | [internal/document/CLAUDE.md](internal/document/CLAUDE.md) |
+| settings | [internal/settings/CLAUDE.md](internal/settings/CLAUDE.md) |
 | ratelimit | [internal/ratelimit/CLAUDE.md](internal/ratelimit/CLAUDE.md) |
 | pkg/ | [pkg/CLAUDE.md](pkg/CLAUDE.md) |

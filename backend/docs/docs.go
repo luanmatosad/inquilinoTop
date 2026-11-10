@@ -3569,6 +3569,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/settings/financial-rules": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Regras financeiras da organização (padrões para novos contratos e aviso de reajuste)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Grava as regras financeiras da organização",
+                "parameters": [
+                    {
+                        "description": "Regras",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/settings.FinancialRules"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/tenants": {
             "get": {
                 "security": [
@@ -5801,6 +5870,23 @@ const docTemplate = `{
                 "RoleEmployee",
                 "RoleViewer"
             ]
+        },
+        "settings.FinancialRules": {
+            "type": "object",
+            "properties": {
+                "default_adjustment_index": {
+                    "type": "string"
+                },
+                "late_fee_percent": {
+                    "type": "number"
+                },
+                "monthly_interest_percent": {
+                    "type": "number"
+                },
+                "readjust_notice_days": {
+                    "type": "integer"
+                }
+            }
         },
         "support.CreateTicketInput": {
             "type": "object",

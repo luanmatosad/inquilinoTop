@@ -1201,6 +1201,17 @@ definitions:
     - RoleManager
     - RoleEmployee
     - RoleViewer
+  settings.FinancialRules:
+    properties:
+      default_adjustment_index:
+        type: string
+      late_fee_percent:
+        type: number
+      monthly_interest_percent:
+        type: number
+      readjust_notice_days:
+        type: integer
+    type: object
   support.CreateTicketInput:
     properties:
       assunto:
@@ -3573,6 +3584,50 @@ paths:
       summary: Atribui role a um usuário
       tags:
       - rbac
+  /settings/financial-rules:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Regras financeiras da organização (padrões para novos contratos e aviso
+        de reajuste)
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Regras
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/settings.FinancialRules'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Grava as regras financeiras da organização
+      tags:
+      - settings
   /tenants:
     get:
       produces:
