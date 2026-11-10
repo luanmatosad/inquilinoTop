@@ -40,9 +40,9 @@ const properties = [
   { id: 'p5', name: 'Rua Sete', units: [{ id: 'u5', label: 'Kitnet 4' }] },
 ]
 
-type Opts = { mo?: unknown; la?: unknown; ls?: unknown; ts?: unknown; ps?: unknown; cfg?: unknown; rules?: unknown }
+type Opts = { mo?: unknown; la?: unknown; ls?: unknown; ts?: unknown; ps?: unknown; cfg?: unknown; rules?: unknown; pix?: unknown }
 function mockApi(o: Opts = {}) {
-  const { mo = month, la = late, ls = leases, ts = tenants, ps = properties, cfg = { pix_key: '11999998888' }, rules } = o
+  const { mo = month, la = late, ls = leases, ts = tenants, ps = properties, cfg = { pix_key: '11999998888' }, rules, pix } = o
   goFetch.mockImplementation(async (path: string) => {
     const v =
       path.startsWith('/api/v1/payments?status=LATE') ? la
@@ -52,6 +52,7 @@ function mockApi(o: Opts = {}) {
       : path === '/api/v1/properties' ? ps
       : path === '/api/v1/payments/config' ? cfg
       : path === '/api/v1/settings/financial-rules' ? rules
+      : path === '/api/v1/settings/pix' ? pix
       : undefined
     if (v === undefined) throw new Error('rota inesperada ' + path)
     if (v instanceof Error) throw v
@@ -164,6 +165,26 @@ describe('Hoje', () => {
       mockApi() // a rota das regras não responde (rota inesperada)
       await renderPage()
       expect(within(region('Fique de olho')).getByText('Reajuste do Ap 302 · Ed. Aurora chega em 15/11')).toBeInTheDocument()
+    })
+  })
+
+  describe('checklist: Pix configurado', () => {
+    it('Pix salvo na tela nova conta como configurado, mesmo sem a chave antiga', async () => {
+      mockApi({ ls: [], mo: [], la: [], cfg: {}, pix: { default: { configured: true }, units: [] } })
+      await renderPage()
+      expect(screen.queryByRole('link', { name: 'Configurar Pix' })).not.toBeInTheDocument()
+    })
+
+    it('sem Pix em lugar nenhum: o passo leva à tela nova', async () => {
+      mockApi({ ls: [], mo: [], la: [], cfg: {}, pix: { default: { configured: false }, units: [] } })
+      await renderPage()
+      expect(screen.getByRole('link', { name: 'Configurar Pix' })).toHaveAttribute('href', '/settings/pix')
+    })
+
+    it('só a chave antiga também vale (a rota nova não responde)', async () => {
+      mockApi({ ls: [], mo: [], la: [], cfg: { pix_key: '11999998888' } })
+      await renderPage()
+      expect(screen.queryByRole('link', { name: 'Configurar Pix' })).not.toBeInTheDocument()
     })
   })
 

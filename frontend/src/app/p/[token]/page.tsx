@@ -30,11 +30,11 @@ async function loadCharge(token: string): Promise<PublicCharge> {
 }
 
 /** Pix do dia; `null` quando o locador não cadastrou a chave. Link inválido é tratado como 404. */
-async function loadPix(token: string): Promise<{ payload: string; qrSvg: string } | null> {
+async function loadPix(token: string): Promise<{ payload: string; qrSvg: string; receiverName?: string } | null> {
   try {
-    const pix = await goFetch<{ payload: string }>(`${api(token)}/pix`, { skipAuth: true })
+    const pix = await goFetch<{ payload: string; receiver_name?: string }>(`${api(token)}/pix`, { skipAuth: true })
     const qrSvg = await QRCode.toString(pix.payload, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' })
-    return { payload: pix.payload, qrSvg }
+    return { payload: pix.payload, qrSvg, receiverName: pix.receiver_name }
   } catch (error) {
     const { status, code } = goErrorInfo(error)
     if (status === 404) notFound()
@@ -136,7 +136,7 @@ export default async function PublicChargePage({ params, searchParams }: Props) 
         </div>
       )}
       {pix ? (
-        <PixPanel payload={pix.payload} qrSvg={pix.qrSvg} />
+        <PixPanel payload={pix.payload} qrSvg={pix.qrSvg} receiverName={pix.receiverName} />
       ) : (
         <Card className="p-4">
           <p className="text-sm text-muted-foreground">O Pix não está disponível nesta cobrança. Fale com {landlord} para combinar o pagamento.</p>

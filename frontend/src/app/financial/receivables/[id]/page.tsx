@@ -252,7 +252,7 @@ export default async function ReceivablePage({
             ) : (
               <span>
                 Chave Pix não cadastrada.{" "}
-                <Link href="/settings/financial" className="underline">
+                <Link href="/settings/pix" className="underline">
                   Cadastrar chave
                 </Link>
               </span>

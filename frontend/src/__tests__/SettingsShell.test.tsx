@@ -27,7 +27,7 @@ describe('SettingsNav', () => {
     const nav = screen.getByRole('navigation', { name: 'Seções de Configurações' })
     const current = within(nav).getByRole('link', { current: 'page' })
     expect(current.textContent).toBe('Segurança')
-    expect(within(nav).getByRole('link', { name: 'Recebimento (Pix)' }).getAttribute('href')).toBe('/settings/financial')
+    expect(within(nav).getByRole('link', { name: 'Recebimento (Pix)' }).getAttribute('href')).toBe('/settings/pix')
     const soon = within(nav).getByText('Mensagens e cobrança')
     expect(soon.closest('[aria-disabled="true"]')).toBeTruthy()
     expect(within(nav).queryByRole('link', { name: /Mensagens e cobrança/ })).toBeNull()
@@ -55,7 +55,7 @@ describe('Lista de seções (/settings)', () => {
     expect(within(list).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual([
       '/settings/profile',
       '/settings/team',
-      '/settings/financial',
+      '/settings/pix',
       '/settings/rules',
       '/settings/notifications',
       '/settings/security',

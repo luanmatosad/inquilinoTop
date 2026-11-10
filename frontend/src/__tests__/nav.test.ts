@@ -91,7 +91,7 @@ describe('isNavItemActive', () => {
   })
 
   it('/settings/* e /owner/settings destacam Configurações', () => {
-    for (const path of ['/settings', '/settings/profile', '/settings/team', '/settings/financial', '/settings/notifications', '/settings/security', '/owner/settings']) {
+    for (const path of ['/settings', '/settings/profile', '/settings/team', '/settings/pix', '/settings/notifications', '/settings/security', '/owner/settings']) {
       expect(activeHrefs(path)).toEqual(['/settings/profile'])
     }
   })
@@ -146,7 +146,7 @@ describe('commandGroups', () => {
     for (const href of [
       '/settings/profile',
       '/settings/team',
-      '/settings/financial',
+      '/settings/pix',
       '/settings/notifications',
       '/settings/security',
       '/support',

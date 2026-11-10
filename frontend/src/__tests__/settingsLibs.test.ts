@@ -29,7 +29,7 @@ describe('settings-nav', () => {
     expect(href).toEqual({
       Perfil: '/settings/profile',
       'Equipe e permissões': '/settings/team',
-      'Recebimento (Pix)': '/settings/financial',
+      'Recebimento (Pix)': '/settings/pix',
       'Regras financeiras': '/settings/rules',
       Notificações: '/settings/notifications',
       Segurança: '/settings/security',
@@ -37,7 +37,7 @@ describe('settings-nav', () => {
   })
   it('activeSection acha a seção pelo caminho', () => {
     expect(activeSection('/settings/security')?.label).toBe('Segurança')
-    expect(activeSection('/settings/financial')?.label).toBe('Recebimento (Pix)')
+    expect(activeSection('/settings/pix')?.label).toBe('Recebimento (Pix)')
     expect(activeSection('/settings/team/qualquer')?.label).toBe('Equipe e permissões')
     expect(activeSection('/settings')).toBeUndefined()
     expect(activeSection('/leases')).toBeUndefined()

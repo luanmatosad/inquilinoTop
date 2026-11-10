@@ -167,7 +167,7 @@ describe('Primeiros passos', () => {
     expect(c.steps.map((s) => s.done)).toEqual([true, false, false, false, false])
     expect(c.steps[1].href).toBe('/properties?novo=1')
     expect(c.steps[2].href).toBe('/tenants?novo=1')
-    expect(c.steps[4].href).toBe('/settings/financial')
+    expect(c.steps[4].href).toBe('/settings/pix')
   })
 
   it('contrato fica bloqueado sem imóvel e inquilino', () => {

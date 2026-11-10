@@ -213,7 +213,7 @@ export function buildChecklist(c: { properties: number; tenants: number; leases:
       hint: 'Sua chave Pix padrão. O dinheiro vai direto para a sua conta.',
       done: c.hasPix,
       blocked: false,
-      href: '/settings/financial',
+      href: '/settings/pix',
       cta: 'Configurar Pix',
     },
   ]

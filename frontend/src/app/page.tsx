@@ -25,7 +25,7 @@ export default async function TodayPage() {
   const { from, to } = monthRange(ym)
 
   // Cobranças são obrigatórias; o resto só enriquece (ou alimenta os primeiros passos) e degrada.
-  const [monthRes, lateRes, leasesRes, tenantsRes, propertiesRes, configRes, profile, rulesRes] = await Promise.allSettled([
+  const [monthRes, lateRes, leasesRes, tenantsRes, propertiesRes, configRes, profile, rulesRes, pixRes] = await Promise.allSettled([
     goFetch<OverviewPayment[]>(`/api/v1/payments?from=${from}&to=${to}`, {}),
     goFetch<OverviewPayment[]>('/api/v1/payments?status=LATE', {}),
     goFetch<TodayLease[]>('/api/v1/leases', {}),
@@ -34,6 +34,7 @@ export default async function TodayPage() {
     goFetch<{ pix_key?: string | null }>('/api/v1/payments/config', {}),
     getProfile(),
     goFetch<FinancialRules>('/api/v1/settings/financial-rules', {}),
+    goFetch<{ default?: { configured?: boolean } }>('/api/v1/settings/pix', {}),
   ])
 
   const failed = monthRes.status === 'rejected' ? monthRes : lateRes.status === 'rejected' ? lateRes : null
@@ -72,7 +73,9 @@ export default async function TodayPage() {
 
   // Conta nova = nenhum contrato; se a busca de contratos falhou, não dá para afirmar.
   const isNewAccount = leasesRes.status === 'fulfilled' && leases.length === 0
-  const hasPix = configRes.status === 'fulfilled' && !!configRes.value?.pix_key?.trim()
+  // Pix configurado: na tela nova (Configurações > Recebimento) ou na chave antiga.
+  const hasPix =
+    (pixRes.status === 'fulfilled' && !!pixRes.value?.default?.configured) || (configRes.status === 'fulfilled' && !!configRes.value?.pix_key?.trim())
   const firstName = profile.status === 'fulfilled' ? profile.value?.full_name?.trim().split(/\s+/)[0] : undefined
   const monthName = MONTHS[Number(ym.slice(5, 7)) - 1].toLowerCase()
 

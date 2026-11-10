@@ -138,7 +138,7 @@ describe('detalhe da cobrança', () => {
     await renderPage()
     const c = screen.getByRole('region', { name: 'Cobrança' })
     expect(c).toHaveTextContent('Chave Pix não cadastrada')
-    expect(within(c).getByRole('link', { name: 'Cadastrar chave' })).toHaveAttribute('href', '/settings/financial')
+    expect(within(c).getByRole('link', { name: 'Cadastrar chave' })).toHaveAttribute('href', '/settings/pix')
   })
 
   it('inquilino: contato e contrato', async () => {

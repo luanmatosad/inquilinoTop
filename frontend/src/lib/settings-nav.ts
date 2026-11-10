@@ -13,7 +13,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   { key: 'branding', label: 'Personalização', description: 'Logo, nome e cor nos recibos.', soon: true },
   { key: 'team', label: 'Equipe e permissões', description: 'Quem ajuda na administração.', href: '/settings/team' },
   { key: 'plan', label: 'Plano e cobrança', description: 'O que você paga ao ImoviFlow.', soon: true },
-  { key: 'pix', label: 'Recebimento (Pix)', description: 'Onde seus inquilinos pagam.', href: '/settings/financial' },
+  { key: 'pix', label: 'Recebimento (Pix)', description: 'Onde seus inquilinos pagam.', href: '/settings/pix' },
   { key: 'messages', label: 'Mensagens e cobrança', description: 'Quando lembrar e o que dizer.', soon: true },
   { key: 'rules', label: 'Regras financeiras', description: 'Multa, juros e reajuste padrão.', href: '/settings/rules' },
   { key: 'categories', label: 'Categorias de despesa', description: 'Organizam despesas e relatórios.', soon: true },

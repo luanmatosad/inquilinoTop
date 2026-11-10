@@ -70,6 +70,19 @@ describe('página pública da cobrança', () => {
     expect(goFetch.mock.calls.map((c) => c[0])).toContain('/api/v1/public/payments/tok')
   })
 
+  it('mostra para quem se paga, quando o servidor informa', async () => {
+    mockApi({ pix: { ...pix, receiver_name: 'CENTRO EMPRESARIAL LTDA' } })
+    await renderPage()
+    expect(screen.getByText('CENTRO EMPRESARIAL LTDA')).toBeInTheDocument()
+    expect(screen.getByText(/Pague para/)).toBeInTheDocument()
+  })
+
+  it('sem nome do recebedor na resposta, não inventa', async () => {
+    mockApi()
+    await renderPage()
+    expect(screen.queryByText(/Pague para/)).not.toBeInTheDocument()
+  })
+
   it('atrasada: selo de atraso', async () => {
     mockApi({ charge: { ...charge, status: 'LATE', amount: 1891.93 } })
     await renderPage()

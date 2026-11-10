@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
 /** QR Code e copia-e-cola do Pix. `qrSvg` é gerado no servidor a partir do código (só traçados, sem texto). */
-export function PixPanel({ payload, qrSvg }: { payload: string; qrSvg: string }) {
+export function PixPanel({ payload, qrSvg, receiverName }: { payload: string; qrSvg: string; receiverName?: string }) {
   const [copied, setCopied] = useState(false)
 
   async function copy() {
@@ -23,6 +23,11 @@ export function PixPanel({ payload, qrSvg }: { payload: string; qrSvg: string })
   return (
     <Card className="gap-3 p-4">
       <div className="text-sm font-medium">Pague com Pix</div>
+      {receiverName && (
+        <p className="text-sm text-muted-foreground">
+          Pague para <span className="font-medium text-foreground">{receiverName}</span>
+        </p>
+      )}
       <div
         role="img"
         aria-label="QR Code do Pix"

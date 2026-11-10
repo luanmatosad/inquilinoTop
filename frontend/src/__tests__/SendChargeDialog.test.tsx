@@ -96,7 +96,7 @@ describe('SendChargeDialog', () => {
     render(<SendChargeDialog {...base} pix={null} />)
     expect((screen.getByLabelText('Mensagem') as HTMLTextAreaElement).value).not.toContain('Pix')
     expect(screen.getByRole('alert')).toHaveTextContent('Chave Pix não cadastrada')
-    expect(screen.getByRole('link', { name: 'Cadastrar chave' })).toHaveAttribute('href', '/settings/financial')
+    expect(screen.getByRole('link', { name: 'Cadastrar chave' })).toHaveAttribute('href', '/settings/pix')
   })
 
   it('Copiar mensagem copia o texto atual', async () => {
