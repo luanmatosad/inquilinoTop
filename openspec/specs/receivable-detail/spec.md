@@ -35,11 +35,19 @@ O frontend SHALL exibir em `/financial/receivables/<id>` o inquilino, a unidade 
 - **THEN** o detalhe os mostra em ordem, com data, descrição e "por você" quando o autor é o usuário
 
 ### Requirement: Enviar cobrança
-O frontend SHALL abrir por `?enviar=1` o envio da cobrança, com a mensagem pronta e editável contendo nome, mês, unidade, valor, vencimento e o Pix copia-e-cola, os canais WhatsApp e E-mail, "Copiar mensagem" e "Marcar como enviada", e SHALL usar o texto de lembrete quando a cobrança estiver atrasada.
+O frontend SHALL abrir por `?enviar=1` o envio da cobrança, com a mensagem pronta e editável vinda do modelo do lembrete que se aplica aos dias até o vencimento (contendo nome, mês, unidade, valor, vencimento e o link ou o Pix copia-e-cola, conforme o modelo), indicando qual modelo foi usado, os canais WhatsApp e E-mail, "Copiar mensagem" e "Marcar como enviada". Se os lembretes não puderem ser lidos, SHALL usar o texto fixo anterior, que já muda quando a cobrança está atrasada.
 
 #### Scenario: Mensagem pronta
 - **WHEN** o usuário abre o envio de uma cobrança a vencer
 - **THEN** a mensagem traz "Oi, Marina!", o mês, a unidade, o valor, o vencimento e o código Pix
+
+#### Scenario: Modelo pelo vencimento
+- **WHEN** a cobrança venceu há 4 dias e há lembretes de 0, +3 e +10 dias
+- **THEN** a mensagem vem do lembrete de +3 e o diálogo mostra o nome dele
+
+#### Scenario: Lembretes indisponíveis
+- **WHEN** a consulta dos lembretes falha
+- **THEN** o envio abre com o texto fixo de antes
 
 #### Scenario: Lembrete
 - **WHEN** a cobrança está atrasada
@@ -60,10 +68,6 @@ O frontend SHALL abrir por `?enviar=1` o envio da cobrança, com a mensagem pron
 #### Scenario: Marcar como enviada
 - **WHEN** o usuário aciona "Marcar como enviada"
 - **THEN** o evento é gravado, a linha do tempo se atualiza e o envio fecha só o parâmetro da URL
-
-#### Scenario: Sem chave Pix
-- **WHEN** a chave Pix não está cadastrada
-- **THEN** a mensagem sai sem o código Pix e a tela avisa, com link para `/settings/financial`
 
 ### Requirement: Negociar atraso
 O frontend SHALL abrir por `?acordo=1`, só para cobrança atrasada, o painel Negociar atraso, com o total de hoje, o novo vencimento, o valor a receber (padrão o total de hoje, editável) e uma observação, e SHALL NOT oferecer Parcelar nem pausar lembretes.
