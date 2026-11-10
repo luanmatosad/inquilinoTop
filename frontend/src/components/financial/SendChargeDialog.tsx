@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
 import { createPaymentLink, recordPaymentEvent } from '@/app/financial/actions'
+import { chargeVariables, renderTemplate } from '@/lib/message-templates'
 import { buildChargeMessage, mailtoUrl } from '@/lib/receivable-detail'
 import { whatsappUrl } from '@/lib/whatsapp'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,8 @@ type Props = {
   /** Pix copia-e-cola; nulo = chave não cadastrada. */
   pix: string | null
   ownerFirstName?: string
+  /** Modelo do lembrete aplicável aos dias até o vencimento (Configurações > Mensagens). Sem ele: texto fixo. */
+  template?: { name: string; body: string } | null
 }
 
 export function SendChargeDialog(p: Props) {
@@ -46,17 +49,22 @@ export function SendChargeDialog(p: Props) {
   const [linking, setLinking] = useState(false)
   // Com o link, a página pública já leva o Pix: a mensagem troca o código pelo endereço.
   const autoMessage = (l: string | null) =>
-    buildChargeMessage({
-      tenantName: p.tenantName,
-      month: p.month,
-      where: p.where,
-      amount: p.amount,
-      dueLabel: p.dueLabel,
-      late: p.late,
-      pix: l ? null : p.pix,
-      link: l,
-      ownerFirstName: p.ownerFirstName,
-    })
+    p.template
+      ? renderTemplate(
+          p.template.body,
+          chargeVariables({ tenantName: p.tenantName, month: p.month, where: p.where, amount: p.amount, dueLabel: p.dueLabel, pix: p.pix, link: l }),
+        )
+      : buildChargeMessage({
+          tenantName: p.tenantName,
+          month: p.month,
+          where: p.where,
+          amount: p.amount,
+          dueLabel: p.dueLabel,
+          late: p.late,
+          pix: l ? null : p.pix,
+          link: l,
+          ownerFirstName: p.ownerFirstName,
+        })
   const [message, setMessage] = useState(() => autoMessage(null))
   if (p.open !== prevOpen) {
     setPrevOpen(p.open)
@@ -132,6 +140,14 @@ export function SendChargeDialog(p: Props) {
           <DialogDescription>
             {p.tenantName} · {formatCurrency(p.amount)}
           </DialogDescription>
+          {p.template && (
+            <p className="text-xs text-muted-foreground">
+              Modelo: {p.template.name}.{' '}
+              <Link href="/settings/messages" className="underline">
+                Editar modelos
+              </Link>
+            </p>
+          )}
         </DialogHeader>
 
         <div className="flex flex-col gap-4">

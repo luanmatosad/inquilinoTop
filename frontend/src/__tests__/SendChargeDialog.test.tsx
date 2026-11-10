@@ -45,6 +45,47 @@ beforeEach(() => {
   nav.search = 'enviar=1'
 })
 
+describe('SendChargeDialog com modelo do lembrete', () => {
+  const template = { name: 'Lembrete gentil', body: 'Oi, {nome}! {mês} ({imóvel}): {valor}, vence em {vencimento}.\n\nPague pelo Pix e avise por aqui: {link}' }
+
+  it('monta a mensagem do modelo, com o Pix no lugar do link, e mostra o nome do modelo', () => {
+    render(<SendChargeDialog {...base} template={template} />)
+    const msg = screen.getByLabelText('Mensagem') as HTMLTextAreaElement
+    expect(msg.value.replace(/\u00a0/g, ' ')).toBe('Oi, Marina! novembro (Ap 302 · Ed. Aurora): R$ 1.850,00, vence em 05/11.\n\nPague pelo Pix e avise por aqui: 000201PIXCODE')
+    expect(screen.getByText(/Modelo: Lembrete gentil/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Editar modelos' })).toHaveAttribute('href', '/settings/messages')
+  })
+
+  it('ao gerar o link, o texto que não foi editado é refeito com o link no lugar do Pix', async () => {
+    render(<SendChargeDialog {...base} template={template} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Gerar link de pagamento' }))
+    await waitFor(() => expect(createPaymentLink).toHaveBeenCalled())
+    const msg = screen.getByLabelText('Mensagem') as HTMLTextAreaElement
+    await waitFor(() => expect(msg.value).toContain('https://app.imoviflow.test/p/TOKEN123'))
+    expect(msg.value).not.toContain('000201PIXCODE')
+  })
+
+  it('{pix} traz sempre o código, mesmo com o link gerado', async () => {
+    render(<SendChargeDialog {...base} template={{ name: 'Dois', body: 'Link: {link}\nPix: {pix}' }} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Gerar link de pagamento' }))
+    const msg = screen.getByLabelText('Mensagem') as HTMLTextAreaElement
+    await waitFor(() => expect(msg.value).toContain('https://app.imoviflow.test/p/TOKEN123'))
+    expect(msg.value).toContain('Pix: 000201PIXCODE')
+  })
+
+  it('sem Pix e sem link: a linha fica sem sobra', () => {
+    render(<SendChargeDialog {...base} pix={null} template={template} />)
+    const msg = screen.getByLabelText('Mensagem') as HTMLTextAreaElement
+    expect(msg.value.endsWith('avise por aqui:')).toBe(true)
+  })
+
+  it('sem modelo: texto fixo de antes e nenhuma linha de modelo', () => {
+    render(<SendChargeDialog {...base} template={null} />)
+    expect(screen.queryByText(/Modelo:/)).not.toBeInTheDocument()
+    expect((screen.getByLabelText('Mensagem') as HTMLTextAreaElement).value).toContain('Passando para lembrar do aluguel')
+  })
+})
+
 describe('SendChargeDialog', () => {
   it('fechado quando open é falso', () => {
     render(<SendChargeDialog {...base} open={false} />)

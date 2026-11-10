@@ -86,6 +86,7 @@ export const moreItems: NavItem[] = allNavItems.filter((i) => !i.mobileTab)
 const settingsPages: NavItem[] = [
   { href: '/settings/team', label: 'Equipe e permissões', icon: Users },
   { href: '/settings/pix', label: 'Recebimento (Pix)', icon: Settings },
+  { href: '/settings/messages', label: 'Mensagens e cobrança', icon: Settings },
   { href: '/settings/rules', label: 'Regras financeiras', icon: Settings },
   { href: '/settings/notifications', label: 'Notificações', icon: Bell },
   { href: '/settings/security', label: 'Segurança', icon: ShieldCheck },

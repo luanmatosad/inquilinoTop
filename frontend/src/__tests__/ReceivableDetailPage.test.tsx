@@ -44,9 +44,9 @@ const events = [
   { kind: 'SENT', at: '2026-10-02T12:00:00Z', channel: 'WHATSAPP', actor_id: 'user-1' },
 ]
 
-type Opts = { pay?: unknown; ev?: unknown; ls?: unknown; ts?: unknown; ps?: unknown; cfg?: unknown }
+type Opts = { pay?: unknown; ev?: unknown; ls?: unknown; ts?: unknown; ps?: unknown; cfg?: unknown; rem?: unknown }
 function mockApi(o: Opts = {}) {
-  const { pay = open, ev = events, ls = lease, ts = tenants, ps = properties, cfg = { pix_key: '11999998888' } } = o
+  const { pay = open, ev = events, ls = lease, ts = tenants, ps = properties, cfg = { pix_key: '11999998888' }, rem } = o
   goFetch.mockImplementation(async (path: string) => {
     const v =
       path === '/api/v1/payments/p1' ? pay
@@ -56,6 +56,7 @@ function mockApi(o: Opts = {}) {
       : path === '/api/v1/properties' ? ps
       : path === '/api/v1/payments/config' ? cfg
       : path === '/api/v1/payments/p1/pix' ? { payload: '000201PIX', amount: 1850 }
+      : path === '/api/v1/settings/reminders' ? rem
       : undefined
     if (v === undefined) throw new Error('rota inesperada ' + path)
     if (v instanceof Error) throw v
@@ -170,6 +171,46 @@ describe('detalhe da cobrança', () => {
     const msg = within(d).getByLabelText('Mensagem') as HTMLTextAreaElement
     expect(msg.value).toContain('000201PIX')
     expect(msg.value).toContain('— Luan')
+  })
+
+  describe('?enviar=1 usa o modelo do lembrete pelos dias até o vencimento', () => {
+    const reminders = {
+      reminders: [
+        { name: 'Lembrete gentil', offset_days: -3, body: 'GENTIL {nome}: {valor} vence em {vencimento}. {link}' },
+        { name: 'Cobrança com Pix', offset_days: 0, body: 'HOJE {nome}. {link}' },
+        { name: 'Aviso de atraso', offset_days: 3, body: 'ATRASO {nome}: {valor} ({imóvel}). {link}' },
+      ],
+    }
+
+    it('a vencer em 13 dias: o primeiro lembrete, com o Pix no lugar do link', async () => {
+      mockApi({ rem: reminders })
+      await renderPage({ enviar: '1' })
+      const d = screen.getByRole('dialog', { name: 'Enviar cobrança' })
+      const msg = within(d).getByLabelText('Mensagem') as HTMLTextAreaElement
+      expect(msg.value).toContain('GENTIL Marina')
+      expect(msg.value).toContain('vence em 20/11')
+      expect(msg.value).toContain('000201PIX')
+      expect(within(d).getByText(/Modelo: Lembrete gentil/)).toBeInTheDocument()
+      expect(within(d).getByRole('link', { name: 'Editar modelos' })).toHaveAttribute('href', '/settings/messages')
+    })
+
+    it('atrasada há 8 dias: o lembrete de +3', async () => {
+      mockApi({ pay: late, rem: reminders })
+      await renderPage({ enviar: '1' })
+      const d = screen.getByRole('dialog', { name: 'Cobrar de novo' })
+      const msg = within(d).getByLabelText('Mensagem') as HTMLTextAreaElement
+      expect(msg.value).toContain('ATRASO Marina')
+      expect(msg.value).toContain('Ap 302 · Ed. Aurora')
+      expect(within(d).getByText(/Modelo: Aviso de atraso/)).toBeInTheDocument()
+    })
+
+    it('lembretes indisponíveis: texto fixo de antes e nenhuma linha de modelo', async () => {
+      mockApi() // a rota dos lembretes não responde
+      await renderPage({ enviar: '1' })
+      const d = screen.getByRole('dialog', { name: 'Enviar cobrança' })
+      expect((within(d).getByLabelText('Mensagem') as HTMLTextAreaElement).value).toContain('Passando para lembrar do aluguel')
+      expect(within(d).queryByText(/Modelo:/)).not.toBeInTheDocument()
+    })
   })
 
   it('?enviar=1 sem chave Pix: mensagem sem código', async () => {

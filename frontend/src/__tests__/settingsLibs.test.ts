@@ -21,7 +21,7 @@ describe('settings-nav', () => {
   })
   it('as sem tela são "em breve" e não têm link', () => {
     const soon = SETTINGS_SECTIONS.filter((s) => s.soon).map((s) => s.label)
-    expect(soon).toEqual(['Personalização', 'Plano e cobrança', 'Mensagens e cobrança', 'Categorias de despesa', 'Privacidade e dados'])
+    expect(soon).toEqual(['Personalização', 'Plano e cobrança', 'Categorias de despesa', 'Privacidade e dados'])
     for (const s of SETTINGS_SECTIONS.filter((s) => s.soon)) expect(s.href).toBeUndefined()
   })
   it('as com tela têm link; Pix leva à tela atual', () => {
@@ -30,6 +30,7 @@ describe('settings-nav', () => {
       Perfil: '/settings/profile',
       'Equipe e permissões': '/settings/team',
       'Recebimento (Pix)': '/settings/pix',
+      'Mensagens e cobrança': '/settings/messages',
       'Regras financeiras': '/settings/rules',
       Notificações: '/settings/notifications',
       Segurança: '/settings/security',

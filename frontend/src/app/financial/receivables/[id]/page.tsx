@@ -6,6 +6,7 @@ import { goFetch } from "@/lib/go/client"
 import { sessionUserId } from "@/lib/go/session-user"
 import { formatCurrency } from "@/lib/utils"
 import { todaySaoPaulo } from "@/lib/lease-overview"
+import { daysFromDue, pickReminder, type Reminder } from "@/lib/message-templates"
 import { formatDateBR, monthName } from "@/lib/date-format"
 import { maskPhone } from "@/lib/masks"
 import { dailyToMonthly } from "@/lib/interest"
@@ -136,13 +137,18 @@ export default async function ReceivablePage({
   // O Pix só é gerado quando o envio está aberto; sem chave (422) a mensagem sai sem ele.
   let pix: string | null = null
   let ownerFirstName: string | undefined
+  // Modelo do lembrete que combina com os dias até o vencimento; sem os lembretes, o diálogo usa o texto fixo de antes.
+  let template: { name: string; body: string } | null = null
   if (enviar === "1" && open) {
-    const [pixRes, profile] = await Promise.all([
+    const [pixRes, profile, reminders] = await Promise.all([
       goFetch<{ payload: string }>(`/api/v1/payments/${id}/pix`, {}).then((v) => v.payload, () => null),
       getProfile().catch(() => null),
+      goFetch<{ reminders: Reminder[] }>("/api/v1/settings/reminders", {}).then((v) => v.reminders, () => null),
     ])
     pix = pixRes
     ownerFirstName = profile?.full_name?.trim().split(/\s+/)[0] || undefined
+    const picked = pickReminder(reminders, daysFromDue(payment.due_date, todaySaoPaulo()))
+    template = picked ? { name: picked.name, body: picked.body } : null
   }
 
   return (
@@ -312,6 +318,7 @@ export default async function ReceivablePage({
           dueLabel={formatDateBR(payment.due_date).slice(0, 5)}
           pix={pix}
           ownerFirstName={ownerFirstName}
+          template={template}
         />
       )}
       {late && (
