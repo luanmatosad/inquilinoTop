@@ -1,0 +1,2 @@
+-- Irreversível: o token bruto não é recuperável a partir do hash.
+-- Não há restauração automática; reverter o código exige reemitir convites pendentes.
