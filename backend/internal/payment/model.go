@@ -121,14 +121,6 @@ type PaidInput struct {
 	ActorID  *uuid.UUID
 }
 
-type UpdateChargeInfoInput struct {
-	ChargeID     string `json:"charge_id" validate:"required"`
-	ChargeMethod string `json:"charge_method" validate:"required,oneof=PIX BOLETO TED"`
-	QRCode       string `json:"qr_code,omitempty" validate:"omitempty"`
-	Link         string `json:"link,omitempty" validate:"omitempty,url"`
-	BarCode      string `json:"bar_code,omitempty" validate:"omitempty,numeric"`
-}
-
 // DeactivateResult resume o cancelamento das cobranças futuras de um contrato encerrado.
 type DeactivateResult struct {
 	// Deactivated é o número de cobranças pendentes futuras retiradas (is_active=false).
@@ -155,25 +147,10 @@ type PaymentFilter struct {
 	LeaseID *uuid.UUID
 }
 
-// Bucket agrupa quantidade e valor total.
-type Bucket struct {
-	Count int     `json:"count"`
-	Total float64 `json:"total"`
-}
-
-// Summary totaliza o período: a receber (a vencer), vencidos (valor atualizado com multa e juros) e recebidos.
-type Summary struct {
-	ToReceive Bucket `json:"to_receive"`
-	Overdue   Bucket `json:"overdue"`
-	Paid      Bucket `json:"paid"`
-}
-
 // Tipos de evento gravados na linha do tempo da cobrança.
 const (
 	EventSent      = "SENT"
 	EventReminder  = "REMINDER"
-	EventAgreement = "AGREEMENT"
-	EventPaid      = "PAID"
 	// Gravados só pelo sistema (aviso do inquilino e recusa do dono); nunca por POST /events.
 	EventReported = "REPORTED"
 	EventRejected = "REJECTED"
@@ -237,8 +214,6 @@ type Repository interface {
 	ApplyAgreement(ctx context.Context, id, orgID uuid.UUID, in AgreementApply) (*Payment, error)
 	// EnsureReceiptNumber atribui o número do recibo a uma cobrança paga que ainda não o tem (pagas antes da numeração).
 	EnsureReceiptNumber(ctx context.Context, id, orgID uuid.UUID) (*Payment, error)
-	UpdateChargeInfo(ctx context.Context, id, orgID uuid.UUID, in UpdateChargeInfoInput) error
-	UpdatePayoutInfo(ctx context.Context, id, orgID uuid.UUID, payoutID, status string) error
 	GetActiveFinancialConfig(ctx context.Context, orgID uuid.UUID) (*FinancialConfig, error)
 	GetFinancialConfig(ctx context.Context, orgID uuid.UUID) (*FinancialConfig, error)
 	CreateFinancialConfig(ctx context.Context, orgID uuid.UUID, in CreateFinancialConfigInput) (*FinancialConfig, error)

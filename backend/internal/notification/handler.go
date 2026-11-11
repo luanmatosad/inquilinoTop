@@ -22,12 +22,19 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler) {
-	r.With(authMW).Get("/api/v1/notifications", h.list)
-	r.With(authMW).Post("/api/v1/notifications", h.create)
-	r.With(authMW).Get("/api/v1/notifications/{id}", h.get)
-	r.With(authMW).Post("/api/v1/notifications/process", h.processQueue)
+	r.With(authMW).Get("/notifications", h.list)
+	r.With(authMW).Post("/notifications", h.create)
+	r.With(authMW).Get("/notifications/{id}", h.get)
 }
 
+// @Summary Lista as notificações do owner autenticado
+// @Tags notifications
+// @Security BearerAuth
+// @Produce json
+// @Param status query string false "Status (padrão: pending)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /notifications [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	status := r.URL.Query().Get("status")
@@ -46,6 +53,15 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, notifications)
 }
 
+// @Summary Cria uma notificação
+// @Tags notifications
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body CreateNotificationInput true "Dados da notificação"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /notifications [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 
@@ -68,6 +84,16 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	httputil.Created(w, n)
 }
 
+// @Summary Retorna uma notificação do owner autenticado
+// @Tags notifications
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID da notificação"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /notifications/{id} [get]
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -87,12 +113,4 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.OK(w, n)
-}
-
-func (h *Handler) processQueue(w http.ResponseWriter, r *http.Request) {
-	if err := h.svc.ProcessQueue(r.Context(), 50); err != nil {
-		httputil.Err(w, http.StatusInternalServerError, "PROCESS_FAILED", err.Error())
-		return
-	}
-	httputil.OK(w, map[string]string{"status": "processed"})
 }

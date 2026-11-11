@@ -77,7 +77,7 @@ func (r *pgRepository) ListByUnit(ctx context.Context, unitID, orgID uuid.UUID) 
 	return list, nil
 }
 
-// filterClause monta o WHERE comum de List e Summary. Parâmetros: $1 org, $2 hoje, depois os opcionais.
+// filterClause monta o WHERE comum de List. Parâmetros: $1 org, $2 hoje, depois os opcionais.
 func filterClause(f ListFilter, today time.Time) (string, []interface{}) {
 	// "$2::date IS NOT NULL" mantém $2 referenciado em qualquer filtro (o Postgres rejeita parâmetro sobrando).
 	where := " WHERE organization_id=$1 AND is_active=true AND $2::date IS NOT NULL"
@@ -160,28 +160,6 @@ func (r *pgRepository) MarkUnpaid(ctx context.Context, id, orgID uuid.UUID) (*Ex
 		return nil, fmt.Errorf("expense.repo: mark unpaid: %w", err)
 	}
 	return &e, nil
-}
-
-func (r *pgRepository) Summary(ctx context.Context, orgID uuid.UUID, f ListFilter, today time.Time) (Summary, error) {
-	f.Status = ""
-	where, args := filterClause(f, today)
-	args[0] = orgID
-	var s Summary
-	err := r.db.Pool.QueryRow(ctx,
-		`SELECT
-		   COUNT(*) FILTER (WHERE status='PENDING' AND due_date >= $2),
-		   COALESCE(SUM(amount) FILTER (WHERE status='PENDING' AND due_date >= $2), 0),
-		   COUNT(*) FILTER (WHERE status='PENDING' AND due_date < $2),
-		   COALESCE(SUM(amount) FILTER (WHERE status='PENDING' AND due_date < $2), 0),
-		   COUNT(*) FILTER (WHERE status='PAID'),
-		   COALESCE(SUM(COALESCE(paid_amount, amount)) FILTER (WHERE status='PAID'), 0)
-		 FROM expenses`+where, args...,
-	).Scan(&s.ToPay.Count, &s.ToPay.Total, &s.Overdue.Count, &s.Overdue.Total, &s.Paid.Count, &s.Paid.Total)
-	if err != nil {
-		return s, fmt.Errorf("expense.repo: summary: %w", err)
-	}
-	s.ToPay.Total, s.Overdue.Total, s.Paid.Total = round2(s.ToPay.Total), round2(s.Overdue.Total), round2(s.Paid.Total)
-	return s, nil
 }
 
 func (r *pgRepository) Update(ctx context.Context, id, orgID uuid.UUID, in CreateExpenseInput) (*Expense, error) {

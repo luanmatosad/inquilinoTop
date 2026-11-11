@@ -33,7 +33,6 @@ const MaxInitialPayments = 12
 type Lease struct {
 	ID                   uuid.UUID  `json:"id"`
 	OrganizationID       uuid.UUID  `json:"organization_id"`
-	OwnerID              uuid.UUID  `json:"owner_id"`
 	UnitID               uuid.UUID  `json:"unit_id"`
 	TenantID             uuid.UUID  `json:"tenant_id"`
 	StartDate            time.Time  `json:"start_date"`
@@ -142,7 +141,7 @@ type RenewLeaseInput struct {
 }
 
 type Repository interface {
-	Create(ctx context.Context, orgID, ownerID uuid.UUID, in CreateLeaseInput) (*Lease, error)
+	Create(ctx context.Context, orgID uuid.UUID, in CreateLeaseInput) (*Lease, error)
 	GetByID(ctx context.Context, id, orgID uuid.UUID) (*Lease, error)
 	List(ctx context.Context, orgID uuid.UUID) ([]Lease, error)
 	Update(ctx context.Context, id, orgID uuid.UUID, in UpdateLeaseInput) (*Lease, error)
@@ -190,22 +189,4 @@ type EndOutput struct {
 	PaymentsCanceled   int    `json:"payments_canceled"`
 	PaymentsNeedReview int    `json:"payments_need_review"`
 	PaymentsError      string `json:"payments_error,omitempty"`
-}
-
-type IndexValue struct {
-	ID             uuid.UUID `json:"id"`
-	IndexType      string    `json:"index_type"`
-	ReferenceMonth time.Time `json:"reference_month"`
-	Value          float64   `json:"value"`
-	Cumulative     float64   `json:"cumulative"`
-	CreatedAt      time.Time `json:"created_at"`
-}
-
-type AdjustLeaseInput struct {
-	IndexType string `json:"index_type" validate:"required"`
-}
-
-type IndexRepository interface {
-	GetHistory(ctx context.Context, indexType string) ([]IndexValue, error)
-	GetLatest(ctx context.Context, indexType string) (*IndexValue, error)
 }

@@ -11,21 +11,25 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/rbac"
+	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func noopAuthMW(next http.Handler) http.Handler {
+var testOrgID = uuid.New()
+
+func authAsOwner(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r)
+		ctx := auth.WithOwnerIDOrgID(r.Context(), uuid.New(), testOrgID)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 func newRBACRouter() chi.Router {
 	svc := rbac.NewService(newMockRoleRepo())
-	h := rbac.NewHandler(svc)
+	h := rbac.NewHandler(svc, fixedRoles{role: rbac.RoleOwner})
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authAsOwner)
 	return r
 }
 
@@ -64,7 +68,7 @@ func TestHandler_AssignRole_RoleInválida(t *testing.T) {
 
 func TestHandler_AssignRole_Válido(t *testing.T) {
 	r := newRBACRouter()
-	orgID := uuid.New()
+	orgID := testOrgID
 	body, _ := json.Marshal(map[string]interface{}{
 		"user_id":         uuid.New().String(),
 		"role":            "viewer",
@@ -80,12 +84,12 @@ func TestHandler_AssignRole_Válido(t *testing.T) {
 func TestHandler_AssignRole_Duplicado(t *testing.T) {
 	mock := newMockRoleRepo()
 	svc := rbac.NewService(mock)
-	h := rbac.NewHandler(svc)
+	h := rbac.NewHandler(svc, fixedRoles{role: rbac.RoleOwner})
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authAsOwner)
 
 	userID := uuid.New()
-	orgID := uuid.New()
+	orgID := testOrgID
 	svc.AssignRole(context.Background(), userID, rbac.RoleAdmin, &orgID, nil)
 
 	body, _ := json.Marshal(map[string]interface{}{
@@ -111,8 +115,9 @@ func TestHandler_RemoveRole_BodyInválido(t *testing.T) {
 func TestHandler_RemoveRole_NãoEncontrado(t *testing.T) {
 	r := newRBACRouter()
 	body, _ := json.Marshal(map[string]interface{}{
-		"user_id": uuid.New().String(),
-		"role":    "owner",
+		"user_id":         uuid.New().String(),
+		"role":            "owner",
+		"organization_id": testOrgID.String(),
 	})
 	req := httptest.NewRequest(http.MethodDelete, "/api/v2/roles", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -124,12 +129,12 @@ func TestHandler_RemoveRole_NãoEncontrado(t *testing.T) {
 func TestHandler_RemoveRole_Válido(t *testing.T) {
 	mock := newMockRoleRepo()
 	svc := rbac.NewService(mock)
-	h := rbac.NewHandler(svc)
+	h := rbac.NewHandler(svc, fixedRoles{role: rbac.RoleOwner})
 	r := chi.NewRouter()
-	h.Register(r, noopAuthMW)
+	h.Register(r, authAsOwner)
 
 	userID := uuid.New()
-	orgID := uuid.New()
+	orgID := testOrgID
 	svc.AssignRole(context.Background(), userID, rbac.RoleOwner, &orgID, nil)
 
 	body, _ := json.Marshal(map[string]interface{}{

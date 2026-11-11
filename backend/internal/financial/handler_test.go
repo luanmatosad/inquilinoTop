@@ -85,21 +85,6 @@ func TestHandler_ImportBankRecords_CSVInvalidoRetorna400(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "INVALID_CSV_FORMAT")
 }
 
-func TestHandler_ListCommissions_MVPRetornaListaVazia(t *testing.T) {
-	router := newFinancialRouter(newMockRepo())
-	req := httptest.NewRequest(http.MethodGet, "/financial/commissions", nil).
-		WithContext(withOrg(context.Background(), uuid.New()))
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusOK, rec.Code)
-	var body struct {
-		Data []any `json:"data"`
-	}
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-	assert.Empty(t, body.Data)
-}
-
 func TestHandler_AdminFee_PutDepoisGetDevolveTaxa(t *testing.T) {
 	router := newFinancialRouter(newMockRepo())
 	ctx := withOrg(context.Background(), uuid.New())

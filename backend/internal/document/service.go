@@ -95,18 +95,6 @@ func (s *Service) Upload(ctx context.Context, ownerID uuid.UUID, in CreateDocume
 	return doc, nil
 }
 
-func (s *Service) Download(ctx context.Context, id, ownerID uuid.UUID) (io.ReadCloser, string, error) {
-	doc, err := s.repo.GetByID(ctx, id, ownerID)
-	if err != nil {
-		return nil, "", err
-	}
-	rc, err := s.storage.Load(ctx, doc.FilePath)
-	if err != nil {
-		return nil, "", err
-	}
-	return rc, doc.MimeType, nil
-}
-
 func (s *Service) GetDocument(ctx context.Context, id, ownerID uuid.UUID) (*Document, error) {
 	return s.repo.GetByID(ctx, id, ownerID)
 }

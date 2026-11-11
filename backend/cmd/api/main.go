@@ -87,15 +87,14 @@ func main() {
 
 	auditRepo := audit.NewRepository(database.Pool)
 	auditSvc := audit.NewService(auditRepo)
-	auditHandler := audit.NewHandler(auditSvc)
 
 	identityRepo := identity.NewRepository(database)
 	orgRepo := organization.NewRepository(database)
+	memberRoles := membershipRoles{repo: orgRepo}
+	auditHandler := audit.NewHandler(auditSvc, memberRoles)
 	orgAdapter := &identity.OrgMemberAdapter{Repo: orgRepo}
 	identitySvc := identity.NewServiceWithOrgAndAudit(identityRepo, orgAdapter, jwtSvc, &identityAuditAdapter{auditSvc: auditSvc})
 	identityHandler := identity.NewHandler(identitySvc)
-	orgSvc := organization.NewService(orgRepo)
-	orgHandler := organization.NewHandler(orgSvc)
 
 	propertyRepo := property.NewRepository(database)
 	propertySvc := property.NewService(propertyRepo)
@@ -113,8 +112,7 @@ func main() {
 
 	leaseRepo := lease.NewRepository(database)
 	leaseReadjRepo := lease.NewReadjustmentRepository(database)
-	indexRepo := lease.NewIndexRepository(database)
-	leaseSvc := lease.NewService(leaseRepo, leaseReadjRepo, indexRepo).WithRefs(propertyRepo, tenantRepo)
+	leaseSvc := lease.NewService(leaseRepo, leaseReadjRepo).WithRefs(propertyRepo, tenantRepo)
 	leaseHandler := lease.NewHandler(leaseSvc)
 
 	identityRepoForPayment := identity.NewRepository(database)
@@ -147,10 +145,6 @@ func main() {
 	expenseSvc := expense.NewService(expenseRepo).WithAuditor(auditSvc).WithLocation(appLoc)
 	expenseHandler := expense.NewHandler(expenseSvc)
 
-	fiscalAggRepo := fiscal.NewAggregateRepository(database)
-	fiscalSvc := fiscal.NewService(fiscalAggRepo)
-	fiscalHandler := fiscal.NewHandler(fiscalSvc)
-
 	supportRepo := support.NewRepository(database)
 	supportSvc := support.NewService(supportRepo)
 	supportHandler := support.NewHandler(supportSvc)
@@ -179,6 +173,8 @@ func main() {
 	notificationRepo := notification.NewRepository(database)
 	notificationSvc := notification.NewService(notificationRepo, emailSender)
 	notificationHandler := notification.NewHandler(notificationSvc)
+	orgSvc := organization.NewService(orgRepo, inviteMailer{svc: notificationSvc}, envOr("APP_PUBLIC_URL", "http://localhost:3000"))
+	orgHandler := organization.NewHandler(orgSvc)
 
 	rateLimiter := ratelimit.NewMiddleware(ratelimit.Config{
 		IPRate:    100 / 60.0,
@@ -189,23 +185,26 @@ func main() {
 
 	rbacRepo := rbac.NewRepository(database.Pool)
 	rbacSvc := rbac.NewService(rbacRepo)
-	rbacHandler := rbac.NewHandler(rbacSvc)
+	rbacHandler := rbac.NewHandler(rbacSvc, memberRoles)
 
-	propertyReadMw := rbac.PermissionMiddleware(rbac.PermissionPropertyRead)
-	propertyWriteMw := rbac.PermissionMiddleware(rbac.PermissionPropertyWrite)
-	tenantReadMw := rbac.PermissionMiddleware(rbac.PermissionTenantRead)
-	tenantWriteMw := rbac.PermissionMiddleware(rbac.PermissionTenantWrite)
-	leaseReadMw := rbac.PermissionMiddleware(rbac.PermissionLeaseRead)
-	leaseWriteMw := rbac.PermissionMiddleware(rbac.PermissionLeaseWrite)
-	paymentReadMw := rbac.PermissionMiddleware(rbac.PermissionPaymentRead)
-	paymentWriteMw := rbac.PermissionMiddleware(rbac.PermissionPaymentWrite)
-	expenseReadMw := rbac.PermissionMiddleware(rbac.PermissionExpenseRead)
-	expenseWriteMw := rbac.PermissionMiddleware(rbac.PermissionExpenseWrite)
-	orgReadMw := rbac.PermissionMiddleware(rbac.PermissionOrgRead)
-	orgUpdateMw := rbac.PermissionMiddleware(rbac.PermissionOrgUpdate)
+	propertyReadMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionPropertyRead)
+	propertyWriteMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionPropertyWrite)
+	tenantReadMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionTenantRead)
+	tenantWriteMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionTenantWrite)
+	leaseReadMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionLeaseRead)
+	leaseWriteMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionLeaseWrite)
+	paymentReadMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionPaymentRead)
+	paymentWriteMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionPaymentWrite)
+	expenseReadMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionExpenseRead)
+	expenseWriteMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionExpenseWrite)
+	orgReadMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionOrgRead)
+	orgUpdateMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionOrgUpdate)
+	memberInviteMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionMemberInvite)
+	memberManageMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionMemberManage)
+	branchManageMw := rbac.PermissionMiddleware(memberRoles, rbac.PermissionBranchManage)
 
 	importRepo := importexport.NewRepository(database)
-	importSvc := importexport.NewService(importRepo, propertyRepo, tenantSvc)
+	importSvc := importexport.NewService(importRepo, tenantSvc)
 	importHandler := importexport.NewHandler(importSvc)
 
 	reg := prometheus.NewRegistry()
@@ -257,12 +256,17 @@ func main() {
 	inspectionHandler.Register(r, authMW, leaseReadMw, leaseWriteMw)
 	dashboardHandler.Register(r, authMW, paymentReadMw)
 	financialHandler.Register(r, authMW, paymentReadMw, paymentWriteMw)
-	fiscalHandler.Register(r, authMW, orgReadMw)
-	supportHandler.Register(r, authMW, orgReadMw, orgReadMw)
+	supportHandler.Register(r, authMW)
 	auditHandler.Register(r, authMW)
 	documentHandler.Register(r, authMW)
 	notificationHandler.Register(r, authMW)
-	orgHandler.RegisterRoutes(r, authMW)
+	orgHandler.RegisterRoutes(r, authMW, organization.Guards{
+		OrgRead:      orgReadMw,
+		OrgUpdate:    orgUpdateMw,
+		BranchManage: branchManageMw,
+		MemberManage: memberManageMw,
+		MemberInvite: memberInviteMw,
+	})
 	rbacHandler.Register(r, authMW)
 
 	importHandler.Register(r, authMW)
@@ -413,6 +417,37 @@ func (a *identityAuditAdapter) LogLogout(ctx context.Context, userID uuid.UUID) 
 
 func (a *identityAuditAdapter) LogFailedLogin(ctx context.Context) {
 	a.auditSvc.LogFailedLogin(ctx, uuid.Nil, "")
+}
+
+// membershipRoles resolve o papel do usuário na organização lendo organization_members.
+type membershipRoles struct {
+	repo organization.Repository
+}
+
+func (m membershipRoles) RoleIn(ctx context.Context, userID, orgID uuid.UUID) (rbac.RoleType, error) {
+	member, err := m.repo.GetMembership(ctx, userID, orgID)
+	if err != nil {
+		return "", err
+	}
+	if member == nil {
+		return "", rbac.ErrNotMember
+	}
+	return rbac.RoleType(member.Role), nil
+}
+
+// inviteMailer enfileira o e-mail do convite na fila de notificações; o worker é quem envia.
+type inviteMailer struct {
+	svc *notification.Service
+}
+
+func (m inviteMailer) NotifyInvite(ctx context.Context, invitedBy uuid.UUID, toEmail, orgName, acceptURL string) error {
+	_, err := m.svc.CreateNotification(ctx, invitedBy, notification.CreateNotificationInput{
+		Type:      "email",
+		ToAddress: toEmail,
+		Subject:   "Você foi convidado para o InquilinoTop",
+		Body:      fmt.Sprintf("Você foi convidado para fazer parte de %s no InquilinoTop.\n\nPara aceitar o convite, acesse:\n%s", orgName, acceptURL),
+	})
+	return err
 }
 
 func mustLoadPrivateKey(path string) *rsa.PrivateKey {

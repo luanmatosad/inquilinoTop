@@ -129,25 +129,6 @@ func (m *mockExpenseRepo) MarkUnpaid(_ context.Context, id, orgID uuid.UUID) (*e
 	return e, nil
 }
 
-func (m *mockExpenseRepo) Summary(ctx context.Context, orgID uuid.UUID, f expense.ListFilter, today time.Time) (expense.Summary, error) {
-	var s expense.Summary
-	list, _ := m.List(ctx, orgID, expense.ListFilter{From: f.From, To: f.To, UnitID: f.UnitID}, today)
-	for _, e := range list {
-		switch {
-		case e.Status == expense.StatusPaid:
-			s.Paid.Count++
-			s.Paid.Total += *e.PaidAmount
-		case e.DueDate.Before(today):
-			s.Overdue.Count++
-			s.Overdue.Total += e.Amount
-		default:
-			s.ToPay.Count++
-			s.ToPay.Total += e.Amount
-		}
-	}
-	return s, nil
-}
-
 func (m *mockExpenseRepo) Delete(_ context.Context, id, orgID uuid.UUID) error {
 	e, err := m.GetByID(context.Background(), id, orgID)
 	if err != nil {

@@ -3,6 +3,7 @@ package notification
 import (
 	"context"
 	"fmt"
+	"mime"
 	"net/smtp"
 )
 
@@ -23,8 +24,8 @@ func NewSMTPSender(config SMTPConfig) EmailSender {
 }
 
 func (s *smtpSender) Send(ctx context.Context, to, subject, body string) error {
-	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s",
-		s.config.From, to, subject, body)
+	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n%s",
+		s.config.From, to, mime.QEncoding.Encode("utf-8", subject), body)
 
 	addr := fmt.Sprintf("%s:%d", s.config.Host, s.config.Port)
 

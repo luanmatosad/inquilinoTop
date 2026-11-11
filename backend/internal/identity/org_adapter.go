@@ -12,7 +12,6 @@ type OrgMembership struct {
 	ID             uuid.UUID  `json:"id"`
 	OrganizationID uuid.UUID  `json:"organization_id"`
 	UserID         uuid.UUID  `json:"user_id"`
-	Role           string     `json:"role"`
 	BranchID       *uuid.UUID `json:"branch_id,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`
 }
@@ -37,7 +36,6 @@ func (a *OrgMemberAdapter) GetByUserID(ctx context.Context, userID uuid.UUID) (*
 		ID:             m.ID,
 		OrganizationID: m.OrganizationID,
 		UserID:         m.UserID,
-		Role:           string(m.Role),
 		BranchID:       m.BranchID,
 		CreatedAt:      m.CreatedAt,
 	}, nil

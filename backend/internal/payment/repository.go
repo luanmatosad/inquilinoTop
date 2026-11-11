@@ -304,24 +304,6 @@ func (r *pgRepository) EnsureReceiptNumber(ctx context.Context, id, orgID uuid.U
 	return &p, nil
 }
 
-func (r *pgRepository) UpdateChargeInfo(ctx context.Context, id, orgID uuid.UUID, in UpdateChargeInfoInput) error {
-	_, err := r.db.Pool.Exec(ctx,
-		`UPDATE payments SET charge_id = $3, charge_method = $4, charge_qrcode = $5, charge_link = $6, charge_barcode = $7, updated_at = NOW()
-		 WHERE id = $1 AND organization_id = $2`,
-		id, orgID, in.ChargeID, in.ChargeMethod, in.QRCode, in.Link, in.BarCode,
-	)
-	return err
-}
-
-func (r *pgRepository) UpdatePayoutInfo(ctx context.Context, id, orgID uuid.UUID, payoutID, status string) error {
-	_, err := r.db.Pool.Exec(ctx,
-		`UPDATE payments SET payout_id = $3, payout_status = $4, updated_at = NOW()
-		 WHERE id = $1 AND organization_id = $2`,
-		id, orgID, payoutID, status,
-	)
-	return err
-}
-
 func (r *pgRepository) GetByChargeID(ctx context.Context, chargeID string) (*Payment, error) {
 	var p Payment
 	err := scanPayment(r.db.Pool.QueryRow(ctx,

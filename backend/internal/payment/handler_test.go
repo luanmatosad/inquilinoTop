@@ -41,7 +41,7 @@ func noopWriteMw(next http.Handler) http.Handler {
 func noopAuthMWWithOwnerID(ownerID uuid.UUID) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := auth.WithOwnerIDOrgIDRole(r.Context(), ownerID, ownerID, "admin")
+			ctx := auth.WithOwnerIDOrgID(r.Context(), ownerID, ownerID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -193,44 +193,6 @@ func seedPendingPayment(ts *testService, ownerID uuid.UUID) *payment.Payment {
 	return p
 }
 
-func TestHandler_Generate_MonthInválido(t *testing.T) {
-	ts := newTestService()
-	h := payment.NewHandler(ts.Service)
-	ownerID := uuid.New()
-
-	r := chi.NewRouter()
-	r.With(noopAuthMWWithOwnerID(ownerID)).Post("/leases/{leaseId}/payments/generate", h.Generate)
-
-	leaseID := uuid.New()
-	setupLeaseInHandler(ts, leaseID, ownerID)
-
-	req := httptest.NewRequest("POST", "/leases/"+leaseID.String()+"/payments/generate?month=abril", nil)
-	w := httptest.NewRecorder()
-
-	r.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "INVALID_MONTH")
-}
-
-func TestHandler_Generate_RouteExists(t *testing.T) {
-	ts := newTestService()
-	h := payment.NewHandler(ts.Service)
-	ownerID := uuid.New()
-
-	r := chi.NewRouter()
-	r.With(noopAuthMWWithOwnerID(ownerID)).Post("/leases/{leaseId}/payments/generate", h.Generate)
-
-	leaseID := uuid.New()
-	setupLeaseInHandler(ts, leaseID, ownerID)
-
-	req := httptest.NewRequest("POST", "/leases/"+leaseID.String()+"/payments/generate?month=2026-04", nil)
-	w := httptest.NewRecorder()
-
-	r.ServeHTTP(w, req)
-	require.NotEqual(t, http.StatusMethodNotAllowed, w.Code)
-	require.NotEqual(t, http.StatusNotFound, w.Code)
-}
-
 func TestHandler_HandleWebhook_RejectsWhenSecretNotConfigured(t *testing.T) {
 	t.Helper()
 	t.Setenv("WEBHOOK_SECRET", "")
@@ -319,17 +281,6 @@ func getPath(r http.Handler, path string) *httptest.ResponseRecorder {
 	return rr
 }
 
-func TestHandler_Summary_RotaNãoÉTratadaComoID(t *testing.T) {
-	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
-	ts, leaseID, orgID := listSvc(now)
-	addPayment(ts, leaseID, orgID, time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC), 1000, "PENDING")
-
-	rr := getPath(payRouter(ts, orgID), "/payments/summary")
-	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-	assert.Contains(t, rr.Body.String(), `"to_receive":{"count":1,"total":1000}`)
-	assert.Contains(t, rr.Body.String(), `"overdue":{"count":0,"total":0}`)
-}
-
 func TestHandler_List_Filtros(t *testing.T) {
 	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	ts, leaseID, orgID := listSvc(now)
@@ -349,14 +300,13 @@ func TestHandler_List_Filtros(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments?status=XYZ").Code)
 	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments?from=15/06/2026").Code)
 	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments?lease_id=nao-uuid").Code)
-	assert.Equal(t, http.StatusBadRequest, getPath(r, "/payments/summary?to=x").Code)
 }
 
 // distinctAuthMW injeta usuário e organização com ids diferentes, como o JWT real faz.
 func distinctAuthMW(userID, orgID uuid.UUID) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := auth.WithOwnerIDOrgIDRole(r.Context(), userID, orgID, "admin")
+			ctx := auth.WithOwnerIDOrgID(r.Context(), userID, orgID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

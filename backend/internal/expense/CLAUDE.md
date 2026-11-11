@@ -17,7 +17,6 @@ Vinculado a Unit (não a Lease). Tem soft-delete. Sem rota GET por ID.
 | Método | Rota | Retorna |
 |---|---|---|
 | GET | /api/v1/expenses?status=&from=&to=&unit_id= | lista da organização (`[]` se vazia) |
-| GET | /api/v1/expenses/summary?from=&to=&unit_id= | `{to_pay, overdue, paid}` com `{count, total}` |
 | GET | /api/v1/units/{unitId}/expenses | lista por unit |
 | POST | /api/v1/units/{unitId}/expenses | 201 expense (com `paid_date`, já paga; data futura → 400 `INVALID_PAID_DATE`) |
 | PUT | /api/v1/expenses/{id} | expense atualizado |

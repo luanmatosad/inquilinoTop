@@ -29,5 +29,5 @@ type ReadjustInput struct {
 
 type ReadjustmentRepository interface {
 	Create(ctx context.Context, r *Readjustment) (*Readjustment, error)
-	ListByLease(ctx context.Context, leaseID, ownerID uuid.UUID) ([]Readjustment, error)
+	ListByLease(ctx context.Context, leaseID, orgID uuid.UUID) ([]Readjustment, error)
 }

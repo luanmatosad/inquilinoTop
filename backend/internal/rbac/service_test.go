@@ -95,9 +95,10 @@ func TestService_AssignRole(t *testing.T) {
 	err := svc.AssignRole(context.Background(), userID, rbac.RoleOwner, &orgID, nil)
 	require.NoError(t, err)
 
-	hasRole, err := svc.CheckPermission(context.Background(), userID, rbac.RoleOwner, &orgID, nil)
+	roles, err := svc.GetUserRoles(context.Background(), userID)
 	require.NoError(t, err)
-	assert.True(t, hasRole)
+	assert.Len(t, roles, 1)
+	assert.Equal(t, rbac.RoleOwner, roles[0].Role)
 }
 
 func TestService_AssignRole_Duplicate(t *testing.T) {
@@ -110,16 +111,6 @@ func TestService_AssignRole_Duplicate(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestService_CheckPermission_NotFound(t *testing.T) {
-	svc := newTestService(t)
-	userID := uuid.New()
-	orgID := uuid.New()
-
-	hasRole, err := svc.CheckPermission(context.Background(), userID, rbac.RoleOwner, &orgID, nil)
-	require.NoError(t, err)
-	assert.False(t, hasRole)
-}
-
 func TestService_RemoveRole(t *testing.T) {
 	svc := newTestService(t)
 	userID := uuid.New()
@@ -129,9 +120,9 @@ func TestService_RemoveRole(t *testing.T) {
 	err := svc.RemoveRole(context.Background(), userID, rbac.RoleViewer, &orgID, nil)
 	require.NoError(t, err)
 
-	hasRole, err := svc.CheckPermission(context.Background(), userID, rbac.RoleViewer, &orgID, nil)
+	roles, err := svc.GetUserRoles(context.Background(), userID)
 	require.NoError(t, err)
-	assert.False(t, hasRole)
+	assert.Empty(t, roles)
 }
 
 func TestService_GetUserRoles(t *testing.T) {

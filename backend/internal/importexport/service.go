@@ -7,18 +7,12 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/inquilinotop/api/internal/property"
 	"github.com/inquilinotop/api/internal/tenant"
 )
 
 type Service struct {
-	repo         Repository
-	propertyRepo PropertyRepository
-	tenants      TenantCreator
-}
-
-type PropertyRepository interface {
-	GetByField(ctx context.Context, ownerID uuid.UUID, field string, value string) (*property.Property, error)
+	repo    Repository
+	tenants TenantCreator
 }
 
 // TenantCreator cria inquilinos escopados por organização; satisfeita por *tenant.Service.
@@ -26,11 +20,10 @@ type TenantCreator interface {
 	Create(ctx context.Context, userID, orgID uuid.UUID, in tenant.CreateTenantInput) (*tenant.Tenant, error)
 }
 
-func NewService(repo Repository, propertyRepo PropertyRepository, tenants TenantCreator) *Service {
+func NewService(repo Repository, tenants TenantCreator) *Service {
 	return &Service{
-		repo:         repo,
-		propertyRepo: propertyRepo,
-		tenants:      tenants,
+		repo:    repo,
+		tenants: tenants,
 	}
 }
 
@@ -137,17 +130,4 @@ func optional(v string) *string {
 
 func (s *Service) ListHistory(ctx context.Context, ownerID uuid.UUID) ([]ImportHistory, error) {
 	return s.repo.ListImportHistory(ctx, ownerID)
-}
-
-func (s *Service) GetHistory(ctx context.Context, id, ownerID uuid.UUID) (*ImportHistory, error) {
-	return s.repo.GetImportHistory(ctx, id, ownerID)
-}
-
-type ValidationError struct {
-	Field   string
-	Message string
-}
-
-func (e *ValidationError) Error() string {
-	return e.Message
 }

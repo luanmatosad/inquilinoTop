@@ -106,7 +106,7 @@ func TestLeaseRepository_CreateAndList(t *testing.T) {
 	tenantID := seedTenant(t, database, orgID, ownerID)
 	repo := lease.NewRepository(database)
 
-	l, err := repo.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	l, err := repo.Create(context.Background(), orgID, lease.CreateLeaseInput{
 		UnitID:     unitID,
 		TenantID:   tenantID,
 		StartDate:  time.Now(),
@@ -130,7 +130,7 @@ func TestLeaseRepository_Delete_SoftDelete(t *testing.T) {
 	tenantID := seedTenant(t, database, orgID, ownerID)
 	repo := lease.NewRepository(database)
 
-	l, _ := repo.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	l, _ := repo.Create(context.Background(), orgID, lease.CreateLeaseInput{
 		UnitID: unitID, TenantID: tenantID, StartDate: time.Now(), RentAmount: 1000,
 	})
 	err := repo.Delete(context.Background(), l.ID, orgID)
@@ -148,7 +148,7 @@ func TestLeaseRepository_Update(t *testing.T) {
 	tenantID := seedTenant(t, database, orgID, ownerID)
 	repo := lease.NewRepository(database)
 
-	l, _ := repo.Create(context.Background(), orgID, ownerID, lease.CreateLeaseInput{
+	l, _ := repo.Create(context.Background(), orgID, lease.CreateLeaseInput{
 		UnitID: unitID, TenantID: tenantID, StartDate: time.Now(), RentAmount: 1000,
 	})
 
@@ -177,12 +177,12 @@ func leaseIn(unitID, tenantID uuid.UUID, start time.Time, end *time.Time) lease.
 
 func TestLeaseRepository_Notes(t *testing.T) {
 	ctx := context.Background()
-	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
+	repo, orgID, _, unitID, tenantID := newLeaseFixture(t)
 	notes := "animais permitidos"
 	in := leaseIn(unitID, tenantID, day(2026, 1, 1), nil)
 	in.Notes = &notes
 
-	l, err := repo.Create(ctx, orgID, ownerID, in)
+	l, err := repo.Create(ctx, orgID, in)
 	require.NoError(t, err)
 	require.NotNil(t, l.Notes)
 	assert.Equal(t, notes, *l.Notes)
@@ -195,32 +195,32 @@ func TestLeaseRepository_Notes(t *testing.T) {
 
 func TestLeaseRepository_Constraint_SobreposiçãoNaCriação(t *testing.T) {
 	ctx := context.Background()
-	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
-	_, err := repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), dayp(2026, 12, 31)))
+	repo, orgID, _, unitID, tenantID := newLeaseFixture(t)
+	_, err := repo.Create(ctx, orgID, leaseIn(unitID, tenantID, day(2026, 1, 1), dayp(2026, 12, 31)))
 	require.NoError(t, err)
 
-	_, err = repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 6, 1), nil))
+	_, err = repo.Create(ctx, orgID, leaseIn(unitID, tenantID, day(2026, 6, 1), nil))
 	assert.ErrorIs(t, err, lease.ErrLeaseOverlap)
 
-	_, err = repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2027, 1, 1), dayp(2027, 12, 31)))
+	_, err = repo.Create(ctx, orgID, leaseIn(unitID, tenantID, day(2027, 1, 1), dayp(2027, 12, 31)))
 	assert.NoError(t, err, "período sequencial é aceito")
 }
 
 func TestLeaseRepository_Constraint_ContratoEncerradoLiberaUnidade(t *testing.T) {
 	ctx := context.Background()
-	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
-	first, err := repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
+	repo, orgID, _, unitID, tenantID := newLeaseFixture(t)
+	first, err := repo.Create(ctx, orgID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
 	require.NoError(t, err)
 	_, err = repo.End(ctx, first.ID, orgID, time.Now(), nil)
 	require.NoError(t, err)
 
-	_, err = repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
+	_, err = repo.Create(ctx, orgID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
 	assert.NoError(t, err)
 }
 
 func TestLeaseRepository_Constraint_CriaçõesSimultâneas(t *testing.T) {
 	ctx := context.Background()
-	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
+	repo, orgID, _, unitID, tenantID := newLeaseFixture(t)
 
 	const n = 6
 	errs := make(chan error, n)
@@ -231,7 +231,7 @@ func TestLeaseRepository_Constraint_CriaçõesSimultâneas(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			<-start
-			_, err := repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
+			_, err := repo.Create(ctx, orgID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
 			errs <- err
 		}()
 	}
@@ -256,8 +256,8 @@ func TestLeaseRepository_Constraint_CriaçõesSimultâneas(t *testing.T) {
 
 func TestLeaseRepository_HasOverlap(t *testing.T) {
 	ctx := context.Background()
-	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
-	l, err := repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 3, 1), dayp(2026, 8, 31)))
+	repo, orgID, _, unitID, tenantID := newLeaseFixture(t)
+	l, err := repo.Create(ctx, orgID, leaseIn(unitID, tenantID, day(2026, 3, 1), dayp(2026, 8, 31)))
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -287,9 +287,9 @@ func TestLeaseRepository_HasOverlap(t *testing.T) {
 
 func TestLeaseRepository_End_SóContratoAtivoENãoEstendeFim(t *testing.T) {
 	ctx := context.Background()
-	repo, orgID, ownerID, unitID, tenantID := newLeaseFixture(t)
+	repo, orgID, _, unitID, tenantID := newLeaseFixture(t)
 	passado := time.Now().AddDate(0, -2, 0)
-	l, err := repo.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, passado.AddDate(-1, 0, 0), &passado))
+	l, err := repo.Create(ctx, orgID, leaseIn(unitID, tenantID, passado.AddDate(-1, 0, 0), &passado))
 	require.NoError(t, err)
 
 	ended, err := repo.End(ctx, l.ID, orgID, time.Now(), nil)
@@ -310,7 +310,7 @@ func TestReadjustmentRepository_CriaELista(t *testing.T) {
 	leases := lease.NewRepository(database)
 	readj := lease.NewReadjustmentRepository(database)
 
-	l, err := leases.Create(ctx, orgID, ownerID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
+	l, err := leases.Create(ctx, orgID, leaseIn(unitID, tenantID, day(2026, 1, 1), nil))
 	require.NoError(t, err)
 
 	idx := "IGPM"
@@ -340,7 +340,7 @@ func TestRepository_ReajusteNoContrato(t *testing.T) {
 
 	unitID, tenantID := seedUnitAndTenant(t, database, orgID, ownerID)
 	idx, mes := "IGP-M", 3
-	created, err := repo.Create(ctx, orgID, ownerID, lease.CreateLeaseInput{
+	created, err := repo.Create(ctx, orgID, lease.CreateLeaseInput{
 		UnitID: unitID, TenantID: tenantID, StartDate: time.Date(2025, 3, 10, 0, 0, 0, 0, time.UTC),
 		RentAmount: 1760, PaymentDay: 5, AdjustmentIndex: &idx, AdjustmentMonth: &mes,
 	})
@@ -379,13 +379,13 @@ func TestRepository_ReajusteInvalidoNoBanco(t *testing.T) {
 	mes := 13
 	bad := base
 	bad.AdjustmentMonth = &mes
-	_, err := repo.Create(ctx, orgID, ownerID, bad)
+	_, err := repo.Create(ctx, orgID, bad)
 	assert.Error(t, err, "CHECK do mês (1 a 12)")
 
 	idx := "XYZ"
 	bad = base
 	bad.AdjustmentIndex = &idx
-	_, err = repo.Create(ctx, orgID, ownerID, bad)
+	_, err = repo.Create(ctx, orgID, bad)
 	assert.Error(t, err, "CHECK do índice")
 }
 
@@ -428,7 +428,7 @@ func TestRepository_End_ComDataEMotivo(t *testing.T) {
 	orgID, ownerID := seedOrgAndUser(t, database)
 	repo := lease.NewRepository(database)
 	unitID, tenantID := seedUnitAndTenant(t, database, orgID, ownerID)
-	created, err := repo.Create(ctx, orgID, ownerID, lease.CreateLeaseInput{
+	created, err := repo.Create(ctx, orgID, lease.CreateLeaseInput{
 		UnitID: unitID, TenantID: tenantID, StartDate: time.Date(2025, 3, 10, 0, 0, 0, 0, time.UTC), RentAmount: 1000, PaymentDay: 5,
 	})
 	require.NoError(t, err)
@@ -450,7 +450,7 @@ func TestRepository_End_NaoEstendeOPrazoPrevisto(t *testing.T) {
 	repo := lease.NewRepository(database)
 	unitID, tenantID := seedUnitAndTenant(t, database, orgID, ownerID)
 	fim := time.Date(2027, 3, 10, 0, 0, 0, 0, time.UTC)
-	created, err := repo.Create(ctx, orgID, ownerID, lease.CreateLeaseInput{
+	created, err := repo.Create(ctx, orgID, lease.CreateLeaseInput{
 		UnitID: unitID, TenantID: tenantID, StartDate: time.Date(2025, 3, 10, 0, 0, 0, 0, time.UTC), EndDate: &fim, RentAmount: 1000, PaymentDay: 5,
 	})
 	require.NoError(t, err)
@@ -467,7 +467,7 @@ func TestRepository_End_MotivoInvalidoNoBanco(t *testing.T) {
 	orgID, ownerID := seedOrgAndUser(t, database)
 	repo := lease.NewRepository(database)
 	unitID, tenantID := seedUnitAndTenant(t, database, orgID, ownerID)
-	created, err := repo.Create(ctx, orgID, ownerID, lease.CreateLeaseInput{
+	created, err := repo.Create(ctx, orgID, lease.CreateLeaseInput{
 		UnitID: unitID, TenantID: tenantID, StartDate: time.Date(2025, 3, 10, 0, 0, 0, 0, time.UTC), RentAmount: 1000, PaymentDay: 5,
 	})
 	require.NoError(t, err)

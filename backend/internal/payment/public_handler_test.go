@@ -35,7 +35,7 @@ func publicRouter(e *publicEnv, ip, tok *fakeLimiter) http.Handler {
 	r := chi.NewRouter()
 	h.Register(r, func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			next.ServeHTTP(w, req.WithContext(auth.WithOwnerIDOrgIDRole(req.Context(), e.user, e.org, "admin")))
+			next.ServeHTTP(w, req.WithContext(auth.WithOwnerIDOrgID(req.Context(), e.user, e.org)))
 		})
 	}, noopWriteMw, noopWriteMw)
 	h.RegisterPublic(r)

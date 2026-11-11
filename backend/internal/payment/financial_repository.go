@@ -42,30 +42,6 @@ func (p *pgRepository) CreateFinancialConfig(ctx context.Context, orgID uuid.UUI
 	return &fc, nil
 }
 
-func (p *pgRepository) GetFinancialConfigByID(ctx context.Context, id, orgID uuid.UUID) (*FinancialConfig, error) {
-	var fc FinancialConfig
-	configJSON := []byte("{}")
-	bankInfoJSON := []byte("{}")
-
-	err := p.db.Pool.QueryRow(ctx,
-		`SELECT id, organization_id, provider, config, pix_key, bank_info, is_active, created_at, updated_at
-		 FROM financial_config WHERE id = $1 AND organization_id = $2`,
-		id, orgID,
-	).Scan(&fc.ID, &fc.OrganizationID, &fc.Provider, &configJSON, &fc.PixKey, &bankInfoJSON, &fc.IsActive, &fc.CreatedAt, &fc.UpdatedAt)
-
-	if err == pgx.ErrNoRows {
-		return nil, apierr.ErrNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	json.Unmarshal(configJSON, &fc.Config)
-	json.Unmarshal(bankInfoJSON, &fc.BankInfo)
-
-	return &fc, nil
-}
-
 func (p *pgRepository) GetActiveFinancialConfig(ctx context.Context, orgID uuid.UUID) (*FinancialConfig, error) {
 	var fc FinancialConfig
 	configJSON := []byte("{}")

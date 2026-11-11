@@ -15,15 +15,14 @@ import (
 type Service struct {
 	repo      Repository
 	readjRepo ReadjustmentRepository
-	indexRepo IndexRepository
 	units     UnitReader
 	tenants   TenantReader
 	payments  PaymentHooks
 	now       func() time.Time
 }
 
-func NewService(repo Repository, readjRepo ReadjustmentRepository, indexRepo IndexRepository) *Service {
-	return &Service{repo: repo, readjRepo: readjRepo, indexRepo: indexRepo, now: time.Now}
+func NewService(repo Repository, readjRepo ReadjustmentRepository) *Service {
+	return &Service{repo: repo, readjRepo: readjRepo, now: time.Now}
 }
 
 // WithRefs habilita a checagem de unidade e inquilino ativos da organização na criação.
@@ -103,7 +102,7 @@ func (s *Service) Create(ctx context.Context, orgID, ownerID uuid.UUID, in Creat
 		in.AdjustmentMonth = &m
 	}
 
-	l, err := s.repo.Create(ctx, orgID, ownerID, in)
+	l, err := s.repo.Create(ctx, orgID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -323,31 +322,4 @@ func (s *Service) ListReadjustments(ctx context.Context, leaseID, orgID uuid.UUI
 
 func round2(x float64) float64 {
 	return math.Round(x*100) / 100
-}
-
-func (s *Service) GetIndexHistory(ctx context.Context, indexType string) ([]IndexValue, error) {
-	return s.indexRepo.GetHistory(ctx, indexType)
-}
-
-func (s *Service) AdjustByAutoIndex(ctx context.Context, id, orgID uuid.UUID, in AdjustLeaseInput) (*ReadjustOutput, error) {
-	idx, err := s.indexRepo.GetLatest(ctx, in.IndexType)
-	if err != nil {
-		return nil, fmt.Errorf("lease.svc: auto adjust get index: %w", err)
-	}
-
-	l, err := s.repo.GetByID(ctx, id, orgID)
-	if err != nil {
-		return nil, fmt.Errorf("lease.svc: auto adjust get lease: %w", err)
-	}
-
-	if l.Status != "ACTIVE" {
-		return nil, fmt.Errorf("lease.svc: %w", ErrLeaseNotActive)
-	}
-
-	readjustIn := ReadjustInput{
-		Percentage: idx.Cumulative,
-		IndexName:  &idx.IndexType,
-		AppliedAt:  idx.ReferenceMonth,
-	}
-	return s.Readjust(ctx, id, orgID, readjustIn)
 }

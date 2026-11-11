@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/inquilinotop/api/internal/property"
 	"github.com/inquilinotop/api/internal/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -71,23 +70,14 @@ func (f *fakeRepo) UpdateImportHistory(_ context.Context, _ uuid.UUID, _, _ int,
 	}
 	return f.updateErr
 }
-func (f *fakeRepo) GetImportHistory(context.Context, uuid.UUID, uuid.UUID) (*ImportHistory, error) {
-	return nil, nil
-}
 func (f *fakeRepo) ListImportHistory(context.Context, uuid.UUID) ([]ImportHistory, error) {
-	return nil, nil
-}
-
-type fakePropertyRepo struct{}
-
-func (fakePropertyRepo) GetByField(context.Context, uuid.UUID, string, string) (*property.Property, error) {
 	return nil, nil
 }
 
 func newTestService() (*Service, *fakeRepo, *fakeTenantRepo) {
 	repo := &fakeRepo{}
 	tr := newFakeTenantRepo()
-	return NewService(repo, fakePropertyRepo{}, tenant.NewService(tr)), repo, tr
+	return NewService(repo, tenant.NewService(tr)), repo, tr
 }
 
 func TestService_ImportRecords_TenantNovoGrava(t *testing.T) {

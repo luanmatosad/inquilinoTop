@@ -48,37 +48,8 @@ func (s *Service) RemoveRole(ctx context.Context, userID uuid.UUID, role RoleTyp
 	return s.repo.Delete(ctx, userID, role, orgID, branchID)
 }
 
-func (s *Service) CheckPermission(ctx context.Context, userID uuid.UUID, role RoleType, orgID, branchID *uuid.UUID) (bool, error) {
-	return s.repo.HasRole(ctx, userID, role, orgID, branchID)
-}
-
 func (s *Service) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]UserRole, error) {
 	return s.repo.GetByUser(ctx, userID)
-}
-
-func (s *Service) GetUserRolesForOrg(ctx context.Context, userID, orgID uuid.UUID) ([]UserRole, error) {
-	return s.repo.GetByUserAndOrg(ctx, userID, orgID)
-}
-
-func (s *Service) AssignOrgRole(ctx context.Context, userID, orgID uuid.UUID, role RoleType, branchID *uuid.UUID) error {
-	hasAny, err := s.repo.HasAnyRole(ctx, userID, orgID)
-	if err != nil {
-		return err
-	}
-	if hasAny {
-		return ErrRoleAlreadyExists
-	}
-	_, err = s.repo.Create(ctx, CreateInput{
-		UserID:         userID,
-		Role:           role,
-		OrganizationID: &orgID,
-		BranchID:       branchID,
-	})
-	return err
-}
-
-func (s *Service) RemoveOrgRole(ctx context.Context, userID, orgID uuid.UUID) error {
-	return s.repo.Delete(ctx, userID, RoleViewer, &orgID, nil)
 }
 
 func (s *Service) HasPermission(ctx context.Context, userID, orgID uuid.UUID, role RoleType, permission Permission) bool {

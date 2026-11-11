@@ -84,13 +84,6 @@ definitions:
       tenant_name:
         type: string
     type: object
-  expense.Bucket:
-    properties:
-      count:
-        type: integer
-      total:
-        type: number
-    type: object
   expense.CreateExpenseInput:
     properties:
       amount:
@@ -160,14 +153,22 @@ definitions:
     required:
     - paid_date
     type: object
-  expense.Summary:
+  financial.adminFeeInput:
     properties:
-      overdue:
-        $ref: '#/definitions/expense.Bucket'
-      paid:
-        $ref: '#/definitions/expense.Bucket'
-      to_pay:
-        $ref: '#/definitions/expense.Bucket'
+      admin_fee_percent:
+        type: number
+    type: object
+  financial.generateInput:
+    properties:
+      period:
+        type: string
+    type: object
+  financial.updateTransferBody:
+    properties:
+      discounts:
+        type: number
+      status:
+        type: string
     type: object
   identity.UpsertNotificationPreferencesInput:
     properties:
@@ -221,6 +222,19 @@ definitions:
     properties:
       code:
         type: string
+    type: object
+  importexport.ImportRequest:
+    properties:
+      duplicate_strategy:
+        type: string
+      entity_type:
+        type: string
+      records:
+        items:
+          additionalProperties:
+            type: string
+          type: object
+        type: array
     type: object
   inspection.Comparison:
     properties:
@@ -411,13 +425,6 @@ definitions:
     required:
     - inspected_at
     type: object
-  lease.AdjustLeaseInput:
-    properties:
-      index_type:
-        type: string
-    required:
-    - index_type
-    type: object
   lease.CreateLeaseInput:
     properties:
       adjustment_index:
@@ -518,8 +525,6 @@ definitions:
         type: string
       organization_id:
         type: string
-      owner_id:
-        type: string
       payment_day:
         type: integer
       payments_error:
@@ -591,8 +596,6 @@ definitions:
         type: string
       organization_id:
         type: string
-      owner_id:
-        type: string
       payment_day:
         type: integer
       payments_canceled:
@@ -652,8 +655,6 @@ definitions:
       notes:
         type: string
       organization_id:
-        type: string
-      owner_id:
         type: string
       payment_day:
         type: integer
@@ -794,6 +795,115 @@ definitions:
     required:
     - rent_amount
     type: object
+  notification.CreateNotificationInput:
+    properties:
+      body:
+        type: string
+      scheduled_at:
+        type: string
+      subject:
+        maxLength: 255
+        type: string
+      to_address:
+        type: string
+      type:
+        enum:
+        - email
+        - sms
+        - push
+        type: string
+    required:
+    - body
+    - subject
+    - to_address
+    - type
+    type: object
+  organization.CreateBranchInput:
+    properties:
+      name:
+        maxLength: 255
+        type: string
+      region:
+        maxLength: 100
+        type: string
+    required:
+    - name
+    type: object
+  organization.CreateInviteInput:
+    properties:
+      branch_id:
+        type: string
+      email:
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/organization.RoleType'
+        enum:
+        - admin
+        - manager
+        - employee
+        - viewer
+    required:
+    - email
+    - role
+    type: object
+  organization.CreateOrgInput:
+    properties:
+      name:
+        maxLength: 255
+        type: string
+    required:
+    - name
+    type: object
+  organization.RoleType:
+    enum:
+    - owner
+    - admin
+    - manager
+    - employee
+    - viewer
+    type: string
+    x-enum-varnames:
+    - RoleOwner
+    - RoleAdmin
+    - RoleManager
+    - RoleEmployee
+    - RoleViewer
+  organization.UpdateBranchInput:
+    properties:
+      is_active:
+        type: boolean
+      name:
+        maxLength: 255
+        type: string
+      region:
+        maxLength: 100
+        type: string
+    required:
+    - name
+    type: object
+  organization.UpdateMemberRoleInput:
+    properties:
+      role:
+        allOf:
+        - $ref: '#/definitions/organization.RoleType'
+        enum:
+        - owner
+        - admin
+        - manager
+        - employee
+        - viewer
+    required:
+    - role
+    type: object
+  organization.UpdateOrgInput:
+    properties:
+      name:
+        maxLength: 255
+        type: string
+    required:
+    - name
+    type: object
   payment.AgreementInput:
     properties:
       agreed_amount:
@@ -819,13 +929,6 @@ definitions:
       late_fee:
         type: number
       net_paid:
-        type: number
-    type: object
-  payment.Bucket:
-    properties:
-      count:
-        type: integer
-      total:
         type: number
     type: object
   payment.ConfirmInput:
@@ -947,6 +1050,8 @@ definitions:
         type: string
       status:
         type: string
+      tenant_name:
+        type: string
       type:
         type: string
       updated_at:
@@ -1036,15 +1141,6 @@ definitions:
     required:
     - channel
     - kind
-    type: object
-  payment.Summary:
-    properties:
-      overdue:
-        $ref: '#/definitions/payment.Bucket'
-      paid:
-        $ref: '#/definitions/payment.Bucket'
-      to_receive:
-        $ref: '#/definitions/payment.Bucket'
     type: object
   payment.UnitRef:
     properties:
@@ -1320,6 +1416,49 @@ info:
   title: InquilinoTop API
   version: "1.0"
 paths:
+  /audit-logs:
+    get:
+      parameters:
+      - description: Início do período (RFC3339)
+        in: query
+        name: from
+        type: string
+      - description: Fim do período (RFC3339)
+        in: query
+        name: to
+        type: string
+      - description: Tipo do evento
+        in: query
+        name: event_type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista os logs de auditoria da organização (somente owner)
+      tags:
+      - audit
   /auth/2fa/disable:
     post:
       consumes:
@@ -1738,6 +1877,149 @@ paths:
       summary: Métricas agregadas do dashboard da organização
       tags:
       - dashboard
+  /documents:
+    get:
+      parameters:
+      - description: Tipo da entidade
+        in: query
+        name: entity_type
+        required: true
+        type: string
+      - description: ID da entidade (UUID)
+        in: query
+        name: entity_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista os documentos de uma entidade
+      tags:
+      - documents
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Arquivo
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Tipo da entidade
+        in: formData
+        name: entity_type
+        required: true
+        type: string
+      - description: ID da entidade (UUID)
+        in: formData
+        name: entity_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Envia um documento (multipart) vinculado a uma entidade
+      tags:
+      - documents
+  /documents/{id}:
+    delete:
+      parameters:
+      - description: ID do documento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove um documento
+      tags:
+      - documents
+    get:
+      parameters:
+      - description: ID do documento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Faz o download de um documento
+      tags:
+      - documents
   /expenses:
     get:
       description: 'Filtros: status (PENDING a vencer | LATE vencida | PAID), from/to
@@ -1899,22 +2181,124 @@ paths:
       summary: Estorna a baixa de uma despesa
       tags:
       - expenses
-  /expenses/summary:
+  /financial/admin-fee:
     get:
-      description: Totais a vencer, vencidos e pagos, por vencimento entre from e
-        to.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lê a taxa administrativa da organização (%)
+      tags:
+      - financial
+    put:
+      consumes:
+      - application/json
       parameters:
-      - description: Vencimento a partir de (YYYY-MM-DD)
+      - description: taxa em percentual
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/financial.adminFeeInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: INVALID_BODY | INVALID_ADMIN_FEE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Grava a taxa administrativa da organização (0 a 100)
+      tags:
+      - financial
+  /financial/bank-records:
+    get:
+      parameters:
+      - description: data inicial YYYY-MM-DD
         in: query
         name: from
         type: string
-      - description: Vencimento até (YYYY-MM-DD)
+      - description: data final YYYY-MM-DD
         in: query
         name: to
         type: string
-      - description: ID da unidade
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: INVALID_DATE
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista lançamentos do extrato importado
+      tags:
+      - financial
+  /financial/bank-records/import:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: arquivo CSV
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: INVALID_FILE | INVALID_CSV_FORMAT
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Importa extrato CSV (date,description,amount,type)
+      tags:
+      - financial
+  /financial/transfers:
+    get:
+      parameters:
+      - description: PENDING | PROCESSED | TRANSFERRED
         in: query
-        name: unit_id
+        name: status
+        type: string
+      - description: competência inicial YYYY-MM
+        in: query
+        name: from
+        type: string
+      - description: competência final YYYY-MM
+        in: query
+        name: to
+        type: string
+      - description: UUID do imóvel
+        in: query
+        name: property_id
         type: string
       produces:
       - application/json
@@ -1922,51 +2306,34 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/expense.Summary'
+            additionalProperties: true
+            type: object
         "400":
-          description: Bad Request
+          description: INVALID_PERIOD | INVALID_PROPERTY_ID
           schema:
             additionalProperties: true
             type: object
       security:
       - BearerAuth: []
-      summary: Resumo das despesas no período
+      summary: Lista repasses da organização
       tags:
-      - expenses
-  /fiscal/annual-report:
-    get:
-      parameters:
-      - description: 'Ano (ex: 2026)'
-        in: query
-        name: year
-        required: true
-        type: integer
-      produces:
+      - financial
+  /financial/transfers/{id}:
+    put:
+      consumes:
       - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Relatório fiscal anual para DIRPF
-      tags:
-      - fiscal
-  /indices/{type}/history:
-    get:
       parameters:
-      - description: Tipo do índice (IPCA, IGP-M)
+      - description: UUID do repasse
         in: path
-        name: type
+        name: id
         required: true
         type: string
+      - description: status e/ou discounts
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/financial.updateTransferBody'
       produces:
       - application/json
       responses:
@@ -1975,11 +2342,119 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "400":
+          description: INVALID_DISCOUNTS | DISCOUNTS_EXCEED_GROSS
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: NOT_FOUND
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: INVALID_TRANSITION | TRANSFER_LOCKED | CONCURRENT_UPDATE
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
-      summary: Lista histórico de um índice
+      summary: Avança o status do repasse ou altera descontos (PENDING)
       tags:
-      - leases
+      - financial
+  /financial/transfers/generate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: competência YYYY-MM
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/financial.generateInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: INVALID_PERIOD
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Gera repasses PENDING da competência (idempotente)
+      tags:
+      - financial
+  /import:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Registros a importar
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/importexport.ImportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Importa registros (inquilinos, imóveis, contratos, etc.) em lote
+      tags:
+      - importexport
+  /import/history:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista o histórico de importações da organização
+      tags:
+      - importexport
   /inspection-photos/{photoId}:
     get:
       description: Devolve os bytes da imagem; só para usuários da organização dona
@@ -2381,6 +2856,52 @@ paths:
       summary: Remove foto de um item do laudo (soft-delete)
       tags:
       - inspections
+  /invites/accept:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 'token: token do convite'
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Aceita um convite com o token recebido por e-mail
+      tags:
+      - organization
   /leases:
     get:
       produces:
@@ -2472,35 +2993,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Atualiza contrato
-      tags:
-      - leases
-  /leases/{id}/adjust:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID do contrato
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Dados para reajuste automático
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/lease.AdjustLeaseInput'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Aplica reajuste automático usando o índice mais recente
       tags:
       - leases
   /leases/{id}/end:
@@ -2742,19 +3234,121 @@ paths:
       summary: Registra pagamento
       tags:
       - payments
-  /leases/{leaseId}/payments/generate:
-    post:
+  /me/roles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista roles do usuário autenticado
+      tags:
+      - rbac
+  /notifications:
+    get:
       parameters:
-      - description: ID do contrato
-        in: path
-        name: leaseId
-        required: true
-        type: string
-      - description: Competência YYYY-MM
+      - description: 'Status (padrão: pending)'
         in: query
-        name: month
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista as notificações do owner autenticado
+      tags:
+      - notifications
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados da notificação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/notification.CreateNotificationInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria uma notificação
+      tags:
+      - notifications
+  /notifications/{id}:
+    get:
+      parameters:
+      - description: ID da notificação
+        in: path
+        name: id
         required: true
         type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retorna uma notificação do owner autenticado
+      tags:
+      - notifications
+  /organizations:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados da organização
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organization.CreateOrgInput'
       produces:
       - application/json
       responses:
@@ -2773,12 +3367,17 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
-      summary: Gera payments (RENT + eventual IPTU) da competência
+      summary: Cria a organização do usuário autenticado
       tags:
-      - payments
-  /me/roles:
+      - organization
+  /organizations/me:
     get:
       produces:
       - application/json
@@ -2788,11 +3387,406 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
-      summary: Lista roles do usuário autenticado
+      summary: Retorna a organização do usuário autenticado
       tags:
-      - rbac
+      - organization
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Campos da organização
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organization.UpdateOrgInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Atualiza os dados da organização
+      tags:
+      - organization
+  /organizations/me/branches:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista as filiais da organização
+      tags:
+      - organization
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados da filial
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organization.CreateBranchInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria uma filial
+      tags:
+      - organization
+  /organizations/me/branches/{id}:
+    delete:
+      parameters:
+      - description: ID da filial
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove uma filial
+      tags:
+      - organization
+    get:
+      parameters:
+      - description: ID da filial
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retorna uma filial da organização
+      tags:
+      - organization
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da filial
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Campos da filial
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organization.UpdateBranchInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Atualiza uma filial
+      tags:
+      - organization
+  /organizations/me/invites:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista os convites da organização
+      tags:
+      - organization
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do convite
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organization.CreateInviteInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria um convite para um novo membro
+      tags:
+      - organization
+  /organizations/me/invites/{id}:
+    delete:
+      parameters:
+      - description: ID do convite
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancela um convite pendente
+      tags:
+      - organization
+  /organizations/me/members:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista os membros da organização
+      tags:
+      - organization
+  /organizations/me/members/{id}:
+    delete:
+      parameters:
+      - description: ID do membro
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove um membro da organização
+      tags:
+      - organization
+  /organizations/me/members/{id}/role:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do membro
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Novo papel
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organization.UpdateMemberRoleInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Altera o papel de um membro
+      tags:
+      - organization
+  /organizations/me/membership:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Org, papel, filial e permissões do usuário autenticado
+      tags:
+      - organization
   /payments:
     get:
       description: 'Filtros: status (PENDING a vencer | LATE vencida, com multa e
@@ -3154,40 +4148,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Recusa o aviso do inquilino ("ainda não recebi")
-      tags:
-      - payments
-  /payments/summary:
-    get:
-      description: Totais a receber, vencidos (valor atualizado com multa e juros)
-        e recebidos, por vencimento entre from e to.
-      parameters:
-      - description: Vencimento a partir de (YYYY-MM-DD)
-        in: query
-        name: from
-        type: string
-      - description: Vencimento até (YYYY-MM-DD)
-        in: query
-        name: to
-        type: string
-      - description: ID do contrato
-        in: query
-        name: lease_id
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/payment.Summary'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Resumo das cobranças no período
       tags:
       - payments
   /properties:

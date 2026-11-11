@@ -32,15 +32,15 @@ func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
 }
 
-func (r *pgRepository) Create(ctx context.Context, orgID uuid.UUID, ownerID uuid.UUID, in CreateLeaseInput) (*Lease, error) {
+func (r *pgRepository) Create(ctx context.Context, orgID uuid.UUID, in CreateLeaseInput) (*Lease, error) {
 	var l Lease
 	err := r.db.Pool.QueryRow(ctx,
-		`INSERT INTO leases (organization_id, owner_id, unit_id, tenant_id, start_date, end_date, rent_amount, deposit_amount, payment_day,
+		`INSERT INTO leases (organization_id, unit_id, tenant_id, start_date, end_date, rent_amount, deposit_amount, payment_day,
 			late_fee_percent, daily_interest_percent, iptu_reimbursable, annual_iptu_amount, iptu_year, notes,
 			adjustment_index, adjustment_month)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
 		 RETURNING `+leaseCols,
-		orgID, ownerID, in.UnitID, in.TenantID, in.StartDate, in.EndDate, in.RentAmount, in.DepositAmount, in.PaymentDay,
+		orgID, in.UnitID, in.TenantID, in.StartDate, in.EndDate, in.RentAmount, in.DepositAmount, in.PaymentDay,
 		in.LateFeePercent, in.DailyInterestPercent, in.IPTUReimbursable, in.AnnualIPTUAmount, in.IPTUYear, in.Notes,
 		in.AdjustmentIndex, in.AdjustmentMonth,
 	).Scan(l.scanDest()...)

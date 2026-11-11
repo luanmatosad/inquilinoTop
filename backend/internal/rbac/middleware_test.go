@@ -1,7 +1,8 @@
 package rbac_test
 
 import (
-	"encoding/json"
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,134 +11,89 @@ import (
 	"github.com/inquilinotop/api/internal/rbac"
 	"github.com/inquilinotop/api/pkg/auth"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestPermissionMiddleware_Returns401_WhenNoOwnerID(t *testing.T) {
-	mw := rbac.PermissionMiddleware(rbac.PermissionPropertyWrite)
+type fixedRoles struct {
+	role rbac.RoleType
+	err  error
+}
 
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+func (f fixedRoles) RoleIn(context.Context, uuid.UUID, uuid.UUID) (rbac.RoleType, error) {
+	return f.role, f.err
+}
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+var okNext = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
+})
+
+func runMiddleware(roles rbac.MembershipRoles, perm rbac.Permission, ctx context.Context) *httptest.ResponseRecorder {
+	mw := rbac.PermissionMiddleware(roles, perm)
+	req := httptest.NewRequest(http.MethodPost, "/", nil).WithContext(ctx)
 	rr := httptest.NewRecorder()
-	mw(next).ServeHTTP(rr, req)
+	mw(okNext).ServeHTTP(rr, req)
+	return rr
+}
+
+func contextoDeMembro() context.Context {
+	return auth.WithOwnerIDOrgID(context.Background(), uuid.New(), uuid.New())
+}
+
+func TestMiddleware_Returns401_WhenNoOwnerID(t *testing.T) {
+	ctx := auth.WithOrganizationID(context.Background(), uuid.New())
+	rr := runMiddleware(fixedRoles{role: rbac.RoleOwner}, rbac.PermissionPropertyWrite, ctx)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
-	var body map[string]interface{}
-	err := json.Unmarshal(rr.Body.Bytes(), &body)
-	require.NoError(t, err)
-	assert.NotNil(t, body["error"])
+	assert.Contains(t, rr.Body.String(), "UNAUTHORIZED")
 }
 
-func TestPermissionMiddleware_Returns403_WhenNoOrgID(t *testing.T) {
-	mw := rbac.PermissionMiddleware(rbac.PermissionPropertyWrite)
-
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req = req.WithContext(auth.WithOwnerID(req.Context(), uuid.New()))
-	rr := httptest.NewRecorder()
-	mw(next).ServeHTTP(rr, req)
+func TestMiddleware_Returns401_WhenNoOrgID(t *testing.T) {
+	ctx := auth.WithOwnerID(context.Background(), uuid.New())
+	rr := runMiddleware(fixedRoles{role: rbac.RoleOwner}, rbac.PermissionPropertyWrite, ctx)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	assert.Contains(t, rr.Body.String(), "NO_ORG")
 }
 
-func TestPermissionMiddleware_Returns403_WhenNoRole(t *testing.T) {
-	mw := rbac.PermissionMiddleware(rbac.PermissionPropertyWrite)
-
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req = req.WithContext(auth.WithOwnerIDOrgID(req.Context(), uuid.New(), uuid.New()))
-	rr := httptest.NewRecorder()
-	mw(next).ServeHTTP(rr, req)
+func TestMiddleware_Returns403_QuandoOwnerFoiRebaixadoNoBanco(t *testing.T) {
+	// O contexto não carrega papel: o banco diz viewer, então a escrita é negada.
+	rr := runMiddleware(fixedRoles{role: "viewer"}, rbac.PermissionPropertyWrite, contextoDeMembro())
 
 	assert.Equal(t, http.StatusForbidden, rr.Code)
+	assert.Contains(t, rr.Body.String(), "FORBIDDEN")
 }
 
-func TestPermissionMiddleware_AllowsViewerToRead(t *testing.T) {
-	mw := rbac.PermissionMiddleware(rbac.PermissionPropertyRead)
-
-	nextCalled := false
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		nextCalled = true
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req = req.WithContext(auth.WithOwnerIDOrgIDRole(req.Context(), uuid.New(), uuid.New(), "viewer"))
-	rr := httptest.NewRecorder()
-	mw(next).ServeHTTP(rr, req)
-
-	assert.True(t, nextCalled)
-}
-
-func TestPermissionMiddleware_BlocksViewerFromWrite(t *testing.T) {
-	mw := rbac.PermissionMiddleware(rbac.PermissionPropertyWrite)
-
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	req = req.WithContext(auth.WithOwnerIDOrgIDRole(req.Context(), uuid.New(), uuid.New(), "viewer"))
-	rr := httptest.NewRecorder()
-	mw(next).ServeHTTP(rr, req)
+func TestMiddleware_Returns403_QuandoMembroRemovido(t *testing.T) {
+	rr := runMiddleware(fixedRoles{err: rbac.ErrNotMember}, rbac.PermissionPropertyRead, contextoDeMembro())
 
 	assert.Equal(t, http.StatusForbidden, rr.Code)
+	assert.Contains(t, rr.Body.String(), "FORBIDDEN")
 }
 
-func TestPermissionMiddleware_AllowsAdminToWrite(t *testing.T) {
-	mw := rbac.PermissionMiddleware(rbac.PermissionPropertyWrite)
+func TestMiddleware_Returns500_QuandoBancoFalha(t *testing.T) {
+	rr := runMiddleware(fixedRoles{err: errors.New("db down")}, rbac.PermissionPropertyRead, contextoDeMembro())
 
-	nextCalled := false
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		nextCalled = true
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	req = req.WithContext(auth.WithOwnerIDOrgIDRole(req.Context(), uuid.New(), uuid.New(), "admin"))
-	rr := httptest.NewRecorder()
-	mw(next).ServeHTTP(rr, req)
-
-	assert.True(t, nextCalled)
+	assert.Equal(t, http.StatusInternalServerError, rr.Code)
+	assert.Contains(t, rr.Body.String(), "ROLE_LOOKUP_FAILED")
+	assert.NotContains(t, rr.Body.String(), "db down")
 }
 
-func TestPermissionMiddleware_BlocksEmployeeFromPaymentWrite(t *testing.T) {
-	mw := rbac.PermissionMiddleware(rbac.PermissionPaymentWrite)
-
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	req = req.WithContext(auth.WithOwnerIDOrgIDRole(req.Context(), uuid.New(), uuid.New(), "employee"))
-	rr := httptest.NewRecorder()
-	mw(next).ServeHTTP(rr, req)
-
-	assert.Equal(t, http.StatusForbidden, rr.Code)
-}
-
-func TestPermissionMiddleware_AllowsManagerToPaymentWrite(t *testing.T) {
-	mw := rbac.PermissionMiddleware(rbac.PermissionPaymentWrite)
-
-	nextCalled := false
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		nextCalled = true
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	req = req.WithContext(auth.WithOwnerIDOrgIDRole(req.Context(), uuid.New(), uuid.New(), "manager"))
-	rr := httptest.NewRecorder()
-	mw(next).ServeHTTP(rr, req)
-
-	assert.True(t, nextCalled)
+func TestMiddleware_PermissaoSegueOPapelDoBanco(t *testing.T) {
+	cases := []struct {
+		name string
+		role rbac.RoleType
+		perm rbac.Permission
+		want int
+	}{
+		{"viewer lê propriedade", "viewer", rbac.PermissionPropertyRead, http.StatusOK},
+		{"viewer não escreve propriedade", "viewer", rbac.PermissionPropertyWrite, http.StatusForbidden},
+		{"admin escreve propriedade", rbac.RoleAdmin, rbac.PermissionPropertyWrite, http.StatusOK},
+		{"employee não escreve pagamento", "employee", rbac.PermissionPaymentWrite, http.StatusForbidden},
+		{"manager escreve pagamento", "manager", rbac.PermissionPaymentWrite, http.StatusOK},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rr := runMiddleware(fixedRoles{role: tc.role}, tc.perm, contextoDeMembro())
+			assert.Equal(t, tc.want, rr.Code)
+		})
+	}
 }

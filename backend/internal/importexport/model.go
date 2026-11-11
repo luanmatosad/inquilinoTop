@@ -20,10 +20,6 @@ type ImportHistory struct {
 	CompletedAt    *time.Time `json:"completed_at,omitempty"`
 }
 
-type ImportRecord struct {
-	Data map[string]string `json:"data"`
-}
-
 type ImportRequest struct {
 	EntityType        string              `json:"entity_type"`
 	Records           []map[string]string `json:"records"`
@@ -41,6 +37,5 @@ type ImportResponse struct {
 type Repository interface {
 	CreateImportHistory(ctx context.Context, ownerID uuid.UUID, fileName, entityType string, totalRows int) (*ImportHistory, error)
 	UpdateImportHistory(ctx context.Context, id uuid.UUID, successful, failed int, status string) error
-	GetImportHistory(ctx context.Context, id, ownerID uuid.UUID) (*ImportHistory, error)
 	ListImportHistory(ctx context.Context, ownerID uuid.UUID) ([]ImportHistory, error)
 }

@@ -236,9 +236,10 @@ func TestPaymentRepository_DeactivateFuturePending(t *testing.T) {
 	charged := mk(today.AddDate(0, 2, 0), "2026-08")
 	paid := mk(today.AddDate(0, 3, 0), "2026-09")
 
-	require.NoError(t, repo.UpdateChargeInfo(ctx, charged.ID, orgID, payment.UpdateChargeInfoInput{ChargeID: "ch_1", ChargeMethod: "PIX"}))
+	_, err := database.Pool.Exec(ctx, `UPDATE payments SET charge_id = 'ch_1' WHERE id = $1`, charged.ID)
+	require.NoError(t, err)
 	paidDate := today
-	_, err := repo.Update(ctx, paid.ID, orgID, payment.UpdatePaymentInput{Status: "PAID", PaidDate: &paidDate, GrossAmount: 1000})
+	_, err = repo.Update(ctx, paid.ID, orgID, payment.UpdatePaymentInput{Status: "PAID", PaidDate: &paidDate, GrossAmount: 1000})
 	require.NoError(t, err)
 
 	res, err := repo.DeactivateFuturePending(ctx, leaseID, orgID, today)
@@ -401,9 +402,10 @@ func TestPaymentRepository_UpdateFuturePendingRent(t *testing.T) {
 	iptu := mk(from.AddDate(0, 1, 0), "2026-07", "EXPENSE")  // IPTU: não muda
 	retirada := mk(from.AddDate(0, 4, 0), "2026-10", "RENT") // desativada: não muda
 
-	require.NoError(t, repo.UpdateChargeInfo(ctx, emitida.ID, orgID, payment.UpdateChargeInfoInput{ChargeID: "ch_1", ChargeMethod: "PIX"}))
+	_, err := database.Pool.Exec(ctx, `UPDATE payments SET charge_id = 'ch_1' WHERE id = $1`, emitida.ID)
+	require.NoError(t, err)
 	paidDate := from
-	_, err := repo.Update(ctx, paga.ID, orgID, payment.UpdatePaymentInput{Status: "PAID", PaidDate: &paidDate, GrossAmount: 1000})
+	_, err = repo.Update(ctx, paga.ID, orgID, payment.UpdatePaymentInput{Status: "PAID", PaidDate: &paidDate, GrossAmount: 1000})
 	require.NoError(t, err)
 	_, err = repo.DeactivateFuturePending(ctx, leaseID, orgID, from.AddDate(0, 3, 15))
 	require.NoError(t, err)

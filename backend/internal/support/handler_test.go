@@ -27,15 +27,11 @@ func authMWWithOwnerID(ownerID uuid.UUID) func(http.Handler) http.Handler {
 	}
 }
 
-func noopWriteMw(next http.Handler) http.Handler {
-	return next
-}
-
 func newRouter() (chi.Router, *support.Handler) {
 	svc := support.NewService(newMockRepo())
 	h := support.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
+	h.Register(r, authMWWithOwnerID(uuid.New()))
 	return r, h
 }
 
@@ -116,7 +112,7 @@ type mockRepoInternalErr struct {
 	*mockRepo
 }
 
-func (m *mockRepoInternalErr) GetByID(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ uuid.UUID) (*support.Ticket, error) {
+func (m *mockRepoInternalErr) GetByID(_ context.Context, _ uuid.UUID, _ *uuid.UUID, _ uuid.UUID) (*support.Ticket, error) {
 	return nil, errors.New("database connection reset")
 }
 
@@ -125,7 +121,7 @@ func TestHandler_GetByID_ErroInterno_Retorna500(t *testing.T) {
 	svc := support.NewService(mock)
 	h := support.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(uuid.New()), noopWriteMw, noopWriteMw)
+	h.Register(r, authMWWithOwnerID(uuid.New()))
 
 	req := httptest.NewRequest(http.MethodGet, "/tickets/"+uuid.New().String(), nil)
 	rr := httptest.NewRecorder()
@@ -140,9 +136,9 @@ func TestHandler_GetByID_Válido(t *testing.T) {
 	svc := support.NewService(mock)
 	h := support.NewHandler(svc)
 	r := chi.NewRouter()
-	h.Register(r, authMWWithOwnerID(userID), noopWriteMw, noopWriteMw)
+	h.Register(r, authMWWithOwnerID(userID))
 
-	ticket, _ := svc.Create(nil, userID, userID, support.CreateTicketInput{ //nolint:staticcheck
+	ticket, _ := svc.Create(context.Background(), &userID, userID, support.CreateTicketInput{
 		Tipo: "FEATURE", Assunto: "Melhoria", Descricao: "Adicionar dark mode",
 	})
 
@@ -150,5 +146,45 @@ func TestHandler_GetByID_Válido(t *testing.T) {
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func authMWSemOrg(ownerID uuid.UUID) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r.WithContext(auth.WithOwnerID(r.Context(), ownerID)))
+		})
+	}
+}
+
+func TestHandler_SemOrganização_CriaEConsultaTicket(t *testing.T) {
+	userID := uuid.New()
+	h := support.NewHandler(support.NewService(newMockRepo()))
+	r := chi.NewRouter()
+	h.Register(r, authMWSemOrg(userID))
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"tipo":      "BUG",
+		"assunto":   "Erro sem organização",
+		"descricao": "Usuário ainda não entrou em uma organização",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/tickets", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusCreated, rr.Code)
+
+	var created struct {
+		Data struct {
+			ID             uuid.UUID  `json:"id"`
+			OrganizationID *uuid.UUID `json:"organization_id"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&created))
+	assert.Nil(t, created.Data.OrganizationID)
+
+	req = httptest.NewRequest(http.MethodGet, "/tickets/"+created.Data.ID.String(), nil)
+	rr = httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/pkg/db"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type repository struct {
@@ -69,14 +70,34 @@ func (r *repository) Update(ctx context.Context, id uuid.UUID, in UpdateOrgInput
 	return &org, nil
 }
 
-func (r *repository) Create(ctx context.Context, name string) (*Organization, error) {
+func (r *repository) CreateWithOwner(ctx context.Context, name string, ownerID uuid.UUID) (*Organization, error) {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("create org: begin: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	var org Organization
-	err := r.db.Pool.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO organizations (name) VALUES ($1)
 		RETURNING id, name, plan, created_at, updated_at
 	`, name).Scan(&org.ID, &org.Name, &org.Plan, &org.CreatedAt, &org.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create org: %w", err)
+	}
+	_, err = tx.Exec(ctx, `
+		INSERT INTO organization_members (organization_id, user_id, role)
+		VALUES ($1, $2, $3)
+	`, org.ID, ownerID, RoleOwner)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "uq_org_members_one_org_per_user" {
+			return nil, ErrAlreadyHasOrganization
+		}
+		return nil, fmt.Errorf("create org owner: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("create org: commit: %w", err)
 	}
 	return &org, nil
 }
@@ -252,19 +273,6 @@ func (r *repository) RemoveMember(ctx context.Context, memberID, orgID uuid.UUID
 	return nil
 }
 
-func (r *repository) CreateMember(ctx context.Context, orgID, userID uuid.UUID, role RoleType, branchID *uuid.UUID) (*Member, error) {
-	var m Member
-	err := r.db.Pool.QueryRow(ctx, `
-		INSERT INTO organization_members (organization_id, user_id, role, branch_id)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, organization_id, user_id, role, branch_id, created_at, updated_at
-	`, orgID, userID, role, branchID).Scan(&m.ID, &m.OrganizationID, &m.UserID, &m.Role, &m.BranchID, &m.CreatedAt, &m.UpdatedAt)
-	if err != nil {
-		return nil, fmt.Errorf("create member: %w", err)
-	}
-	return &m, nil
-}
-
 func (r *repository) HasRole(ctx context.Context, userID, orgID uuid.UUID, role RoleType) (bool, error) {
 	var exists bool
 	err := r.db.Pool.QueryRow(ctx, `
@@ -355,14 +363,58 @@ func (r *repository) CancelInvite(ctx context.Context, inviteID, orgID uuid.UUID
 	return nil
 }
 
-func (r *repository) AcceptInvite(ctx context.Context, inviteID uuid.UUID) error {
-	_, err := r.db.Pool.Exec(ctx, `
-		UPDATE organization_invites SET accepted_at = NOW() WHERE id = $1
-	`, inviteID)
+// AcceptInvite grava a membership e marca o convite como aceito na mesma transação. Se o convite já foi
+// usado ou expirou, o UPDATE não toca linha e a transação volta: quem perdeu a corrida recebe ErrInviteAlreadyUsed.
+func (r *repository) AcceptInvite(ctx context.Context, invite *Invite, userID uuid.UUID) error {
+	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("accept invite: %w", err)
+		return fmt.Errorf("accept invite: begin: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var one int
+	err = tx.QueryRow(ctx, `SELECT 1 FROM organization_members WHERE user_id = $1 LIMIT 1`, userID).Scan(&one)
+	if err == nil {
+		return ErrAlreadyHasOrganization
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("accept invite: check membership: %w", err)
+	}
+
+	tag, err := tx.Exec(ctx, `
+		UPDATE organization_invites SET accepted_at = NOW()
+		WHERE id = $1 AND accepted_at IS NULL AND expires_at > NOW()
+	`, invite.ID)
+	if err != nil {
+		return fmt.Errorf("accept invite: mark accepted: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrInviteAlreadyUsed
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO organization_members (organization_id, user_id, role, branch_id)
+		VALUES ($1, $2, $3, $4)
+	`, invite.OrganizationID, userID, invite.Role, invite.BranchID); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "uq_org_members_one_org_per_user" {
+			return ErrAlreadyHasOrganization
+		}
+		return fmt.Errorf("accept invite: create member: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("accept invite: commit: %w", err)
 	}
 	return nil
+}
+
+func (r *repository) GetUserEmail(ctx context.Context, userID uuid.UUID) (string, error) {
+	var email string
+	err := r.db.Pool.QueryRow(ctx, `SELECT email FROM users WHERE id = $1`, userID).Scan(&email)
+	if err != nil {
+		return "", fmt.Errorf("get user email: %w", err)
+	}
+	return email, nil
 }
 
 func (r *repository) GetMembershipByUserID(ctx context.Context, userID uuid.UUID) (*Member, error) {

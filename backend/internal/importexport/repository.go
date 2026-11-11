@@ -58,23 +58,6 @@ func (r *pgRepository) UpdateImportHistory(ctx context.Context, id uuid.UUID, su
 	return err
 }
 
-func (r *pgRepository) GetImportHistory(ctx context.Context, id, ownerID uuid.UUID) (*ImportHistory, error) {
-	var history ImportHistory
-	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, owner_id, file_name, entity_type, total_rows, successful_rows, failed_rows, status, created_at, completed_at
-		FROM import_history
-		WHERE id = $1 AND owner_id = $2
-	`, id, ownerID).Scan(
-		&history.ID, &history.OwnerID, &history.FileName, &history.EntityType,
-		&history.TotalRows, &history.SuccessfulRows, &history.FailedRows,
-		&history.Status, &history.CreatedAt, &history.CompletedAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &history, nil
-}
-
 func (r *pgRepository) ListImportHistory(ctx context.Context, ownerID uuid.UUID) ([]ImportHistory, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, owner_id, file_name, entity_type, total_rows, successful_rows, failed_rows, status, created_at, completed_at

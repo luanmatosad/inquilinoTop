@@ -158,35 +158,3 @@ func getUserID(r *http.Request) string {
 	}
 	return ""
 }
-
-type LimiterByID struct {
-	limiters map[uuid.UUID]*Limiter
-	mu       sync.RWMutex
-	rate     float64
-	burst    int
-}
-
-func NewByID(rate float64, burst int) *LimiterByID {
-	return &LimiterByID{
-		limiters: make(map[uuid.UUID]*Limiter),
-		rate:     rate,
-		burst:    burst,
-	}
-}
-
-func (l *LimiterByID) Allow(key uuid.UUID) bool {
-	l.mu.RLock()
-	limiter, exists := l.limiters[key]
-	l.mu.RUnlock()
-
-	if !exists {
-		l.mu.Lock()
-		if _, exists = l.limiters[key]; !exists {
-			l.limiters[key] = New(l.rate, l.burst)
-		}
-		limiter = l.limiters[key]
-		l.mu.Unlock()
-	}
-
-	return limiter.Allow(key.String())
-}

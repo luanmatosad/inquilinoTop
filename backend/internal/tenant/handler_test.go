@@ -30,7 +30,7 @@ func authMWWithOwnerID(ownerID uuid.UUID) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			orgID := ownerID // Use same ID for consistency
-			ctx := auth.WithOwnerIDOrgIDRole(r.Context(), ownerID, orgID, "admin")
+			ctx := auth.WithOwnerIDOrgID(r.Context(), ownerID, orgID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

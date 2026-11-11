@@ -20,7 +20,7 @@ func NewRepository(database *db.DB) Repository {
 	return &pgRepository{db: database}
 }
 
-func (r *pgRepository) Create(ctx context.Context, orgID, userID uuid.UUID, in CreateTicketInput) (*Ticket, error) {
+func (r *pgRepository) Create(ctx context.Context, orgID *uuid.UUID, userID uuid.UUID, in CreateTicketInput) (*Ticket, error) {
 	ticket := &Ticket{
 		ID:             uuid.New(),
 		OrganizationID: orgID,
@@ -48,12 +48,12 @@ func (r *pgRepository) Create(ctx context.Context, orgID, userID uuid.UUID, in C
 	return ticket, nil
 }
 
-func (r *pgRepository) GetByID(ctx context.Context, id, orgID, userID uuid.UUID) (*Ticket, error) {
+func (r *pgRepository) GetByID(ctx context.Context, id uuid.UUID, orgID *uuid.UUID, userID uuid.UUID) (*Ticket, error) {
 	ticket := &Ticket{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, organization_id, user_id, tipo, assunto, descricao, status, created_at, updated_at
 		FROM support_tickets
-		WHERE id = $1 AND organization_id = $2 AND user_id = $3`,
+		WHERE id = $1 AND organization_id IS NOT DISTINCT FROM $2 AND user_id = $3`,
 		id, orgID, userID,
 	).Scan(&ticket.ID, &ticket.OrganizationID, &ticket.UserID, &ticket.Tipo, &ticket.Assunto,
 		&ticket.Descricao, &ticket.Status, &ticket.CreatedAt, &ticket.UpdatedAt)
@@ -67,11 +67,11 @@ func (r *pgRepository) GetByID(ctx context.Context, id, orgID, userID uuid.UUID)
 	return ticket, nil
 }
 
-func (r *pgRepository) ListByUser(ctx context.Context, orgID, userID uuid.UUID) ([]Ticket, error) {
+func (r *pgRepository) ListByUser(ctx context.Context, orgID *uuid.UUID, userID uuid.UUID) ([]Ticket, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, organization_id, user_id, tipo, assunto, descricao, status, created_at, updated_at
 		FROM support_tickets
-		WHERE organization_id = $1 AND user_id = $2
+		WHERE organization_id IS NOT DISTINCT FROM $1 AND user_id = $2
 		ORDER BY created_at DESC`,
 		orgID, userID,
 	)

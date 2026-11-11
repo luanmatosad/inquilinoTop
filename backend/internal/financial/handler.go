@@ -32,7 +32,6 @@ func (h *Handler) Register(r chi.Router, authMW, readMw, writeMw func(http.Handl
 		r.With(readMw).Get("/financial/transfers", h.listTransfers)
 		r.With(writeMw).Post("/financial/transfers/generate", h.generateTransfers)
 		r.With(writeMw).Put("/financial/transfers/{id}", h.updateTransfer)
-		r.With(readMw).Get("/financial/commissions", h.listCommissions)
 		r.With(readMw).Get("/financial/bank-records", h.listBankRecords)
 		r.With(writeMw).Post("/financial/bank-records/import", h.importBankRecords)
 		r.With(readMw).Get("/financial/admin-fee", h.getAdminFee)
@@ -48,8 +47,8 @@ func (h *Handler) Register(r chi.Router, authMW, readMw, writeMw func(http.Handl
 // @Param       from        query string false "competência inicial YYYY-MM"
 // @Param       to          query string false "competência final YYYY-MM"
 // @Param       property_id query string false "UUID do imóvel"
-// @Success     200 {object} httputil.Envelope
-// @Failure     400 {object} httputil.Envelope "INVALID_PERIOD | INVALID_PROPERTY_ID"
+// @Success     200 {object} map[string]interface{}
+// @Failure     400 {object} map[string]interface{} "INVALID_PERIOD | INVALID_PROPERTY_ID"
 // @Router      /financial/transfers [get]
 func (h *Handler) listTransfers(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -88,8 +87,8 @@ type generateInput struct {
 // @Accept      json
 // @Produce     json
 // @Param       body body generateInput true "competência YYYY-MM"
-// @Success     200 {object} httputil.Envelope
-// @Failure     400 {object} httputil.Envelope "INVALID_PERIOD"
+// @Success     200 {object} map[string]interface{}
+// @Failure     400 {object} map[string]interface{} "INVALID_PERIOD"
 // @Router      /financial/transfers/generate [post]
 func (h *Handler) generateTransfers(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -122,10 +121,10 @@ type updateTransferBody struct {
 // @Produce     json
 // @Param       id   path string             true "UUID do repasse"
 // @Param       body body updateTransferBody true "status e/ou discounts"
-// @Success     200 {object} httputil.Envelope
-// @Failure     400 {object} httputil.Envelope "INVALID_DISCOUNTS | DISCOUNTS_EXCEED_GROSS"
-// @Failure     404 {object} httputil.Envelope "NOT_FOUND"
-// @Failure     409 {object} httputil.Envelope "INVALID_TRANSITION | TRANSFER_LOCKED | CONCURRENT_UPDATE"
+// @Success     200 {object} map[string]interface{}
+// @Failure     400 {object} map[string]interface{} "INVALID_DISCOUNTS | DISCOUNTS_EXCEED_GROSS"
+// @Failure     404 {object} map[string]interface{} "NOT_FOUND"
+// @Failure     409 {object} map[string]interface{} "INVALID_TRANSITION | TRANSFER_LOCKED | CONCURRENT_UPDATE"
 // @Router      /financial/transfers/{id} [put]
 func (h *Handler) updateTransfer(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -151,21 +150,11 @@ func (h *Handler) updateTransfer(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, t)
 }
 
-// @Summary     Comissões de corretores (MVP: ainda sem origem de dados, retorna lista vazia)
-// @Tags        financial
-// @Security    BearerAuth
-// @Produce     json
-// @Success     200 {object} httputil.Envelope
-// @Router      /financial/commissions [get]
-func (h *Handler) listCommissions(w http.ResponseWriter, r *http.Request) {
-	httputil.OK(w, []struct{}{})
-}
-
 // @Summary     Lê a taxa administrativa da organização (%)
 // @Tags        financial
 // @Security    BearerAuth
 // @Produce     json
-// @Success     200 {object} httputil.Envelope
+// @Success     200 {object} map[string]interface{}
 // @Router      /financial/admin-fee [get]
 func (h *Handler) getAdminFee(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -191,8 +180,8 @@ type adminFeeInput struct {
 // @Accept      json
 // @Produce     json
 // @Param       body body adminFeeInput true "taxa em percentual"
-// @Success     200 {object} httputil.Envelope
-// @Failure     400 {object} httputil.Envelope "INVALID_BODY | INVALID_ADMIN_FEE"
+// @Success     200 {object} map[string]interface{}
+// @Failure     400 {object} map[string]interface{} "INVALID_BODY | INVALID_ADMIN_FEE"
 // @Router      /financial/admin-fee [put]
 func (h *Handler) putAdminFee(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -224,8 +213,8 @@ func (h *Handler) putAdminFee(w http.ResponseWriter, r *http.Request) {
 // @Produce     json
 // @Param       from query string false "data inicial YYYY-MM-DD"
 // @Param       to   query string false "data final YYYY-MM-DD"
-// @Success     200 {object} httputil.Envelope
-// @Failure     400 {object} httputil.Envelope "INVALID_DATE"
+// @Success     200 {object} map[string]interface{}
+// @Failure     400 {object} map[string]interface{} "INVALID_DATE"
 // @Router      /financial/bank-records [get]
 func (h *Handler) listBankRecords(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())
@@ -264,8 +253,8 @@ func (h *Handler) listBankRecords(w http.ResponseWriter, r *http.Request) {
 // @Accept      multipart/form-data
 // @Produce     json
 // @Param       file formData file true "arquivo CSV"
-// @Success     200 {object} httputil.Envelope
-// @Failure     400 {object} httputil.Envelope "INVALID_FILE | INVALID_CSV_FORMAT"
+// @Success     200 {object} map[string]interface{}
+// @Failure     400 {object} map[string]interface{} "INVALID_FILE | INVALID_CSV_FORMAT"
 // @Router      /financial/bank-records/import [post]
 func (h *Handler) importBankRecords(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrganizationIDFromCtx(r.Context())

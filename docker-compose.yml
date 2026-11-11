@@ -49,6 +49,11 @@ services:
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
       PORT: 8080
       SENTRY_DSN: ${BACKEND_SENTRY_DSN:-}
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@inquilinotop.com}
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,8 +68,6 @@ services:
       - "${FRONTEND_PORT:-3000}:3000"
     # No volume mount for frontend - use built image only
     environment:
-      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
       NEXT_PUBLIC_API_URL: http://backend:8080
       NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
       NEXT_PUBLIC_APP_ENV: ${APP_ENV:-development}

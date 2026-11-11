@@ -39,7 +39,7 @@ POST /api/v1/auth/login
 POST /api/v1/auth/refresh
 POST /api/v1/auth/logout
 POST /api/v1/auth/2fa/verify
-POST /api/v1/payments/webhook   # webhook do provider de pagamento
+POST /api/v1/webhook/{provider}   # webhook do provider de pagamento
 GET  /api/v1/public/payments/{token}          # cobrança pelo link (sem login)
 GET  /api/v1/public/payments/{token}/pix      # Pix do dia
 GET  /api/v1/public/payments/{token}/receipt  # recibo (só paga), sem documentos nem endereço

@@ -11,8 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/internal/lease"
-	"github.com/inquilinotop/api/internal/payment/provider"
-	"github.com/inquilinotop/api/internal/tenant"
 	"github.com/inquilinotop/api/pkg/pix"
 )
 
@@ -123,41 +121,6 @@ func (s *Service) List(ctx context.Context, orgID uuid.UUID, f PaymentFilter) ([
 		list[i] = s.enrich(ctx, p, leases)
 	}
 	return list, nil
-}
-
-// ListByOwner lista as cobranças da organização, opcionalmente só de um status.
-func (s *Service) ListByOwner(ctx context.Context, orgID uuid.UUID, statusFilter string) ([]Payment, error) {
-	return s.List(ctx, orgID, PaymentFilter{Status: statusFilter})
-}
-
-// Summary totaliza o período por vencimento. "Vencidos" soma o valor atualizado (bruto + multa + juros);
-// "recebidos" soma o líquido quando existe, senão o bruto. Filtro de status não se aplica.
-func (s *Service) Summary(ctx context.Context, orgID uuid.UUID, f PaymentFilter) (Summary, error) {
-	f.Status = ""
-	list, err := s.List(ctx, orgID, f)
-	if err != nil {
-		return Summary{}, err
-	}
-	var sum Summary
-	add := func(b *Bucket, v float64) {
-		b.Count++
-		b.Total = round2(b.Total + v)
-	}
-	for _, p := range list {
-		switch {
-		case p.Status == "PAID":
-			if p.NetAmount != nil {
-				add(&sum.Paid, *p.NetAmount)
-			} else {
-				add(&sum.Paid, p.GrossAmount)
-			}
-		case p.Status == "LATE":
-			add(&sum.Overdue, p.GrossAmount+p.LateFeeAmount+p.InterestAmount)
-		default:
-			add(&sum.ToReceive, p.GrossAmount)
-		}
-	}
-	return sum, nil
 }
 
 // Enrich calcula LATE, multa e juros de uma cobrança não paga e vencida.
@@ -281,24 +244,6 @@ func (s *Service) IsAlreadyPaid(err error) bool {
 
 func (s *Service) IsNotPaid(err error) bool {
 	return errors.Is(err, errNotPaid)
-}
-
-func (s *Service) getProvider(fc *FinancialConfig) (provider.PaymentProvider, error) {
-	if fc == nil {
-		return nil, errors.New("financial config is missing")
-	}
-
-	// Convert map[string]any to map[string]string for provider config
-	stringConfig := make(map[string]string)
-	for k, v := range fc.Config {
-		if strVal, ok := v.(string); ok {
-			stringConfig[k] = strVal
-		} else {
-			stringConfig[k] = fmt.Sprintf("%v", v)
-		}
-	}
-
-	return provider.NewProvider(fc.Provider, stringConfig)
 }
 
 // CancelFuturePending retira as cobranças pendentes futuras de um contrato encerrado.
@@ -473,160 +418,6 @@ func round2(x float64) float64 {
 	return math.Round(x*100) / 100
 }
 
-var (
-	errNoFinancialConfig = fmt.Errorf("no financial config found")
-	errNoChargeCreated   = fmt.Errorf("no charge created")
-	errPaymentNotPaid    = fmt.Errorf("payment not paid")
-	errInvalidMethod     = fmt.Errorf("invalid method")
-)
-
-func (s *Service) CreateCharge(ctx context.Context, paymentID, orgID uuid.UUID, method string) (*provider.ChargeResponse, error) {
-	payment, err := s.repo.GetByID(ctx, paymentID, orgID)
-	if err != nil {
-		return nil, fmt.Errorf("payment.svc: get payment: %w", err)
-	}
-
-	if payment.Status == "PAID" {
-		return nil, fmt.Errorf("payment already paid")
-	}
-
-	l, err := s.leaseReader.GetByID(ctx, payment.LeaseID, orgID)
-	if err != nil {
-		return nil, fmt.Errorf("payment.svc: load lease: %w", err)
-	}
-
-	tn, err := s.tenantReader.GetByID(ctx, l.TenantID, orgID)
-	if err != nil {
-		return nil, fmt.Errorf("payment.svc: load tenant: %w", err)
-	}
-
-	customer := provider.Customer{
-		Name:     tn.Name,
-		Document: "",
-		Email:    "",
-	}
-	if tn.Email != nil {
-		customer.Email = *tn.Email
-	}
-	if tn.Document != nil {
-		customer.Document = *tn.Document
-	}
-
-	fc, err := s.getActiveFinancialConfig(ctx, orgID)
-	if err != nil {
-		return nil, errNoFinancialConfig
-	}
-
-	prov, err := s.getProvider(fc)
-	if err != nil {
-		return nil, fmt.Errorf("payment.svc: new provider: %w", err)
-	}
-
-	req := provider.ChargeRequest{
-		Amount:      payment.GrossAmount,
-		Currency:    "BRL",
-		DueDate:     &payment.DueDate,
-		Customer:    customer,
-		Reference:   paymentID.String(),
-		Description: fmt.Sprintf("Pagamento %s", payment.Type),
-	}
-
-	var resp *provider.ChargeResponse
-
-	if method == "PIX" {
-		resp, err = prov.CreatePIXCharge(ctx, req)
-	} else if method == "BOLETO" {
-		resp, err = prov.CreateBoletoCharge(ctx, req)
-	} else {
-		return nil, errInvalidMethod
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("payment.svc: create charge: %w", err)
-	}
-
-	err = s.repo.UpdateChargeInfo(ctx, paymentID, orgID, UpdateChargeInfoInput{
-		ChargeID:     resp.ChargeID,
-		ChargeMethod: method,
-		QRCode:       resp.QRCode,
-		Link:         resp.QRLink,
-		BarCode:      resp.BarCode,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("payment.svc: update charge info: %w", err)
-	}
-
-	return resp, nil
-}
-
-func (s *Service) GetChargeStatus(ctx context.Context, paymentID, orgID uuid.UUID) (*provider.ChargeStatus, error) {
-	payment, err := s.repo.GetByID(ctx, paymentID, orgID)
-	if err != nil {
-		return nil, fmt.Errorf("payment.svc: get payment: %w", err)
-	}
-
-	if payment.ChargeID == nil || *payment.ChargeID == "" {
-		return nil, errNoChargeCreated
-	}
-
-	fc, err := s.getActiveFinancialConfig(ctx, orgID)
-	if err != nil {
-		return nil, errNoFinancialConfig
-	}
-
-	prov, err := s.getProvider(fc)
-	if err != nil {
-		return nil, fmt.Errorf("payment.svc: new provider: %w", err)
-	}
-
-	return prov.GetChargeStatus(ctx, *payment.ChargeID)
-}
-
-func (s *Service) CreatePayout(ctx context.Context, paymentID, orgID uuid.UUID, dest provider.Destination) (*provider.PayoutResponse, error) {
-	payment, err := s.repo.GetByID(ctx, paymentID, orgID)
-	if err != nil {
-		return nil, fmt.Errorf("payment.svc: get payment: %w", err)
-	}
-
-	if payment.Status != "PAID" {
-		return nil, errPaymentNotPaid
-	}
-
-	if payment.NetAmount == nil {
-		return nil, fmt.Errorf("payment net amount is nil")
-	}
-
-	fc, err := s.getActiveFinancialConfig(ctx, orgID)
-	if err != nil {
-		return nil, errNoFinancialConfig
-	}
-
-	prov, err := s.getProvider(fc)
-	if err != nil {
-		return nil, fmt.Errorf("payment.svc: new provider: %w", err)
-	}
-
-	req := provider.PayoutRequest{
-		Amount:      *payment.NetAmount,
-		Currency:    "BRL",
-		Destination: dest,
-		Reference:   paymentID.String(),
-	}
-
-	resp, err := prov.CreatePayout(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("payment.svc: create payout: %w", err)
-	}
-
-	err = s.repo.UpdatePayoutInfo(ctx, paymentID, orgID, resp.PayoutID, resp.Status)
-	if err != nil {
-		return nil, fmt.Errorf("payment.svc: update payout info: %w", err)
-	}
-
-	return resp, nil
-}
-
 func (s *Service) ProcessWebhook(ctx context.Context, providerName string, event map[string]interface{}) error {
 	eventType, ok := event["event"].(string)
 	if !ok {
@@ -671,13 +462,6 @@ func (s *Service) UpdateFinancialConfig(ctx context.Context, orgID uuid.UUID, in
 	// Simple validation, let repo handle strict types
 	return s.repo.UpsertFinancialConfig(ctx, orgID, in)
 }
-
-func (s *Service) getActiveFinancialConfig(ctx context.Context, orgID uuid.UUID) (*FinancialConfig, error) {
-	return s.repo.GetActiveFinancialConfig(ctx, orgID)
-}
-
-var _ = lease.Lease{}
-var _ = tenant.Tenant{}
 
 // ErrInvalidEvent: tipo ou canal de evento não permitido na API (HTTP 400).
 var ErrInvalidEvent = errors.New("payment: evento inválido")

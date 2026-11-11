@@ -210,31 +210,3 @@ func TestExpenseRepository_List_IsolaOrganização(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, list)
 }
-
-func TestExpenseRepository_Summary(t *testing.T) {
-	ctx := context.Background()
-	database := testDB(t)
-	userID, orgID, unitID := seedUnit(t, database)
-	repo := expense.NewRepository(database)
-	today := ymd(2026, 6, 15)
-
-	newExpense(t, repo, userID, orgID, unitID, 100, ymd(2026, 6, 20))
-	newExpense(t, repo, userID, orgID, unitID, 50.5, ymd(2026, 7, 1))
-	newExpense(t, repo, userID, orgID, unitID, 70, ymd(2026, 6, 1))
-	paga := newExpense(t, repo, userID, orgID, unitID, 200, ymd(2026, 6, 3))
-	_, err := repo.MarkPaid(ctx, paga.ID, orgID, ymd(2026, 6, 3), 190)
-	require.NoError(t, err)
-
-	got, err := repo.Summary(ctx, orgID, expense.ListFilter{}, today)
-	require.NoError(t, err)
-	assert.Equal(t, expense.Bucket{Count: 2, Total: 150.5}, got.ToPay)
-	assert.Equal(t, expense.Bucket{Count: 1, Total: 70}, got.Overdue)
-	assert.Equal(t, expense.Bucket{Count: 1, Total: 190}, got.Paid, "pago soma o valor efetivamente pago")
-
-	from, to := ymd(2026, 6, 1), ymd(2026, 6, 30)
-	got, err = repo.Summary(ctx, orgID, expense.ListFilter{From: &from, To: &to}, today)
-	require.NoError(t, err)
-	assert.Equal(t, 1, got.ToPay.Count)
-	assert.Equal(t, 1, got.Overdue.Count)
-	assert.Equal(t, 1, got.Paid.Count)
-}

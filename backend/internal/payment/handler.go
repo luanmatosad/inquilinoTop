@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/inquilinotop/api/internal/payment/provider"
 	"github.com/inquilinotop/api/internal/ratelimit"
 	"github.com/inquilinotop/api/pkg/apierr"
 	"github.com/inquilinotop/api/pkg/auth"
@@ -35,9 +34,7 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler,
 		r.Use(authMW)
 		r.With(readMw).Get("/leases/{leaseId}/payments", h.listByLease)
 		r.With(writeMw).Post("/leases/{leaseId}/payments", h.create)
-		r.With(writeMw).Post("/leases/{leaseId}/payments/generate", h.Generate)
 		r.With(readMw).Get("/payments", h.listByOwner)
-		r.With(readMw).Get("/payments/summary", h.summary)
 		r.With(readMw).Get("/payments/{id}", h.get)
 		r.With(writeMw).Put("/payments/{id}", h.update)
 		r.With(readMw).Get("/payments/{id}/receipt", h.Receipt)
@@ -49,9 +46,6 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler,
 		r.With(writeMw).Post("/payments/{id}/reject-report", h.rejectReport)
 		r.With(readMw).Get("/payments/{id}/events", h.listEvents)
 		r.With(writeMw).Post("/payments/{id}/events", h.recordEvent)
-		r.With(writeMw).Post("/payments/{id}/charge", h.handleCreateCharge)
-		r.With(readMw).Get("/payments/{id}/charge", h.handleGetChargeStatus)
-		r.With(writeMw).Post("/payments/{id}/payout", h.handleCreatePayout)
 		r.With(readMw).Get("/payments/config", h.getFinancialConfig)
 		r.With(writeMw).Put("/payments/config", h.updateFinancialConfig)
 	})
@@ -127,37 +121,6 @@ func (h *Handler) listByOwner(w http.ResponseWriter, r *http.Request) {
 		list = []Payment{}
 	}
 	httputil.OK(w, list)
-}
-
-// @Summary Resumo das cobranças no período
-// @Description Totais a receber, vencidos (valor atualizado com multa e juros) e recebidos, por vencimento entre from e to.
-// @Tags payments
-// @Security BearerAuth
-// @Produce json
-// @Param from query string false "Vencimento a partir de (YYYY-MM-DD)"
-// @Param to query string false "Vencimento até (YYYY-MM-DD)"
-// @Param lease_id query string false "ID do contrato"
-// @Success 200 {object} Summary
-// @Failure 400 {object} map[string]interface{}
-// @Router /payments/summary [get]
-func (h *Handler) summary(w http.ResponseWriter, r *http.Request) {
-	orgID := auth.OrganizationIDFromCtx(r.Context())
-	if orgID == uuid.Nil {
-		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
-		return
-	}
-	f, err := parseFilter(r)
-	if err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_FILTER", err.Error())
-		return
-	}
-	sum, err := h.svc.Summary(r.Context(), orgID, f)
-	if err != nil {
-		slog.Error("payment: summary failed", "org_id", orgID, "error", err)
-		httputil.Err(w, http.StatusInternalServerError, "SUMMARY_FAILED", err.Error())
-		return
-	}
-	httputil.OK(w, sum)
 }
 
 // @Summary Lista pagamentos de um contrato
@@ -309,56 +272,6 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, p)
 }
 
-// @Summary Gera payments (RENT + eventual IPTU) da competência
-// @Tags payments
-// @Security BearerAuth
-// @Produce json
-// @Param leaseId path string true "ID do contrato"
-// @Param month query string true "Competência YYYY-MM"
-// @Success 201 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Router /leases/{leaseId}/payments/generate [post]
-func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
-	userID := auth.OwnerIDFromCtx(r.Context())
-	orgID := auth.OrganizationIDFromCtx(r.Context())
-	if orgID == uuid.Nil {
-		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
-		return
-	}
-	if userID == uuid.Nil {
-		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "usuário não encontrado")
-		return
-	}
-	leaseID, err := uuid.Parse(chi.URLParam(r, "leaseId"))
-	if err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "leaseId inválido")
-		return
-	}
-	month := r.URL.Query().Get("month")
-	if month == "" {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_MONTH", "query param month obrigatório")
-		return
-	}
-	ps, err := h.svc.GenerateMonth(r.Context(), userID, leaseID, orgID, month)
-	if err != nil {
-		switch {
-		case errors.Is(err, ErrInvalidMonth):
-			httputil.Err(w, http.StatusBadRequest, "INVALID_MONTH", "mês inválido (esperado YYYY-MM)")
-		case errors.Is(err, ErrLeaseNotActive):
-			httputil.Err(w, http.StatusConflict, "LEASE_NOT_ACTIVE", "contrato não ativo")
-		case errors.Is(err, ErrIPTUMissing):
-			httputil.Err(w, http.StatusConflict, "IPTU_MISSING", "IPTU não configurado")
-		case errors.Is(err, apierr.ErrNotFound):
-			httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "contrato não encontrado")
-		default:
-			httputil.Err(w, http.StatusInternalServerError, "GENERATE_FAILED", err.Error())
-		}
-		return
-	}
-	httputil.Created(w, ps)
-}
-
 // @Summary Recibo mensal (status=PAID)
 // @Tags payments
 // @Security BearerAuth
@@ -389,99 +302,6 @@ func (h *Handler) Receipt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.OK(w, rec)
-}
-
-type CreateChargeRequest struct {
-	Method string `json:"method"`
-}
-
-func (h *Handler) handleCreateCharge(w http.ResponseWriter, r *http.Request) {
-	id, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
-		return
-	}
-
-	orgID := auth.OrganizationIDFromCtx(r.Context())
-
-	var req CreateChargeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
-		return
-	}
-
-	if req.Method != "PIX" && req.Method != "BOLETO" {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_METHOD", "method deve ser PIX ou BOLETO")
-		return
-	}
-
-	resp, err := h.svc.CreateCharge(r.Context(), id, orgID, req.Method)
-	if err != nil {
-		httputil.Err(w, http.StatusInternalServerError, "CREATE_CHARGE_FAILED", err.Error())
-		return
-	}
-
-	httputil.OK(w, resp)
-}
-
-func (h *Handler) handleGetChargeStatus(w http.ResponseWriter, r *http.Request) {
-	id, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
-		return
-	}
-
-	orgID := auth.OrganizationIDFromCtx(r.Context())
-
-	status, err := h.svc.GetChargeStatus(r.Context(), id, orgID)
-	if err != nil {
-		httputil.Err(w, http.StatusBadRequest, "GET_STATUS_FAILED", err.Error())
-		return
-	}
-
-	httputil.OK(w, status)
-}
-
-type CreatePayoutRequest struct {
-	Destination struct {
-		Type       string `json:"type"`
-		PixKey     string `json:"pix_key,omitempty"`
-		PixKeyType string `json:"pix_key_type,omitempty"`
-		OwnerName  string `json:"owner_name"`
-		Document   string `json:"document"`
-	} `json:"destination"`
-}
-
-func (h *Handler) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
-	id, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
-		return
-	}
-
-	orgID := auth.OrganizationIDFromCtx(r.Context())
-
-	var req CreatePayoutRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
-		return
-	}
-
-	dest := provider.Destination{
-		Type:       req.Destination.Type,
-		PixKey:     req.Destination.PixKey,
-		PixKeyType: req.Destination.PixKeyType,
-		OwnerName:  req.Destination.OwnerName,
-		Document:   req.Destination.Document,
-	}
-
-	resp, err := h.svc.CreatePayout(r.Context(), id, orgID, dest)
-	if err != nil {
-		httputil.Err(w, http.StatusInternalServerError, "CREATE_PAYOUT_FAILED", err.Error())
-		return
-	}
-
-	httputil.OK(w, resp)
 }
 
 func (h *Handler) handleWebhook(w http.ResponseWriter, r *http.Request) {

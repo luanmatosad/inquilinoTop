@@ -251,24 +251,6 @@ func TestService_Update_DespesaPendente_PermiteValor(t *testing.T) {
 	assert.Equal(t, 175.0, updated.Amount)
 }
 
-// ---- resumo ----
-
-func TestService_Summary(t *testing.T) {
-	e := newRegEnv()
-	e.add(t, 100, d(2026, 6, 20))
-	e.add(t, 40, d(2026, 6, 25))
-	e.add(t, 30, d(2026, 6, 1))
-	paga := e.add(t, 55, d(2026, 6, 2))
-	_, err := e.svc.Pay(context.Background(), paga.ID, e.org, uuid.New(), expense.PayExpenseInput{PaidDate: d(2026, 6, 3)})
-	require.NoError(t, err)
-
-	sum, err := e.svc.Summary(context.Background(), e.org, expense.ListFilter{Status: expense.StatusPaid})
-	require.NoError(t, err)
-	assert.Equal(t, expense.Bucket{Count: 2, Total: 140}, sum.ToPay)
-	assert.Equal(t, expense.Bucket{Count: 1, Total: 30}, sum.Overdue)
-	assert.Equal(t, expense.Bucket{Count: 1, Total: 55}, sum.Paid)
-}
-
 // ---- handler ----
 
 func expRouter(e *regEnv) http.Handler {
@@ -344,17 +326,6 @@ func TestHandler_List_Filtros(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, call(r, http.MethodGet, "/expenses?status=XYZ", "").Code)
 	assert.Equal(t, http.StatusBadRequest, call(r, http.MethodGet, "/expenses?from=01/06/2026", "").Code)
 	assert.Equal(t, http.StatusBadRequest, call(r, http.MethodGet, "/expenses?unit_id=nao-uuid", "").Code)
-}
-
-func TestHandler_Summary(t *testing.T) {
-	e := newRegEnv()
-	e.add(t, 100, d(2026, 6, 20))
-	e.add(t, 30, d(2026, 6, 1))
-	rr := call(expRouter(e), http.MethodGet, "/expenses/summary?from=2026-06-01&to=2026-06-30", "")
-	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-	assert.Contains(t, rr.Body.String(), `"to_pay":{"count":1,"total":100}`)
-	assert.Contains(t, rr.Body.String(), `"overdue":{"count":1,"total":30}`)
-	assert.Contains(t, rr.Body.String(), `"paid":{"count":0,"total":0}`)
 }
 
 func TestService_Audit_UsaOUsuárioComoOwner(t *testing.T) {

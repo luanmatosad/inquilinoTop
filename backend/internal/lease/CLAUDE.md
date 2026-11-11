@@ -33,9 +33,9 @@ Inputs:
 - `end_date` deve ser posterior a `start_date` e, na renovação, ao fim atual → `ErrInvalidDates` → 422 `INVALID_DATES`.
 - Unidade e inquilino precisam existir na organização (`WithRefs`) → 404 `UNIT_NOT_FOUND` / `TENANT_NOT_FOUND`.
 - `Update` não muda status (→ 409 `STATUS_CHANGE_NOT_ALLOWED`); só `End` e `Renew`. `End` e `Renew` exigem contrato ACTIVE (→ 409 `LEASE_NOT_ACTIVE`).
-- `generate_payments=true` gera uma cobrança `RENT` por competência até `end_date`, no máximo 12 (`MaxInitialPayments`). A geração seguinte **não existe** (o scheduler é um stub): para contrato aberto, gerar manualmente via `POST /leases/{id}/payments/generate`.
+- `generate_payments=true` gera uma cobrança `RENT` por competência até `end_date`, no máximo 12 (`MaxInitialPayments`). A geração seguinte **não existe** (o scheduler é um stub) e a rota manual `POST /leases/{id}/payments/generate` foi removida (sem consumidor): contrato aberto fica sem cobrança futura gerada.
 - Encerrar chama `PaymentHooks.CancelFuturePending` (ADR payment-0003) a partir da **data de saída efetiva**. Falha ali não desfaz o encerramento.
-- Reajustar chama `PaymentHooks.ReadjustFuturePending` (ADR payment-0004): atualiza o `gross_amount` das `RENT` `PENDING` sem `charge_id` com vencimento a partir da vigência. Falha ali não desfaz o reajuste do contrato. O reajuste automático (`/adjust`) usa o mesmo caminho.
+- Reajustar chama `PaymentHooks.ReadjustFuturePending` (ADR payment-0004): atualiza o `gross_amount` das `RENT` `PENDING` sem `charge_id` com vencimento a partir da vigência. Falha ali não desfaz o reajuste do contrato.
 - `next_readjustment` (`NextReadjustment`): sem reajuste aplicado, o primeiro mês de reajuste 12+ meses depois do início; com reajuste, o ciclo mais próximo da data aplicada + 12 meses. O `leaseCols` traz o último `applied_at` por subconsulta (sem N+1).
 - Dependências por interface: `UnitReader`, `TenantReader`, `PaymentHooks`; ligadas em `cmd/api/main.go` com `WithRefs` e `WithPayments`.
 
@@ -50,5 +50,4 @@ Inputs:
 - `PUT /leases/{id}` é substituição total: `adjustment_index` omitido é limpo; `adjustment_month` omitido mantém o atual.
 - `payment_day` (migration 000017): obrigatório em `CreateLeaseInput` (1–31), usado como dia de vencimento por `payment.GenerateMonth`.
 - `scheduler.go`: stub (só registra log); **não** gera pagamentos.
-- `index_repository.go`: repositório para tabela `index_values` (IGPM, IPCA etc.) — consumido em `Readjust`.
 - `errors.Is` (não `strings.Contains`) para roteamento de erros (corrigido em `fix/payment,lease` commit).

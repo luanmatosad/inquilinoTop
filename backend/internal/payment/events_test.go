@@ -162,7 +162,7 @@ func eventsRouter(ts *testService, org, user uuid.UUID) http.Handler {
 	r := chi.NewRouter()
 	h.Register(r, func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			ctx := auth.WithOwnerIDOrgIDRole(req.Context(), user, org, "admin")
+			ctx := auth.WithOwnerIDOrgID(req.Context(), user, org)
 			next.ServeHTTP(w, req.WithContext(ctx))
 		})
 	}, noopWriteMw, noopWriteMw)

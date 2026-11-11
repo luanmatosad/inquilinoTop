@@ -103,12 +103,6 @@ func (s *Service) ListByOwner(ctx context.Context, orgID uuid.UUID) ([]Expense, 
 	return s.List(ctx, orgID, ListFilter{})
 }
 
-func (s *Service) Summary(ctx context.Context, orgID uuid.UUID, f ListFilter) (Summary, error) {
-	// O resumo sempre separa os três grupos; filtro de status não se aplica.
-	f.Status = ""
-	return s.repo.Summary(ctx, orgID, f, s.today())
-}
-
 func validStatusFilter(status string) bool {
 	switch status {
 	case "", StatusPending, StatusLate, StatusPaid:

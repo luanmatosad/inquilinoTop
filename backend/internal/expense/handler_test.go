@@ -25,7 +25,7 @@ var testOrg = uuid.New()
 // noopAuthMW injeta owner e organização fixos, como o middleware real faz após validar o JWT.
 func noopAuthMW(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := auth.WithOwnerIDOrgIDRole(r.Context(), testOrg, testOrg, "admin")
+		ctx := auth.WithOwnerIDOrgID(r.Context(), testOrg, testOrg)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

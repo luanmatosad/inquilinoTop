@@ -22,4 +22,3 @@ ratelimit.NewMiddleware(ratelimit.Config{
 ## Gotchas
 
 - `X-RateLimit-Remaining` é estático (99 ou 199) — não reflete valor real de tokens restantes.
-- `LimiterByID` é limiter adicional por UUID — disponível para uso programático, não usado no middleware padrão.

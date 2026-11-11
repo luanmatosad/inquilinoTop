@@ -71,19 +71,6 @@ type ListFilter struct {
 	UnitID *uuid.UUID
 }
 
-// Bucket agrupa quantidade e valor total.
-type Bucket struct {
-	Count int     `json:"count"`
-	Total float64 `json:"total"`
-}
-
-// Summary totaliza o período: a vencer, vencidas e pagas (valor efetivamente pago).
-type Summary struct {
-	ToPay   Bucket `json:"to_pay"`
-	Overdue Bucket `json:"overdue"`
-	Paid    Bucket `json:"paid"`
-}
-
 type Repository interface {
 	Create(ctx context.Context, userID, orgID uuid.UUID, in CreateExpenseInput) (*Expense, error)
 	GetByID(ctx context.Context, id, orgID uuid.UUID) (*Expense, error)
@@ -96,7 +83,6 @@ type Repository interface {
 	MarkPaid(ctx context.Context, id, orgID uuid.UUID, paidDate time.Time, paidAmount float64) (*Expense, error)
 	// MarkUnpaid estorna só despesa PAID; devolve ErrNotPaid se estiver PENDING.
 	MarkUnpaid(ctx context.Context, id, orgID uuid.UUID) (*Expense, error)
-	Summary(ctx context.Context, orgID uuid.UUID, f ListFilter, today time.Time) (Summary, error)
 }
 
 // Auditor registra baixa e estorno; *audit.Service satisfaz esta interface.

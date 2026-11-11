@@ -148,29 +148,6 @@ func (m *mockPaymentRepo) EnsureReceiptNumber(_ context.Context, id, ownerID uui
 	return p, nil
 }
 
-func (m *mockPaymentRepo) UpdateChargeInfo(_ context.Context, id, ownerID uuid.UUID, in payment.UpdateChargeInfoInput) error {
-	p, err := m.GetByID(context.Background(), id, ownerID)
-	if err != nil {
-		return err
-	}
-	p.ChargeID = &in.ChargeID
-	p.ChargeMethod = &in.ChargeMethod
-	p.ChargeQRCode = &in.QRCode
-	p.ChargeLink = &in.Link
-	p.ChargeBarcode = &in.BarCode
-	return nil
-}
-
-func (m *mockPaymentRepo) UpdatePayoutInfo(_ context.Context, id, ownerID uuid.UUID, payoutID, status string) error {
-	p, err := m.GetByID(context.Background(), id, ownerID)
-	if err != nil {
-		return err
-	}
-	p.PayoutID = &payoutID
-	p.PayoutStatus = &status
-	return nil
-}
-
 func (m *mockPaymentRepo) GetActiveFinancialConfig(_ context.Context, ownerID uuid.UUID) (*payment.FinancialConfig, error) {
 	if m.fc != nil {
 		return m.fc, nil
@@ -1013,30 +990,6 @@ func TestService_List_StatusInválido(t *testing.T) {
 	svc, _, orgID := listSvc(time.Now())
 	_, err := svc.List(context.Background(), orgID, payment.PaymentFilter{Status: "XYZ"})
 	assert.ErrorIs(t, err, payment.ErrInvalidFilter)
-}
-
-func TestService_Summary(t *testing.T) {
-	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
-	svc, leaseID, orgID := listSvc(now)
-	addPayment(svc, leaseID, orgID, time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC), 1000, "PENDING")
-	addPayment(svc, leaseID, orgID, time.Date(2026, 6, 25, 0, 0, 0, 0, time.UTC), 500, "PENDING")
-	addPayment(svc, leaseID, orgID, time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC), 1000, "PENDING") // vencida há 10 dias: 1000+20+10
-	paga := addPayment(svc, leaseID, orgID, time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), 1000, "PAID")
-	net := 980.0
-	paga.NetAmount = &net
-
-	sum, err := svc.Summary(context.Background(), orgID, payment.PaymentFilter{Status: "PAID"})
-	require.NoError(t, err)
-	assert.Equal(t, payment.Bucket{Count: 2, Total: 1500}, sum.ToReceive)
-	assert.Equal(t, payment.Bucket{Count: 1, Total: 1030}, sum.Overdue, "vencidos usam o valor atualizado")
-	assert.Equal(t, payment.Bucket{Count: 1, Total: 980}, sum.Paid, "recebido usa o líquido")
-}
-
-func TestService_Summary_Vazio(t *testing.T) {
-	svc, _, orgID := listSvc(time.Now())
-	sum, err := svc.Summary(context.Background(), orgID, payment.PaymentFilter{})
-	require.NoError(t, err)
-	assert.Equal(t, payment.Summary{}, sum)
 }
 
 func TestService_Enrich_PercentuaisSãoEmPorcento(t *testing.T) {

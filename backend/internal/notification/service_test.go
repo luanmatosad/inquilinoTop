@@ -14,10 +14,14 @@ import (
 
 type mockNotificationRepo struct {
 	notifications map[uuid.UUID]*notification.Notification
+	reserveErr    map[uuid.UUID]error
 }
 
 func newMockRepo() *mockNotificationRepo {
-	return &mockNotificationRepo{notifications: make(map[uuid.UUID]*notification.Notification)}
+	return &mockNotificationRepo{
+		notifications: make(map[uuid.UUID]*notification.Notification),
+		reserveErr:    make(map[uuid.UUID]error),
+	}
 }
 
 func (m *mockNotificationRepo) Create(_ context.Context, ownerID uuid.UUID, in notification.CreateNotificationInput) (*notification.Notification, error) {
@@ -43,14 +47,14 @@ func (m *mockNotificationRepo) GetByID(_ context.Context, id, ownerID uuid.UUID)
 	return n, nil
 }
 
-func (m *mockNotificationRepo) ListPending(_ context.Context, limit int) ([]notification.Notification, error) {
-	var list []notification.Notification
-	for _, n := range m.notifications {
+func (m *mockNotificationRepo) ListPending(_ context.Context, limit int) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	for id, n := range m.notifications {
 		if n.Status == "pending" {
-			list = append(list, *n)
+			ids = append(ids, id)
 		}
 	}
-	return list, nil
+	return ids, nil
 }
 
 func (m *mockNotificationRepo) ListByOwner(_ context.Context, ownerID uuid.UUID, status string) ([]notification.Notification, error) {
@@ -63,27 +67,25 @@ func (m *mockNotificationRepo) ListByOwner(_ context.Context, ownerID uuid.UUID,
 	return list, nil
 }
 
-func (m *mockNotificationRepo) UpdateStatus(_ context.Context, id uuid.UUID, status notification.NotificationStatus, sentAt *time.Time) error {
+func (m *mockNotificationRepo) ReserveAndSend(_ context.Context, id uuid.UUID, send func(notification.Notification) error) (bool, error) {
+	if err := m.reserveErr[id]; err != nil {
+		return false, err
+	}
 	n, ok := m.notifications[id]
 	if !ok {
-		return errors.New("not found")
+		return false, nil
 	}
-	n.Status = string(status)
-	return nil
+	// erro de envio vira retry no repositório real; o mock só observa o envio
+	_ = send(*n)
+	return true, nil
 }
 
-func (m *mockNotificationRepo) IncrementRetry(_ context.Context, id uuid.UUID) error {
-	n, ok := m.notifications[id]
-	if !ok {
-		return errors.New("not found")
-	}
-	n.RetryCount++
-	return nil
+type mockEmailSender struct {
+	sent []string
 }
-
-type mockEmailSender struct{}
 
 func (m *mockEmailSender) Send(_ context.Context, to, subject, body string) error {
+	m.sent = append(m.sent, to)
 	return nil
 }
 
@@ -111,4 +113,41 @@ func TestService_ListByOwner_Pending_IsolatesOwner(t *testing.T) {
 	if len(result) == 1 {
 		assert.Equal(t, ownerA, result[0].OwnerID, "notificação retornada deve pertencer ao ownerA")
 	}
+}
+
+func TestService_ProcessQueue_EnviaCadaPendente(t *testing.T) {
+	repo := newMockRepo()
+	sender := &mockEmailSender{}
+	svc := notification.NewService(repo, sender)
+	owner := uuid.New()
+	for _, to := range []string{"a@test.com", "b@test.com"} {
+		_, err := repo.Create(context.Background(), owner, notification.CreateNotificationInput{
+			Type: "email", ToAddress: to, Subject: "S", Body: "B",
+		})
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, svc.ProcessQueue(context.Background(), 10))
+
+	assert.ElementsMatch(t, []string{"a@test.com", "b@test.com"}, sender.sent)
+}
+
+func TestService_ProcessQueue_ErroNumaReservaNaoInterrompeAFila(t *testing.T) {
+	repo := newMockRepo()
+	sender := &mockEmailSender{}
+	svc := notification.NewService(repo, sender)
+	owner := uuid.New()
+	falha, err := repo.Create(context.Background(), owner, notification.CreateNotificationInput{
+		Type: "email", ToAddress: "falha@test.com", Subject: "S", Body: "B",
+	})
+	require.NoError(t, err)
+	_, err = repo.Create(context.Background(), owner, notification.CreateNotificationInput{
+		Type: "email", ToAddress: "ok@test.com", Subject: "S", Body: "B",
+	})
+	require.NoError(t, err)
+	repo.reserveErr[falha.ID] = errors.New("db indisponível")
+
+	require.NoError(t, svc.ProcessQueue(context.Background(), 10))
+
+	assert.Equal(t, []string{"ok@test.com"}, sender.sent)
 }

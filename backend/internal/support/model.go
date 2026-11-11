@@ -8,25 +8,25 @@ import (
 )
 
 type Ticket struct {
-	ID          uuid.UUID `json:"id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	UserID      uuid.UUID `json:"user_id"`
-	Tipo        string   `json:"tipo"`
-	Assunto     string   `json:"assunto"`
-	Descricao  string   `json:"descricao"`
-	Status     string   `json:"status"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID *uuid.UUID `json:"organization_id"`
+	UserID         uuid.UUID  `json:"user_id"`
+	Tipo           string     `json:"tipo"`
+	Assunto        string     `json:"assunto"`
+	Descricao      string     `json:"descricao"`
+	Status         string     `json:"status"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type CreateTicketInput struct {
-	Tipo       string `json:"tipo" validate:"required,oneof=BUG FEATURE DOUBT PAYMENT"`
-	Assunto    string `json:"assunto" validate:"required,max=200"`
+	Tipo      string `json:"tipo" validate:"required,oneof=BUG FEATURE DOUBT PAYMENT"`
+	Assunto   string `json:"assunto" validate:"required,max=200"`
 	Descricao string `json:"descricao" validate:"required,max=5000"`
 }
 
 type Repository interface {
-	Create(ctx context.Context, orgID, userID uuid.UUID, in CreateTicketInput) (*Ticket, error)
-	GetByID(ctx context.Context, id, orgID, userID uuid.UUID) (*Ticket, error)
-	ListByUser(ctx context.Context, orgID, userID uuid.UUID) ([]Ticket, error)
+	Create(ctx context.Context, orgID *uuid.UUID, userID uuid.UUID, in CreateTicketInput) (*Ticket, error)
+	GetByID(ctx context.Context, id uuid.UUID, orgID *uuid.UUID, userID uuid.UUID) (*Ticket, error)
+	ListByUser(ctx context.Context, orgID *uuid.UUID, userID uuid.UUID) ([]Ticket, error)
 }

@@ -2,7 +2,6 @@ package rbac
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -156,11 +155,3 @@ func (r *pgRepository) HasAnyRole(ctx context.Context, userID, orgID uuid.UUID) 
 }
 
 var _ Repository = (*pgRepository)(nil)
-
-func IsErrRoleAlreadyExists(err error) bool {
-	return errors.Is(err, ErrRoleAlreadyExists)
-}
-
-func IsErrRoleNotFound(err error) bool {
-	return errors.Is(err, ErrRoleNotFound)
-}

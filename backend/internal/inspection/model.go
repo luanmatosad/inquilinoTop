@@ -22,7 +22,6 @@ const (
 	ConditionFair          = "FAIR"
 	ConditionPoor          = "POOR"
 	ConditionDamaged       = "DAMAGED"
-	ConditionNotApplicable = "NOT_APPLICABLE"
 )
 
 var (

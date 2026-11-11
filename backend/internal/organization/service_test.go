@@ -2,6 +2,9 @@ package organization_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"testing"
 	"time"
 
@@ -13,18 +16,24 @@ import (
 )
 
 type mockRepo struct {
-	orgs      map[uuid.UUID]*organization.Organization
-	members   map[uuid.UUID]*organization.Member
-	invites   map[uuid.UUID]*organization.Invite
-	branches  map[uuid.UUID]*organization.Branch
+	orgs            map[uuid.UUID]*organization.Organization
+	members         map[uuid.UUID]*organization.Member
+	invites         map[uuid.UUID]*organization.Invite
+	branches        map[uuid.UUID]*organization.Branch
+	tokenHashes     map[string]uuid.UUID // SHA-256 do token -> id do convite
+	emails          map[uuid.UUID]string // userID -> e-mail
+	acceptErr       error                // erro forçado no aceite (falha de banco)
+	createInviteErr error                // erro forçado na gravação do convite
 }
 
 func newMockRepo() *mockRepo {
 	return &mockRepo{
-		orgs:     make(map[uuid.UUID]*organization.Organization),
-		members:  make(map[uuid.UUID]*organization.Member),
-		invites:  make(map[uuid.UUID]*organization.Invite),
-		branches: make(map[uuid.UUID]*organization.Branch),
+		orgs:        make(map[uuid.UUID]*organization.Organization),
+		members:     make(map[uuid.UUID]*organization.Member),
+		invites:     make(map[uuid.UUID]*organization.Invite),
+		branches:    make(map[uuid.UUID]*organization.Branch),
+		tokenHashes: make(map[string]uuid.UUID),
+		emails:      make(map[uuid.UUID]string),
 	}
 }
 
@@ -52,8 +61,11 @@ func (m *mockRepo) Update(ctx context.Context, id uuid.UUID, in organization.Upd
 	return nil, nil
 }
 
-func (m *mockRepo) Create(ctx context.Context, name string) (*organization.Organization, error) {
-	return nil, nil
+func (m *mockRepo) CreateWithOwner(ctx context.Context, name string, ownerID uuid.UUID) (*organization.Organization, error) {
+	org := &organization.Organization{ID: uuid.New(), Name: name}
+	m.orgs[org.ID] = org
+	m.members[uuid.New()] = &organization.Member{OrganizationID: org.ID, UserID: ownerID, Role: organization.RoleOwner}
+	return org, nil
 }
 
 func (m *mockRepo) CreateBranch(ctx context.Context, orgID uuid.UUID, in organization.CreateBranchInput) (*organization.Branch, error) {
@@ -119,35 +131,32 @@ func (m *mockRepo) RemoveMember(ctx context.Context, memberID, orgID uuid.UUID) 
 	return nil
 }
 
-func (m *mockRepo) CreateMember(ctx context.Context, orgID, userID uuid.UUID, role organization.RoleType, branchID *uuid.UUID) (*organization.Member, error) {
-	return nil, nil
-}
-
 func (m *mockRepo) HasRole(ctx context.Context, userID, orgID uuid.UUID, role organization.RoleType) (bool, error) {
 	return true, nil
 }
 
-func (m *mockRepo) CreateInvite(ctx context.Context, in organization.CreateInviteInput, orgID, invitedBy uuid.UUID, token string, expiresAt time.Time) (*organization.Invite, error) {
+func (m *mockRepo) CreateInvite(ctx context.Context, in organization.CreateInviteInput, orgID, invitedBy uuid.UUID, tokenHash string, expiresAt time.Time) (*organization.Invite, error) {
+	if m.createInviteErr != nil {
+		return nil, m.createInviteErr
+	}
 	invite := &organization.Invite{
 		ID:             uuid.New(),
 		OrganizationID: orgID,
 		Email:          in.Email,
 		Role:           in.Role,
 		BranchID:       in.BranchID,
-		Token:          token,
 		InvitedBy:      invitedBy,
 		ExpiresAt:      expiresAt,
 		CreatedAt:      time.Now(),
 	}
 	m.invites[invite.ID] = invite
+	m.tokenHashes[tokenHash] = invite.ID
 	return invite, nil
 }
 
-func (m *mockRepo) GetInviteByToken(ctx context.Context, token string) (*organization.Invite, error) {
-	for _, invite := range m.invites {
-		if invite.Token == token {
-			return invite, nil
-		}
+func (m *mockRepo) GetInviteByToken(ctx context.Context, tokenHash string) (*organization.Invite, error) {
+	if id, ok := m.tokenHashes[tokenHash]; ok {
+		return m.invites[id], nil
 	}
 	return nil, nil
 }
@@ -169,12 +178,22 @@ func (m *mockRepo) CancelInvite(ctx context.Context, inviteID, orgID uuid.UUID) 
 	return nil
 }
 
-func (m *mockRepo) AcceptInvite(ctx context.Context, inviteID uuid.UUID) error {
-	if invite, ok := m.invites[inviteID]; ok {
-		now := time.Now()
-		invite.AcceptedAt = &now
+func (m *mockRepo) AcceptInvite(ctx context.Context, invite *organization.Invite, userID uuid.UUID) error {
+	if m.acceptErr != nil {
+		return m.acceptErr
 	}
+	for _, member := range m.members {
+		if member.UserID == userID {
+			return organization.ErrAlreadyHasOrganization
+		}
+	}
+	now := time.Now()
+	invite.AcceptedAt = &now
 	return nil
+}
+
+func (m *mockRepo) GetUserEmail(ctx context.Context, userID uuid.UUID) (string, error) {
+	return m.emails[userID], nil
 }
 
 func (m *mockRepo) GetInviteByEmail(ctx context.Context, email string, orgID uuid.UUID) (*organization.Invite, error) {
@@ -190,13 +209,13 @@ func (m *mockRepo) GetMembershipByUserID(ctx context.Context, userID uuid.UUID) 
 	return nil, nil
 }
 
-func setupTestContext(userID, orgID uuid.UUID, role string) context.Context {
-	return auth.WithOwnerIDOrgIDRole(context.Background(), userID, orgID, role)
+func setupTestContext(userID, orgID uuid.UUID) context.Context {
+	return auth.WithOwnerIDOrgID(context.Background(), userID, orgID)
 }
 
 func TestService_GetOrganization(t *testing.T) {
 	repo := newMockRepo()
-	svc := organization.NewService(repo)
+	svc := newTestService(repo)
 
 	userID := uuid.New()
 	orgID := uuid.New()
@@ -206,7 +225,7 @@ func TestService_GetOrganization(t *testing.T) {
 		Name: "Test Org",
 	}
 
-	ctx := setupTestContext(userID, orgID, "owner")
+	ctx := setupTestContext(userID, orgID)
 	
 	org, err := svc.GetOrganization(ctx)
 	require.NoError(t, err)
@@ -216,7 +235,7 @@ func TestService_GetOrganization(t *testing.T) {
 
 func TestService_UpdateOrganization(t *testing.T) {
 	repo := newMockRepo()
-	svc := organization.NewService(repo)
+	svc := newTestService(repo)
 
 	userID := uuid.New()
 	orgID := uuid.New()
@@ -226,7 +245,7 @@ func TestService_UpdateOrganization(t *testing.T) {
 		Name: "Test Org",
 	}
 
-	ctx := setupTestContext(userID, orgID, "owner")
+	ctx := setupTestContext(userID, orgID)
 	
 	org, err := svc.UpdateOrganization(ctx, organization.UpdateOrgInput{Name: "Updated Org"})
 	require.NoError(t, err)
@@ -234,9 +253,38 @@ func TestService_UpdateOrganization(t *testing.T) {
 	assert.Equal(t, "Updated Org", org.Name)
 }
 
+func TestService_CreateOrganization_CriaOrgComOwner(t *testing.T) {
+	repo := newMockRepo()
+	svc := newTestService(repo)
+
+	ctx := setupTestContext(uuid.New(), uuid.Nil)
+
+	org, err := svc.CreateOrganization(ctx, organization.CreateOrgInput{Name: "Administradora X"})
+	require.NoError(t, err)
+	require.NotNil(t, org)
+
+	mine, err := svc.GetMyOrganization(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, mine)
+	assert.Equal(t, org.ID, mine.ID)
+}
+
+func TestService_CreateOrganization_UsuarioComOrgRecusa(t *testing.T) {
+	repo := newMockRepo()
+	svc := newTestService(repo)
+
+	ctx := setupTestContext(uuid.New(), uuid.Nil)
+
+	_, err := svc.CreateOrganization(ctx, organization.CreateOrgInput{Name: "A"})
+	require.NoError(t, err)
+
+	_, err = svc.CreateOrganization(ctx, organization.CreateOrgInput{Name: "B"})
+	assert.ErrorIs(t, err, organization.ErrAlreadyHasOrganization)
+}
+
 func TestService_ListMembers(t *testing.T) {
 	repo := newMockRepo()
-	svc := organization.NewService(repo)
+	svc := newTestService(repo)
 
 	userID := uuid.New()
 	orgID := uuid.New()
@@ -255,7 +303,7 @@ func TestService_ListMembers(t *testing.T) {
 		Role:           organization.RoleAdmin,
 	}
 
-	ctx := setupTestContext(userID, orgID, "owner")
+	ctx := setupTestContext(userID, orgID)
 	
 	members, err := svc.ListMembers(ctx)
 	require.NoError(t, err)
@@ -264,7 +312,7 @@ func TestService_ListMembers(t *testing.T) {
 
 func TestService_UpdateMemberRole_CannotChangeOwner(t *testing.T) {
 	repo := newMockRepo()
-	svc := organization.NewService(repo)
+	svc := newTestService(repo)
 
 	userID := uuid.New()
 	orgID := uuid.New()
@@ -277,7 +325,7 @@ func TestService_UpdateMemberRole_CannotChangeOwner(t *testing.T) {
 		Role:           organization.RoleOwner,
 	}
 
-	ctx := setupTestContext(userID, orgID, "owner")
+	ctx := setupTestContext(userID, orgID)
 	
 	_, err := svc.UpdateMemberRole(ctx, memberID, organization.UpdateMemberRoleInput{Role: organization.RoleAdmin})
 	require.Error(t, err)
@@ -286,7 +334,7 @@ func TestService_UpdateMemberRole_CannotChangeOwner(t *testing.T) {
 
 func TestService_RemoveMember_CannotRemoveOwner(t *testing.T) {
 	repo := newMockRepo()
-	svc := organization.NewService(repo)
+	svc := newTestService(repo)
 
 	userID := uuid.New()
 	orgID := uuid.New()
@@ -299,7 +347,7 @@ func TestService_RemoveMember_CannotRemoveOwner(t *testing.T) {
 		Role:           organization.RoleOwner,
 	}
 
-	ctx := setupTestContext(userID, orgID, "owner")
+	ctx := setupTestContext(userID, orgID)
 	
 	err := svc.RemoveMember(ctx, memberID)
 	require.Error(t, err)
@@ -308,7 +356,7 @@ func TestService_RemoveMember_CannotRemoveOwner(t *testing.T) {
 
 func TestService_RemoveMember_CannotRemoveSelf(t *testing.T) {
 	repo := newMockRepo()
-	svc := organization.NewService(repo)
+	svc := newTestService(repo)
 
 	userID := uuid.New()
 	orgID := uuid.New()
@@ -321,115 +369,199 @@ func TestService_RemoveMember_CannotRemoveSelf(t *testing.T) {
 		Role:           organization.RoleAdmin,
 	}
 
-	ctx := setupTestContext(userID, orgID, "admin")
+	ctx := setupTestContext(userID, orgID)
 	
 	err := svc.RemoveMember(ctx, memberID)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot remove yourself")
 }
 
-func TestService_CreateInvite_GeneratesToken(t *testing.T) {
+func hashOf(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
+}
+
+func seedInvite(repo *mockRepo, orgID uuid.UUID, email, token string, expiresAt time.Time) *organization.Invite {
+	invite := &organization.Invite{ID: uuid.New(), OrganizationID: orgID, Email: email, Role: organization.RoleEmployee, ExpiresAt: expiresAt}
+	repo.invites[invite.ID] = invite
+	repo.tokenHashes[hashOf(token)] = invite.ID
+	return invite
+}
+
+// newTestService monta o serviço com notificador que aceita tudo; testes de e-mail montam o seu.
+func newTestService(repo organization.Repository) *organization.Service {
+	return organization.NewService(repo, &fakeNotifier{}, "http://app.test")
+}
+
+func seedOrg(repo *mockRepo, name string) uuid.UUID {
+	id := uuid.New()
+	repo.orgs[id] = &organization.Organization{ID: id, Name: name}
+	return id
+}
+
+type inviteMail struct {
+	invitedBy uuid.UUID
+	toEmail   string
+	orgName   string
+	acceptURL string
+}
+
+// fakeNotifier grava os convites enfileirados; err simula falha ao enfileirar.
+type fakeNotifier struct {
+	mails []inviteMail
+	err   error
+}
+
+func (f *fakeNotifier) NotifyInvite(_ context.Context, invitedBy uuid.UUID, toEmail, orgName, acceptURL string) error {
+	f.mails = append(f.mails, inviteMail{invitedBy: invitedBy, toEmail: toEmail, orgName: orgName, acceptURL: acceptURL})
+	return f.err
+}
+
+func TestService_CreateInvite_GuardaSoHash(t *testing.T) {
 	repo := newMockRepo()
-	svc := organization.NewService(repo)
+	orgID := seedOrg(repo, "Imobiliária Teste")
+	svc := newTestService(repo)
 
-	userID := uuid.New()
-	orgID := uuid.New()
-
-	ctx := setupTestContext(userID, orgID, "owner")
-	
-	invite, err := svc.CreateInvite(ctx, organization.CreateInviteInput{
+	created, err := svc.CreateInvite(setupTestContext(uuid.New(), orgID), organization.CreateInviteInput{
 		Email: "test@example.com",
 		Role:  organization.RoleAdmin,
 	})
-	
 	require.NoError(t, err)
-	require.NotNil(t, invite)
-	assert.NotEmpty(t, invite.Token)
-	assert.Equal(t, "test@example.com", invite.Email)
-	assert.Equal(t, organization.RoleAdmin, invite.Role)
+	require.NotEmpty(t, created.Token)
+	assert.Equal(t, "test@example.com", created.Email)
+
+	_, rawStored := repo.tokenHashes[created.Token]
+	assert.False(t, rawStored, "token bruto não pode chegar ao repositório")
+	_, hashStored := repo.tokenHashes[hashOf(created.Token)]
+	assert.True(t, hashStored, "repositório guarda o SHA-256 do token")
 }
 
-func TestService_AcceptInvite_AlreadyAccepted(t *testing.T) {
+func TestService_CreateInvite_EnfileiraEmailComTokenNoLink(t *testing.T) {
 	repo := newMockRepo()
-	svc := organization.NewService(repo)
+	orgID := seedOrg(repo, "Imobiliária Teste")
+	notifier := &fakeNotifier{}
+	svc := organization.NewService(repo, notifier, "https://app.test")
+	ownerID := uuid.New()
 
-	userID := uuid.New()
-	orgID := uuid.New()
-	token := "valid_token"
+	created, err := svc.CreateInvite(setupTestContext(ownerID, orgID), organization.CreateInviteInput{
+		Email: "convidado@example.com",
+		Role:  organization.RoleManager,
+	})
+	require.NoError(t, err)
 
-	now := time.Now()
-	repo.invites[uuid.New()] = &organization.Invite{
-		ID:             uuid.New(),
-		OrganizationID: orgID,
-		Email:          "test@example.com",
-		Token:          token,
-		AcceptedAt:     &now,
-		ExpiresAt:      time.Now().Add(24 * time.Hour),
-	}
-
-	ctx := setupTestContext(userID, orgID, "viewer")
-	
-	err := svc.AcceptInvite(ctx, token, userID)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invite already accepted")
+	require.Len(t, notifier.mails, 1)
+	mail := notifier.mails[0]
+	assert.Equal(t, ownerID, mail.invitedBy)
+	assert.Equal(t, "convidado@example.com", mail.toEmail)
+	assert.Equal(t, "Imobiliária Teste", mail.orgName)
+	assert.Equal(t, "https://app.test/invite/accept?token="+created.Token, mail.acceptURL)
 }
 
-func TestService_AcceptInvite_Expired(t *testing.T) {
+func TestService_CreateInvite_FalhaAoEnfileirarNaoDesfazConvite(t *testing.T) {
 	repo := newMockRepo()
-	svc := organization.NewService(repo)
+	orgID := seedOrg(repo, "Imobiliária Teste")
+	svc := organization.NewService(repo, &fakeNotifier{err: errors.New("fila indisponível")}, "https://app.test")
 
-	userID := uuid.New()
-	orgID := uuid.New()
-	token := "expired_token"
-
-	repo.invites[uuid.New()] = &organization.Invite{
-		ID:             uuid.New(),
-		OrganizationID: orgID,
-		Email:          "test@example.com",
-		Token:          token,
-		ExpiresAt:      time.Now().Add(-24 * time.Hour),
-	}
-
-	ctx := setupTestContext(userID, orgID, "viewer")
-	
-	err := svc.AcceptInvite(ctx, token, userID)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invite expired")
+	created, err := svc.CreateInvite(setupTestContext(uuid.New(), orgID), organization.CreateInviteInput{
+		Email: "convidado@example.com",
+		Role:  organization.RoleViewer,
+	})
+	require.NoError(t, err)
+	assert.NotEmpty(t, created.Token)
+	_, stored := repo.tokenHashes[hashOf(created.Token)]
+	assert.True(t, stored, "convite gravado continua válido mesmo sem e-mail")
 }
 
-func TestService_AcceptInvite_AlreadyMember(t *testing.T) {
+func TestService_CreateInvite_FalhaNaGravacaoNaoEnfileira(t *testing.T) {
 	repo := newMockRepo()
-	svc := organization.NewService(repo)
+	repo.createInviteErr = errors.New("banco indisponível")
+	orgID := seedOrg(repo, "Imobiliária Teste")
+	notifier := &fakeNotifier{}
+	svc := organization.NewService(repo, notifier, "https://app.test")
 
-	userID := uuid.New()
-	orgID := uuid.New()
-	token := "valid_token"
-
-	repo.invites[uuid.New()] = &organization.Invite{
-		ID:             uuid.New(),
-		OrganizationID: orgID,
-		Email:          "test@example.com",
-		Token:          token,
-		ExpiresAt:      time.Now().Add(24 * time.Hour),
-	}
-
-	repo.members[uuid.New()] = &organization.Member{
-		ID:             uuid.New(),
-		OrganizationID: orgID,
-		UserID:         userID,
-		Role:           organization.RoleViewer,
-	}
-
-	ctx := setupTestContext(userID, orgID, "viewer")
-	
-	err := svc.AcceptInvite(ctx, token, userID)
+	_, err := svc.CreateInvite(setupTestContext(uuid.New(), orgID), organization.CreateInviteInput{
+		Email: "convidado@example.com",
+		Role:  organization.RoleViewer,
+	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "already a member")
+	assert.Empty(t, notifier.mails)
+}
+
+func TestService_AcceptInvite_Aceita(t *testing.T) {
+	repo := newMockRepo()
+	svc := newTestService(repo)
+	userID := uuid.New()
+	repo.emails[userID] = "convidado@example.com"
+	invite := seedInvite(repo, uuid.New(), "convidado@example.com", "tok", time.Now().Add(time.Hour))
+
+	require.NoError(t, svc.AcceptInvite(context.Background(), "tok", userID))
+	assert.NotNil(t, invite.AcceptedAt)
+}
+
+func TestService_AcceptInvite_EmailEhComparadoSemCaixa(t *testing.T) {
+	repo := newMockRepo()
+	svc := newTestService(repo)
+	userID := uuid.New()
+	repo.emails[userID] = "convidado@example.com"
+	invite := seedInvite(repo, uuid.New(), "Convidado@Example.com", "tok", time.Now().Add(time.Hour))
+
+	require.NoError(t, svc.AcceptInvite(context.Background(), "tok", userID))
+	assert.NotNil(t, invite.AcceptedAt)
+}
+
+func TestService_AcceptInvite_EmailDiferenteNaoRevelaConvite(t *testing.T) {
+	repo := newMockRepo()
+	svc := newTestService(repo)
+	userID := uuid.New()
+	repo.emails[userID] = "outro@example.com"
+	invite := seedInvite(repo, uuid.New(), "convidado@example.com", "tok", time.Now().Add(time.Hour))
+
+	err := svc.AcceptInvite(context.Background(), "tok", userID)
+	assert.ErrorIs(t, err, organization.ErrInviteNotFound)
+	assert.Nil(t, invite.AcceptedAt)
+}
+
+func TestService_AcceptInvite_JaUsado(t *testing.T) {
+	repo := newMockRepo()
+	svc := newTestService(repo)
+	userID := uuid.New()
+	repo.emails[userID] = "convidado@example.com"
+	invite := seedInvite(repo, uuid.New(), "convidado@example.com", "tok", time.Now().Add(time.Hour))
+	used := time.Now()
+	invite.AcceptedAt = &used
+
+	err := svc.AcceptInvite(context.Background(), "tok", userID)
+	assert.ErrorIs(t, err, organization.ErrInviteAlreadyUsed)
+}
+
+func TestService_AcceptInvite_Expirado(t *testing.T) {
+	repo := newMockRepo()
+	svc := newTestService(repo)
+	userID := uuid.New()
+	repo.emails[userID] = "convidado@example.com"
+	seedInvite(repo, uuid.New(), "convidado@example.com", "tok", time.Now().Add(-time.Hour))
+
+	err := svc.AcceptInvite(context.Background(), "tok", userID)
+	assert.ErrorIs(t, err, organization.ErrInviteExpired)
+}
+
+func TestService_AcceptInvite_FilialRemovida(t *testing.T) {
+	repo := newMockRepo()
+	svc := newTestService(repo)
+	userID := uuid.New()
+	repo.emails[userID] = "convidado@example.com"
+	branchID := uuid.New()
+	invite := seedInvite(repo, uuid.New(), "convidado@example.com", "tok", time.Now().Add(time.Hour))
+	invite.BranchID = &branchID
+
+	err := svc.AcceptInvite(context.Background(), "tok", userID)
+	assert.ErrorIs(t, err, organization.ErrInviteBranchGone)
+	assert.Nil(t, invite.AcceptedAt)
 }
 
 func TestService_ListInvites(t *testing.T) {
 	repo := newMockRepo()
-	svc := organization.NewService(repo)
+	svc := newTestService(repo)
 
 	userID := uuid.New()
 	orgID := uuid.New()
@@ -446,7 +578,7 @@ func TestService_ListInvites(t *testing.T) {
 		Email:          "test2@example.com",
 	}
 
-	ctx := setupTestContext(userID, orgID, "owner")
+	ctx := setupTestContext(userID, orgID)
 	
 	invites, err := svc.ListInvites(ctx)
 	require.NoError(t, err)
@@ -455,7 +587,7 @@ func TestService_ListInvites(t *testing.T) {
 
 func TestService_CancelInvite(t *testing.T) {
 	repo := newMockRepo()
-	svc := organization.NewService(repo)
+	svc := newTestService(repo)
 
 	userID := uuid.New()
 	orgID := uuid.New()
@@ -467,7 +599,7 @@ func TestService_CancelInvite(t *testing.T) {
 		Email:          "test@example.com",
 	}
 
-	ctx := setupTestContext(userID, orgID, "owner")
+	ctx := setupTestContext(userID, orgID)
 	
 	err := svc.CancelInvite(ctx, inviteID)
 	require.NoError(t, err)

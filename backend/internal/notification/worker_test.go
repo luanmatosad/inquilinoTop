@@ -16,7 +16,7 @@ type countingRepo struct {
 	processCallCount int32
 }
 
-func (c *countingRepo) ListPending(_ context.Context, limit int) ([]notification.Notification, error) {
+func (c *countingRepo) ListPending(_ context.Context, limit int) ([]uuid.UUID, error) {
 	atomic.AddInt32(&c.processCallCount, 1)
 	return nil, nil
 }

@@ -23,7 +23,7 @@ func newRouter(t *testing.T, withOrg bool) http.Handler {
 	h.Register(r, func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			if withOrg {
-				req = req.WithContext(auth.WithOwnerIDOrgIDRole(req.Context(), user, org, "admin"))
+				req = req.WithContext(auth.WithOwnerIDOrgID(req.Context(), user, org))
 			}
 			next.ServeHTTP(w, req)
 		})

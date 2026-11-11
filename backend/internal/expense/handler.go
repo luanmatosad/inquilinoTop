@@ -27,8 +27,6 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler,
 	r.Group(func(r chi.Router) {
 		r.Use(authMW)
 		r.With(readMw).Get("/expenses", h.listByOwner)
-		// /expenses/summary antes de /expenses/{id}: o chi dá precedência à rota estática, mas fica explícito.
-		r.With(readMw).Get("/expenses/summary", h.summary)
 		r.With(writeMw).Post("/expenses/{id}/pay", h.pay)
 		r.With(writeMw).Post("/expenses/{id}/unpay", h.unpay)
 		r.With(readMw).Get("/units/{unitId}/expenses", h.listByUnit)
@@ -106,36 +104,6 @@ func (h *Handler) listByOwner(w http.ResponseWriter, r *http.Request) {
 		list = []Expense{}
 	}
 	httputil.OK(w, list)
-}
-
-// @Summary Resumo das despesas no período
-// @Description Totais a vencer, vencidos e pagos, por vencimento entre from e to.
-// @Tags expenses
-// @Security BearerAuth
-// @Produce json
-// @Param from query string false "Vencimento a partir de (YYYY-MM-DD)"
-// @Param to query string false "Vencimento até (YYYY-MM-DD)"
-// @Param unit_id query string false "ID da unidade"
-// @Success 200 {object} Summary
-// @Failure 400 {object} map[string]interface{}
-// @Router /expenses/summary [get]
-func (h *Handler) summary(w http.ResponseWriter, r *http.Request) {
-	orgID := auth.OrganizationIDFromCtx(r.Context())
-	if orgID == uuid.Nil {
-		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
-		return
-	}
-	f, err := parseFilter(r)
-	if err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_FILTER", err.Error())
-		return
-	}
-	sum, err := h.svc.Summary(r.Context(), orgID, f)
-	if err != nil {
-		httputil.Err(w, http.StatusInternalServerError, "SUMMARY_FAILED", err.Error())
-		return
-	}
-	httputil.OK(w, sum)
 }
 
 // @Summary Dá baixa em uma despesa

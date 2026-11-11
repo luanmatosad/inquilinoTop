@@ -25,7 +25,7 @@ func (e *env) router() http.Handler {
 	r := chi.NewRouter()
 	authMW := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			next.ServeHTTP(w, req.WithContext(auth.WithOwnerIDOrgIDRole(req.Context(), e.user, e.org, "admin")))
+			next.ServeHTTP(w, req.WithContext(auth.WithOwnerIDOrgID(req.Context(), e.user, e.org)))
 		})
 	}
 	inspection.NewHandler(e.svc).Register(r, authMW, passMW, passMW)

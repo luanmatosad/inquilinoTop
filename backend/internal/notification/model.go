@@ -2,13 +2,12 @@ package notification
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 )
 
 type Notification struct {
-	ID          uuid.UUID  `json:"id"`
+	ID          uuid.UUID `json:"id"`
 	OwnerID     uuid.UUID `json:"owner_id"`
 	Type        string    `json:"type"`
 	ToAddress   string    `json:"to_address"`
@@ -31,11 +30,8 @@ type CreateNotificationInput struct {
 
 type NotificationType string
 
-const (
-	TypeEmail NotificationType = "email"
-	TypeSMS   NotificationType = "sms"
-	TypePush  NotificationType = "push"
-)
+// MaxRetries é o número de falhas de envio após o qual a notificação vira failed.
+const MaxRetries = 5
 
 const (
 	StatusPending NotificationStatus = "pending"
@@ -52,8 +48,7 @@ type EmailSender interface {
 type Repository interface {
 	Create(ctx context.Context, ownerID uuid.UUID, in CreateNotificationInput) (*Notification, error)
 	GetByID(ctx context.Context, id, ownerID uuid.UUID) (*Notification, error)
-	ListPending(ctx context.Context, limit int) ([]Notification, error)
+	ListPending(ctx context.Context, limit int) ([]uuid.UUID, error)
 	ListByOwner(ctx context.Context, ownerID uuid.UUID, status string) ([]Notification, error)
-	UpdateStatus(ctx context.Context, id uuid.UUID, status NotificationStatus, sentAt *time.Time) error
-	IncrementRetry(ctx context.Context, id uuid.UUID) error
+	ReserveAndSend(ctx context.Context, id uuid.UUID, send func(Notification) error) (bool, error)
 }

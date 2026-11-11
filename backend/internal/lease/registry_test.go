@@ -101,7 +101,7 @@ func newEnv() *env {
 	}
 	e.units.known[e.unit] = true
 	e.tenants.known[e.tn] = true
-	e.svc = lease.NewService(e.repo, newMockReadjustmentRepo(), &mockIndexRepo{}).
+	e.svc = lease.NewService(e.repo, newMockReadjustmentRepo()).
 		WithRefs(e.units, e.tenants).
 		WithPayments(e.payments)
 	return e
@@ -726,7 +726,7 @@ func TestService_Readjust_FalhaNasCobrancasNaoDesfazOReajuste(t *testing.T) {
 }
 
 func TestService_Readjust_SemGanchoDeCobrancasContinuaFuncionando(t *testing.T) {
-	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo(), &mockIndexRepo{})
+	svc := lease.NewService(newMockLeaseRepo(), newMockReadjustmentRepo())
 	orgID, ownerID := uuid.New(), uuid.New()
 	created, err := createLease(svc, orgID, ownerID, lease.CreateLeaseInput{UnitID: uuid.New(), TenantID: uuid.New(), StartDate: day(2026, 1, 1), RentAmount: 1000, PaymentDay: 5})
 	require.NoError(t, err)
@@ -765,17 +765,4 @@ func TestService_Readjust_ProximoReajusteConsideraOReajusteRecemAplicado(t *test
 	require.NoError(t, err)
 	require.NotNil(t, out.Lease.NextReadjustment)
 	assert.True(t, day(2027, 3, 1).Equal(*out.Lease.NextReadjustment))
-}
-
-func TestService_AdjustByAutoIndex_TambemAtualizaCobrancasFuturas(t *testing.T) {
-	e := newEnv()
-	e.payments.reUpdated = 3
-	created := e.create(t, e.in(day(2026, 1, 1), nil))
-	svc := lease.NewService(e.repo, newMockReadjustmentRepo(), &mockIndexRepo{latest: &lease.IndexValue{IndexType: "IGP-M", Cumulative: 0.04, ReferenceMonth: day(2026, 9, 1)}}).
-		WithRefs(e.units, e.tenants).WithPayments(e.payments)
-
-	out, err := svc.AdjustByAutoIndex(context.Background(), created.Lease.ID, e.org, lease.AdjustLeaseInput{IndexType: "IGP-M"})
-	require.NoError(t, err)
-	assert.Equal(t, 3, out.PaymentsUpdated)
-	assert.True(t, day(2026, 9, 1).Equal(e.payments.reFrom), "a vigência do reajuste automático é o mês de referência do índice")
 }

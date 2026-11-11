@@ -34,8 +34,6 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler,
 		r.With(writeMw).Post("/leases/{id}/renew", h.renew)
 		r.With(writeMw).Post("/leases/{id}/readjust", h.readjust)
 		r.With(readMw).Get("/leases/{id}/readjustments", h.listReadjustments)
-		r.Get("/indices/{type}/history", h.getIndexHistory)
-		r.With(writeMw).Post("/leases/{id}/adjust", h.autoAdjust)
 		r.With(readMw).Get("/leases/{id}", h.get)
 	})
 }
@@ -381,68 +379,6 @@ func (h *Handler) listReadjustments(w http.ResponseWriter, r *http.Request) {
 		list = []Readjustment{}
 	}
 	httputil.OK(w, list)
-}
-
-// @Summary Lista histórico de um índice
-// @Tags leases
-// @Security BearerAuth
-// @Produce json
-// @Param type path string true "Tipo do índice (IPCA, IGP-M)"
-// @Success 200 {object} map[string]interface{}
-// @Router /indices/{type}/history [get]
-func (h *Handler) getIndexHistory(w http.ResponseWriter, r *http.Request) {
-	indexType := chi.URLParam(r, "type")
-	if indexType == "" {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_INDEX_TYPE", "tipo de índice inválido")
-		return
-	}
-
-	list, err := h.svc.GetIndexHistory(r.Context(), indexType)
-	if err != nil {
-		httputil.Err(w, http.StatusInternalServerError, "LIST_FAILED", err.Error())
-		return
-	}
-	if list == nil {
-		list = []IndexValue{}
-	}
-	httputil.OK(w, list)
-}
-
-// @Summary Aplica reajuste automático usando o índice mais recente
-// @Tags leases
-// @Security BearerAuth
-// @Accept json
-// @Produce json
-// @Param id path string true "ID do contrato"
-// @Param body body AdjustLeaseInput true "Dados para reajuste automático"
-// @Success 200 {object} map[string]interface{}
-// @Router /leases/{id}/adjust [post]
-func (h *Handler) autoAdjust(w http.ResponseWriter, r *http.Request) {
-	orgID := auth.OrganizationIDFromCtx(r.Context())
-	if orgID == uuid.Nil {
-		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "organização não encontrada")
-		return
-	}
-	id, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "id inválido")
-		return
-	}
-	var in AdjustLeaseInput
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_BODY", "corpo inválido")
-		return
-	}
-	if err := validator.Validate(in); err != nil {
-		httputil.ValidationErr(w, err)
-		return
-	}
-	out, err := h.svc.AdjustByAutoIndex(r.Context(), id, orgID, in)
-	if err != nil {
-		httputil.Err(w, http.StatusInternalServerError, "AUTO_ADJUST_FAILED", err.Error())
-		return
-	}
-	httputil.OK(w, out)
 }
 
 // writeDomainErr traduz erros de regra do contrato em HTTP; devolve false se err não for um deles.

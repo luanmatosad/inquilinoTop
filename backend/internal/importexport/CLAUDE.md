@@ -8,7 +8,6 @@ Importação em lote (CSV já parseado no cliente) com histórico. Histórico es
 |---|---|
 | POST | `/import` — body `{entity_type, records: [map[string]string], duplicate_strategy}` → `{import_id, imported, failed, skipped, errors[]}` |
 | GET | `/import/history` |
-| GET | `/import/history/{id}` |
 
 ## Fluxo
 
@@ -27,6 +26,4 @@ Importação em lote (CSV já parseado no cliente) com histórico. Histórico es
 ## Gotchas
 
 - Escopo: handler usa `auth.OrganizationIDFromCtx` (401 `UNAUTHORIZED` se ausente) como `orgID`; `userID` = `auth.OwnerIDFromCtx` (mesmo padrão do handler de tenant). Histórico segue com `ownerID`.
-- `PropertyRepository` ainda é injetada em `NewService`, mas não é usada (sem import de property).
 - `skipped` só existe na resposta; histórico não tem coluna para isso (sem migration).
-- `ValidationError{Field, Message}` permanece como tipo de erro de validação.

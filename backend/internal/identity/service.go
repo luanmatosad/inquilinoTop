@@ -16,13 +16,12 @@ import (
 )
 
 type AuthResult struct {
-	User                *User   `json:"user"`
-	AccessToken         string  `json:"access_token"`
-	RefreshToken        string  `json:"refresh_token"`
-	TwoFactorRequired   bool    `json:"two_factor_required,omitempty"`
-	TempToken           string  `json:"temp_token,omitempty"`
-	OrganizationID      string  `json:"organization_id,omitempty"`
-	Role                string  `json:"role,omitempty"`
+	User              *User  `json:"user"`
+	AccessToken       string `json:"access_token"`
+	RefreshToken      string `json:"refresh_token"`
+	TwoFactorRequired bool   `json:"two_factor_required,omitempty"`
+	TempToken         string `json:"temp_token,omitempty"`
+	OrganizationID    string `json:"organization_id,omitempty"`
 }
 
 func (a *AuthResult) GetUserID() uuid.UUID {
@@ -96,9 +95,9 @@ func (s *Service) Login(ctx context.Context, email, password string) (*AuthResul
 			return nil, fmt.Errorf("identity.svc: store temp token: %w", err)
 		}
 		return &AuthResult{
-			User:               user,
+			User:              user,
 			TwoFactorRequired: true,
-			TempToken:        tempToken,
+			TempToken:         tempToken,
 		}, nil
 	}
 	result, err := s.issueTokens(ctx, user)
@@ -181,7 +180,7 @@ func (s *Service) issueTokens(ctx context.Context, user *User) (*AuthResult, err
 	if s.orgRepo != nil {
 		membership, orgErr := s.orgRepo.GetByUserID(ctx, user.ID)
 		if orgErr == nil && membership != nil {
-			accessToken, err = s.jwtSvc.SignWithOrg(user.ID, membership.OrganizationID, membership.Role, membership.BranchID)
+			accessToken, err = s.jwtSvc.SignWithOrg(user.ID, membership.OrganizationID, membership.BranchID)
 			if err == nil {
 				raw := uuid.New().String()
 				_, err = s.repo.CreateRefreshToken(ctx, user.ID, tokenHash(raw), time.Now().Add(30*24*time.Hour))
@@ -193,7 +192,6 @@ func (s *Service) issueTokens(ctx context.Context, user *User) (*AuthResult, err
 					AccessToken:    accessToken,
 					RefreshToken:   raw,
 					OrganizationID: membership.OrganizationID.String(),
-					Role:           membership.Role,
 				}, nil
 			}
 		}
@@ -365,9 +363,9 @@ func verifyTOTP(secret, code string) bool {
 	v := totp.Validator{
 		Algorithm: totp.AlgorithmSHA1,
 		Digits:    6,
-		Skew:     1,
-		Period:   30,
-		Secret:   secret,
+		Skew:      1,
+		Period:    30,
+		Secret:    secret,
 	}
 	// Validate devolve (false, nil) para um código errado: é preciso olhar o booleano, não só o erro.
 	ok, err := v.Validate(code)

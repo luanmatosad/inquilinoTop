@@ -3,7 +3,7 @@ package notification
 import (
 	"context"
 	"fmt"
-	"time"
+	"log/slog"
 
 	"github.com/google/uuid"
 )
@@ -33,18 +33,17 @@ func (s *Service) GetNotification(ctx context.Context, id, ownerID uuid.UUID) (*
 }
 
 func (s *Service) ProcessQueue(ctx context.Context, limit int) error {
-	notifications, err := s.repo.ListPending(ctx, limit)
+	ids, err := s.repo.ListPending(ctx, limit)
 	if err != nil {
 		return err
 	}
 
-	for _, n := range notifications {
-		if err := s.processNotification(ctx, n); err != nil {
-			s.repo.IncrementRetry(ctx, n.ID)
-			continue
+	for _, id := range ids {
+		if _, err := s.repo.ReserveAndSend(ctx, id, func(n Notification) error {
+			return s.processNotification(ctx, n)
+		}); err != nil {
+			slog.Error("notification.svc: processar notificação", "id", id, "error", err)
 		}
-		now := time.Now()
-		s.repo.UpdateStatus(ctx, n.ID, StatusSent, &now)
 	}
 	return nil
 }

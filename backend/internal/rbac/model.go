@@ -67,12 +67,6 @@ type RemoveRoleInput struct {
 	BranchID       *uuid.UUID `json:"branch_id,omitempty"`
 }
 
-type CheckPermissionInput struct {
-	OrganizationID uuid.UUID
-	BranchID       *uuid.UUID
-	Permission     Permission
-}
-
 type Repository interface {
 	Create(ctx context.Context, in CreateInput) (*UserRole, error)
 	Delete(ctx context.Context, userID uuid.UUID, role RoleType, orgID, branchID *uuid.UUID) error

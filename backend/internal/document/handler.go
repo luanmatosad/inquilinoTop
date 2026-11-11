@@ -29,6 +29,16 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 	r.With(authMW).Delete("/documents/{id}", h.delete)
 }
 
+// @Summary Lista os documentos de uma entidade
+// @Tags documents
+// @Security BearerAuth
+// @Produce json
+// @Param entity_type query string true "Tipo da entidade"
+// @Param entity_id query string true "ID da entidade (UUID)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /documents [get]
 func (h *Handler) listByEntity(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	entityType := r.URL.Query().Get("entity_type")
@@ -56,6 +66,17 @@ func (h *Handler) listByEntity(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, list)
 }
 
+// @Summary Envia um documento (multipart) vinculado a uma entidade
+// @Tags documents
+// @Security BearerAuth
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "Arquivo"
+// @Param entity_type formData string true "Tipo da entidade"
+// @Param entity_id formData string true "ID da entidade (UUID)"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /documents [post]
 func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 
@@ -111,6 +132,16 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 	httputil.Created(w, doc)
 }
 
+// @Summary Faz o download de um documento
+// @Tags documents
+// @Security BearerAuth
+// @Produce application/octet-stream
+// @Param id path string true "ID do documento"
+// @Success 200 {file} binary
+// @Failure 400 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /documents/{id} [get]
 func (h *Handler) download(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -142,6 +173,16 @@ func (h *Handler) download(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, rc)
 }
 
+// @Summary Remove um documento
+// @Tags documents
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "ID do documento"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /documents/{id} [delete]
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))

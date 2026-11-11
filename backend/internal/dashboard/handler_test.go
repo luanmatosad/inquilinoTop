@@ -70,17 +70,25 @@ func TestHandler_Metrics_ErroInterno(t *testing.T) {
 	assert.NotContains(t, rec.Body.String(), "db down")
 }
 
-func TestHandler_Metrics_RBAC_PapelSemPaymentRead(t *testing.T) {
-	r := chi.NewRouter()
-	NewHandler(NewService(&mockRepo{metrics: &Metrics{}}, brt)).
-		Register(r, passthrough, rbac.PermissionMiddleware(rbac.PermissionPaymentRead))
+type fixedRoles struct {
+	role rbac.RoleType
+}
 
+func (f fixedRoles) RoleIn(context.Context, uuid.UUID, uuid.UUID) (rbac.RoleType, error) {
+	return f.role, nil
+}
+
+func TestHandler_Metrics_RBAC_PapelSemPaymentRead(t *testing.T) {
 	for role, want := range map[string]int{
 		"viewer":   http.StatusForbidden,
 		"employee": http.StatusOK,
 		"owner":    http.StatusOK,
 	} {
-		ctx := auth.WithOwnerIDOrgIDRole(context.Background(), uuid.New(), uuid.New(), role)
+		r := chi.NewRouter()
+		NewHandler(NewService(&mockRepo{metrics: &Metrics{}}, brt)).
+			Register(r, passthrough, rbac.PermissionMiddleware(fixedRoles{role: rbac.RoleType(role)}, rbac.PermissionPaymentRead))
+
+		ctx := auth.WithOwnerIDOrgID(context.Background(), uuid.New(), uuid.New())
 		rec := doGet(r, ctx)
 		assert.Equal(t, want, rec.Code, "role %s", role)
 		if want == http.StatusForbidden {

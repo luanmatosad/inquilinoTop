@@ -23,10 +23,20 @@ func (h *Handler) Register(r chi.Router, authMW func(http.Handler) http.Handler)
 		r.Use(authMW)
 		r.Post("/import", h.handleImport)
 		r.Get("/import/history", h.handleListHistory)
-		r.Get("/import/history/{id}", h.handleGetHistory)
 	})
 }
 
+// @Summary Importa registros (inquilinos, imóveis, contratos, etc.) em lote
+// @Tags importexport
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body ImportRequest true "Registros a importar"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /import [post]
 func (h *Handler) handleImport(w http.ResponseWriter, r *http.Request) {
 	var req ImportRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -57,6 +67,14 @@ func (h *Handler) handleImport(w http.ResponseWriter, r *http.Request) {
 	httputil.OK(w, resp)
 }
 
+// @Summary Lista o histórico de importações da organização
+// @Tags importexport
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /import/history [get]
 func (h *Handler) handleListHistory(w http.ResponseWriter, r *http.Request) {
 	ownerID := auth.OwnerIDFromCtx(r.Context())
 	if ownerID == uuid.Nil {
@@ -71,27 +89,4 @@ func (h *Handler) handleListHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.OK(w, histories)
-}
-
-func (h *Handler) handleGetHistory(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		httputil.Err(w, http.StatusBadRequest, "INVALID_ID", "Invalid import ID")
-		return
-	}
-
-	ownerID := auth.OwnerIDFromCtx(r.Context())
-	if ownerID == uuid.Nil {
-		httputil.Err(w, http.StatusUnauthorized, "UNAUTHORIZED", "Owner not found")
-		return
-	}
-
-	history, err := h.service.GetHistory(r.Context(), id, ownerID)
-	if err != nil {
-		httputil.Err(w, http.StatusNotFound, "NOT_FOUND", "Import not found")
-		return
-	}
-
-	httputil.OK(w, history)
 }

@@ -65,27 +65,6 @@ func (s *Service) LogUpdate(ctx context.Context, ownerID uuid.UUID, entityType s
 		})
 }
 
-func (s *Service) LogDelete(ctx context.Context, ownerID uuid.UUID, entityType string, entityID uuid.UUID, userID uuid.UUID, ipAddress string) {
-	organizationID := auth.OrganizationIDFromCtx(ctx)
-	s.repo.Create(ctx, organizationID, ownerID, CreateInput{
-		UserID:     &userID,
-		EventType:  string(EventDelete),
-		EntityType: &entityType,
-		EntityID:   &entityID,
-		IPAddress:  &ipAddress,
-	})
-}
-
-func (s *Service) LogPermissionDenied(ctx context.Context, ownerID uuid.UUID, userID uuid.UUID, resource string, ipAddress string) {
-	organizationID := auth.OrganizationIDFromCtx(ctx)
-	s.repo.Create(ctx, organizationID, ownerID, CreateInput{
-		UserID:    &userID,
-		EventType: string(EventPermissionDenied),
-		Details:  map[string]string{"resource": resource},
-		IPAddress: &ipAddress,
-	})
-}
-
 func (s *Service) ListLogs(ctx context.Context, ownerID uuid.UUID, from, to *time.Time, eventType *string) ([]AuditLog, error) {
 	organizationID := auth.OrganizationIDFromCtx(ctx)
 	return s.repo.List(ctx, organizationID, ownerID, from, to, eventType)

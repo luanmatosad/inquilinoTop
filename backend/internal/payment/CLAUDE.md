@@ -1,6 +1,6 @@
 # payment — Pagamentos
 
-Vinculado a Lease. Sem Delete (pagamentos são imutáveis); única exceção: `DeactivateFuturePending` (ADR 0003). Suporta cobrança via providers externos.
+Vinculado a Lease. Sem Delete (pagamentos são imutáveis); única exceção: `DeactivateFuturePending` (ADR 0003).
 
 ## Modelo
 
@@ -11,12 +11,10 @@ Vinculado a Lease. Sem Delete (pagamentos são imutáveis); única exceção: `D
 | Método | Rota | Retorna |
 |---|---|---|
 | GET | /api/v1/payments?status=&from=&to=&lease_id= | lista da organização, com LATE, multa e juros |
-| GET | /api/v1/payments/summary?from=&to=&lease_id= | `{to_receive, overdue, paid}` com `{count, total}` |
 | GET | /api/v1/leases/{leaseId}/payments | lista por lease |
 | POST | /api/v1/leases/{leaseId}/payments | 201 payment |
 | GET | /api/v1/payments/{id} | payment |
 | PUT | /api/v1/payments/{id} | payment atualizado |
-| POST | /api/v1/leases/{leaseId}/payments/generate?month=YYYY-MM | gera RENT + IPTU do mês |
 | GET | /api/v1/payments/{id}/receipt | recibo numerado (só se PAID): `number` 0001/2026, forma, desconto |
 | GET | /api/v1/payments/{id}/events | linha do tempo: Criada, eventos gravados (SENT, REMINDER, AGREEMENT, REPORTED, REJECTED, PAID) e Venceu em |
 | POST | /api/v1/payments/{id}/events | registra envio: `kind` SENT\|REMINDER, `channel` WHATSAPP\|EMAIL\|COPY (409 se paga) |
@@ -28,19 +26,10 @@ Vinculado a Lease. Sem Delete (pagamentos são imutáveis); única exceção: `D
 | GET | /api/v1/public/payments/{token}, `/pix`, `/receipt` | **sem login**; ver Link público |
 | POST | /api/v1/public/payments/{token}/report | "já paguei": multipart `amount`, `paid_date`, `proof?` |
 | POST | /api/v1/payments/{id}/agreement | acordo de atraso: `new_due_date` (> hoje), `agreed_amount?`, `note?` |
-| POST | /api/v1/payments/{id}/charge | cria cobrança no provider (PIX/BOLETO) |
-| POST | /api/v1/payments/webhook | recebe webhook do provider |
+| POST | /api/v1/webhook/{provider} | recebe webhook do provider |
 | GET | /api/v1/financial-config | configuração financeira do owner |
 | POST | /api/v1/financial-config | cria/atualiza configuração financeira |
 | DELETE | /api/v1/financial-config | soft-delete da configuração |
-
-## Providers de Pagamento (`internal/payment/provider/`)
-
-Interface `PaymentProvider`: `CreatePIXCharge`, `CreateBoletoCharge`, `GetChargeStatus`, `CreatePayout`, `RegisterWebhook`, `GetProviderName`.
-
-Providers implementados: `asaas`, `sicoob`, `bradesco` (com `sync.Mutex` no token cache), `itau`, `mock`.
-
-Factory: `provider.NewProvider(providerType, config)` — string `"asaas"|"sicoob"|"bradesco"|"itau"|"mock"`.
 
 ## Interfaces Cruzadas
 
@@ -85,5 +74,5 @@ Factory: `provider.NewProvider(providerType, config)` — string `"asaas"|"sicoo
 ## Decisões
 
 - [0001 - Payment imutável (sem Delete)](../../../docs/decisions/payment/0001-payment-imutavel-sem-delete.md)
-- [0002 - Abstração multi-provider (PaymentProvider)](../../../docs/decisions/payment/0002-abstracao-multi-provider.md)
+- [0002 - Abstração multi-provider](../../../docs/decisions/payment/0002-abstracao-multi-provider.md)
 - [0003 - Cancelamento de futuras pendentes ao encerrar contrato](../../../docs/decisions/payment/0003-cancelamento-de-futuras-pendentes-ao-encerrar-contrato.md)

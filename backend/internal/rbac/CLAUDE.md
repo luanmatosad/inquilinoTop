@@ -28,13 +28,12 @@ Gerencia roles de usuários, escopadas a `organization_id` (+ `branch_id` opcion
 
 ## Middleware
 
-- `PermissionMiddleware(permission)`: extrai `ownerID`/`organizationID`/`role` do contexto (via `pkg/auth`), checa `HasPermission` — 401 sem org, 403 sem permissão. Aplicado em todas as rotas de domínio (GET usa permissions `:read`, POST/PUT/DELETE usam `:write`).
-- `RoleMiddleware(svc, roles...)`: exige um dos roles informados; `RoleOwner` sempre passa (bypass hierárquico).
+- `PermissionMiddleware(roles, permission)`: extrai `ownerID`/`organizationID` do contexto (via `pkg/auth`), revalida o papel via `MembershipRoles` (consulta `organization_members` a cada request) e checa `HasPermission` — 401 sem owner/org, 403 sem vínculo ou sem permissão, 500 se a consulta falhar. Aplicado em todas as rotas de domínio (GET usa permissions `:read`, POST/PUT/DELETE usam `:write`).
 
 ## Gotchas
 
 - Escopo migrou de `property_id` pra `organization_id` + `branch_id` — ver [0002](../../../docs/decisions/rbac/0002-migracao-organization-id.md).
-- Middleware em `middleware.go` usa `httputil.Err` e `auth.OwnerIDFromCtx`/`OrganizationIDFromCtx`/`RoleFromCtx` (não `r.Header.Get("Authorization")` direto).
+- Middleware em `middleware.go` usa `httputil.Err` e `auth.OwnerIDFromCtx`/`OrganizationIDFromCtx` (não `r.Header.Get("Authorization")` direto). Papel NÃO vem do JWT nem do contexto: vem de `MembershipRoles` (`organization_members`).
 
 ## Decisões
 

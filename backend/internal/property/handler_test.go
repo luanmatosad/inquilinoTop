@@ -30,7 +30,7 @@ func noopWriteMw(next http.Handler) http.Handler {
 func authMWWithOwnerID(ownerID uuid.UUID) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := auth.WithOwnerIDOrgIDRole(r.Context(), ownerID, ownerID, "admin")
+			ctx := auth.WithOwnerIDOrgID(r.Context(), ownerID, ownerID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

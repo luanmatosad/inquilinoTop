@@ -3,20 +3,41 @@ package organization
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/inquilinotop/api/pkg/auth"
 )
 
-type Service struct {
-	repo Repository
+var ErrAlreadyHasOrganization = errors.New("usuário já possui organização")
+
+var (
+	ErrInviteNotFound    = errors.New("convite não encontrado")
+	ErrInviteExpired     = errors.New("convite expirado")
+	ErrInviteAlreadyUsed = errors.New("convite já utilizado")
+	ErrInviteBranchGone  = errors.New("filial do convite não existe mais")
+)
+
+// InviteNotifier enfileira o e-mail do convite. Quem envia é o worker de notificações, não o service.
+type InviteNotifier interface {
+	NotifyInvite(ctx context.Context, invitedBy uuid.UUID, toEmail, orgName, acceptURL string) error
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo        Repository
+	notifier    InviteNotifier
+	frontendURL string
+}
+
+// NewService recebe o notificador do convite e a URL pública do frontend (base do link de aceite).
+func NewService(repo Repository, notifier InviteNotifier, frontendURL string) *Service {
+	return &Service{repo: repo, notifier: notifier, frontendURL: frontendURL}
 }
 
 func (s *Service) getOrgID(ctx context.Context) (uuid.UUID, error) {
@@ -57,6 +78,21 @@ func (s *Service) UpdateOrganization(ctx context.Context, in UpdateOrgInput) (*O
 		return nil, err
 	}
 	return s.repo.Update(ctx, orgID, in)
+}
+
+func (s *Service) CreateOrganization(ctx context.Context, in CreateOrgInput) (*Organization, error) {
+	ownerID, err := s.getOwnerID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	existing, err := s.repo.GetByUserID(ctx, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, ErrAlreadyHasOrganization
+	}
+	return s.repo.CreateWithOwner(ctx, in.Name, ownerID)
 }
 
 func (s *Service) CreateBranch(ctx context.Context, in CreateBranchInput) (*Branch, error) {
@@ -182,7 +218,13 @@ func generateToken() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-func (s *Service) CreateInvite(ctx context.Context, in CreateInviteInput) (*Invite, error) {
+// hashToken guarda o convite como SHA-256 hex: o banco nunca recebe o token bruto.
+func hashToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
+}
+
+func (s *Service) CreateInvite(ctx context.Context, in CreateInviteInput) (*InviteCreated, error) {
 	token, err := generateToken()
 	if err != nil {
 		return nil, fmt.Errorf("generate token: %w", err)
@@ -196,11 +238,28 @@ func (s *Service) CreateInvite(ctx context.Context, in CreateInviteInput) (*Invi
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.CreateInvite(ctx, in, orgID, ownerID, token, expiresAt)
+	org, err := s.repo.GetByID(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("create invite: organization: %w", err)
+	}
+	if org == nil {
+		return nil, fmt.Errorf("create invite: organização não encontrada")
+	}
+	invite, err := s.repo.CreateInvite(ctx, in, orgID, ownerID, hashToken(token), expiresAt)
+	if err != nil {
+		return nil, err
+	}
+	// O convite já está gravado e o token volta na resposta: falha ao enfileirar o e-mail não o desfaz.
+	// Não há reenvio; quem convidou copia o link da resposta ou cancela e convida de novo.
+	acceptURL := s.frontendURL + "/invite/accept?token=" + token
+	if err := s.notifier.NotifyInvite(ctx, ownerID, invite.Email, org.Name, acceptURL); err != nil {
+		slog.Error("organization: enfileirar e-mail do convite", "invite_id", invite.ID, "org_id", orgID, "error", err)
+	}
+	return &InviteCreated{Invite: *invite, Token: token}, nil
 }
 
 func (s *Service) GetInviteByToken(ctx context.Context, token string) (*Invite, error) {
-	return s.repo.GetInviteByToken(ctx, token)
+	return s.repo.GetInviteByToken(ctx, hashToken(token))
 }
 
 func (s *Service) ListInvites(ctx context.Context) ([]Invite, error) {
@@ -220,36 +279,34 @@ func (s *Service) CancelInvite(ctx context.Context, inviteID uuid.UUID) error {
 }
 
 func (s *Service) AcceptInvite(ctx context.Context, token string, userID uuid.UUID) error {
-	invite, err := s.repo.GetInviteByToken(ctx, token)
+	email, err := s.repo.GetUserEmail(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("invalid invite")
+		return fmt.Errorf("accept invite: user email: %w", err)
 	}
-	if invite == nil {
-		return fmt.Errorf("invalid invite")
+	invite, err := s.repo.GetInviteByToken(ctx, hashToken(token))
+	if err != nil {
+		return fmt.Errorf("accept invite: lookup: %w", err)
+	}
+	// Convite de outra pessoa responde igual a convite inexistente: não revela que o token existe.
+	if invite == nil || !strings.EqualFold(invite.Email, email) {
+		return ErrInviteNotFound
 	}
 	if invite.AcceptedAt != nil {
-		return fmt.Errorf("invite already accepted")
+		return ErrInviteAlreadyUsed
 	}
 	if time.Now().After(invite.ExpiresAt) {
-		return fmt.Errorf("invite expired")
+		return ErrInviteExpired
 	}
-
 	if invite.BranchID != nil {
 		branch, err := s.repo.GetBranch(ctx, *invite.BranchID, invite.OrganizationID)
-		if err != nil || branch == nil {
-			return fmt.Errorf("branch not found")
+		if err != nil {
+			return fmt.Errorf("accept invite: branch: %w", err)
+		}
+		if branch == nil {
+			return ErrInviteBranchGone
 		}
 	}
-
-	existing, err := s.repo.GetMembership(ctx, userID, invite.OrganizationID)
-	if err == nil && existing != nil {
-		return fmt.Errorf("already a member")
-	}
-	_, err = s.repo.CreateMember(ctx, invite.OrganizationID, userID, invite.Role, invite.BranchID)
-	if err != nil {
-		return fmt.Errorf("create membership: %w", err)
-	}
-	return s.repo.AcceptInvite(ctx, invite.ID)
+	return s.repo.AcceptInvite(ctx, invite, userID)
 }
 
 func (s *Service) HasRole(ctx context.Context, role RoleType) (bool, error) {
@@ -270,6 +327,7 @@ type ServiceInterface interface {
 	GetOrganization(ctx context.Context) (*Organization, error)
 	GetMyOrganization(ctx context.Context) (*Organization, error)
 	UpdateOrganization(ctx context.Context, in UpdateOrgInput) (*Organization, error)
+	CreateOrganization(ctx context.Context, in CreateOrgInput) (*Organization, error)
 	CreateBranch(ctx context.Context, in CreateBranchInput) (*Branch, error)
 	GetBranch(ctx context.Context, branchID uuid.UUID) (*Branch, error)
 	ListBranches(ctx context.Context) ([]Branch, error)
@@ -280,7 +338,7 @@ type ServiceInterface interface {
 	ListMembers(ctx context.Context) ([]Member, error)
 	UpdateMemberRole(ctx context.Context, memberID uuid.UUID, in UpdateMemberRoleInput) (*Member, error)
 	RemoveMember(ctx context.Context, memberID uuid.UUID) error
-	CreateInvite(ctx context.Context, in CreateInviteInput) (*Invite, error)
+	CreateInvite(ctx context.Context, in CreateInviteInput) (*InviteCreated, error)
 	GetInviteByToken(ctx context.Context, token string) (*Invite, error)
 	ListInvites(ctx context.Context) ([]Invite, error)
 	CancelInvite(ctx context.Context, inviteID uuid.UUID) error
