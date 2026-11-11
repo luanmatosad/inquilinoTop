@@ -15,10 +15,10 @@ export const REMINDER_VARIABLES = [
 ] as const
 
 export const MAX_REMINDERS = 8
-export const MAX_NAME = 40
+const MAX_NAME = 40
 export const MAX_BODY = 1000
-export const MIN_OFFSET = -30
-export const MAX_OFFSET = 60
+const MIN_OFFSET = -30
+const MAX_OFFSET = 60
 
 /** Dados de exemplo da prévia (a Marina do canvas). */
 export const SAMPLE_VARIABLES: Record<string, string> = {

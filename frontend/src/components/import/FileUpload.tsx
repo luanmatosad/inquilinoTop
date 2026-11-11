@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react"
 import * as XLSX from "xlsx"
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
+import { Upload, AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export interface ParsedSpreadsheet {

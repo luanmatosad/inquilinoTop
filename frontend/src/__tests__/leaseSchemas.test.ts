@@ -1,12 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import {
   leaseSchema,
-  renewSchema,
   readjustSchema,
   endSchema,
   toEndPayload,
   toLeasePayload,
-  toRenewPayload,
   toReadjustPayload,
 } from '@/lib/lease-schemas'
 
@@ -85,17 +83,6 @@ describe('endSchema', () => {
     const ok = endSchema.safeParse({ end_date: '2026-11-30', reason: 'TENANT_REQUEST' })
     expect(ok.success).toBe(true)
     if (ok.success) expect(toEndPayload(ok.data)).toEqual({ end_date: '2026-11-30', reason: 'TENANT_REQUEST' })
-  })
-})
-
-describe('renewSchema', () => {
-  it('exige nova data final', () => {
-    expect(renewSchema.safeParse({}).success).toBe(false)
-    expect(renewSchema.safeParse({ new_end_date: '2027-12-31' }).success).toBe(true)
-  })
-  it('payload converte data e valor opcional', () => {
-    const p = toRenewPayload({ new_end_date: '2027-12-31', rent_amount: '1700', payment_day: '' })
-    expect(p).toEqual({ new_end_date: '2027-12-31T00:00:00Z', rent_amount: 1700 })
   })
 })
 

@@ -3,7 +3,7 @@ import { formatDateBR } from './date-format'
 import { todaySaoPaulo } from './lease-overview'
 import { plural } from './property-format'
 
-export type Bucket = { count: number; total: number }
+type Bucket = { count: number; total: number }
 export type PendingItem = { payment_id: string; tenant: string; amount: number; due_date: string; awaiting: boolean }
 export type ClosingSnapshot = {
   forecast: Bucket
@@ -12,7 +12,7 @@ export type ClosingSnapshot = {
   receipts_issued: number
   pending: PendingItem[]
 }
-export type ClosingEvent = {
+type ClosingEvent = {
   id: string
   kind: 'CLOSED' | 'REOPENED'
   actor_name: string

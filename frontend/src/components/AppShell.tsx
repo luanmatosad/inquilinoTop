@@ -18,7 +18,8 @@ const SIDEBAR_WIDTH = '15rem' // 240px (Figma)
 export function AppShell({ sidebar, header, children }: AppShellProps) {
   const pathname = usePathname()
 
-  if (isPublicRoute(pathname)) {
+  // Onboarding e aceite de convite são telas cheias, sem sidebar: o usuário pode ainda não ter organização.
+  if (isPublicRoute(pathname) || pathname === '/onboarding' || pathname === '/invite/accept') {
     return <>{children}</>
   }
 

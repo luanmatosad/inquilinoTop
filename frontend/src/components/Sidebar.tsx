@@ -27,21 +27,15 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { useOrganization } from '@/contexts/OrganizationContext'
 import { isNavItemActive, navGroups } from '@/lib/nav'
 
-export type SidebarOrganization = {
-  name: string
-  plan?: string | null
-}
-
-export type SidebarUser = {
+type SidebarUser = {
   name?: string | null
   email?: string | null
 }
 
 type SidebarProps = {
-  /** Organização atual (somente exibição, sem troca). `null` usa um texto neutro. */
-  organization: SidebarOrganization | null
   user: SidebarUser
 }
 
@@ -63,9 +57,10 @@ function formatPlan(plan?: string | null): string | null {
   return plan.charAt(0).toUpperCase() + plan.slice(1).toLowerCase()
 }
 
-export function Sidebar({ organization, user }: SidebarProps) {
+export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname()
   const { isMobile, setOpenMobile } = useSidebar()
+  const organization = useOrganization()?.organization ?? null
 
   const orgName = organization?.name?.trim() || FALLBACK_ORGANIZATION_NAME
   const orgPlan = formatPlan(organization?.plan)

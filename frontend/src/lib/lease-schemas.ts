@@ -92,24 +92,6 @@ export function toLeasePayload(v: LeaseFormValues) {
   })
 }
 
-// ---------- Renovar ----------
-
-export const renewSchema = z.object({
-  new_end_date: requiredDate("Informe a nova data final"),
-  rent_amount: optionalMoney,
-  payment_day: z.string().optional().refine((v) => !v || (/^\d+$/.test(v) && Number(v) >= 1 && Number(v) <= 31), "Dia entre 1 e 31"),
-})
-
-export type RenewFormValues = z.infer<typeof renewSchema>
-
-export function toRenewPayload(v: RenewFormValues) {
-  return compact({
-    new_end_date: toRfc3339(v.new_end_date),
-    rent_amount: v.rent_amount ? parseDecimal(v.rent_amount) : undefined,
-    payment_day: v.payment_day ? Number(v.payment_day) : undefined,
-  })
-}
-
 // ---------- Reajustar ----------
 
 export const readjustSchema = z.object({

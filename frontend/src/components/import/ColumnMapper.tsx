@@ -1,7 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { FieldDefinition, ENTITY_FIELDS } from "@/data/import/validation"
+import { useMemo } from "react"
+import { ENTITY_FIELDS } from "@/data/import/validation"
 import {
   Select,
   SelectContent,
@@ -69,8 +69,6 @@ export function ColumnMapper({
   onContinue,
   onBack,
 }: ColumnMapperProps) {
-  const [showTable, setShowTable] = useState(true)
-
   const fields = useMemo(() => ENTITY_FIELDS[entityType] ?? [], [entityType])
 
   const initialMapping = useMemo(() => {
@@ -83,10 +81,6 @@ export function ColumnMapper({
     })
     return initial
   }, [headers, mapping])
-
-  const mappedFields = useMemo(() => {
-    return new Set(Object.values(initialMapping).filter(Boolean))
-  }, [initialMapping])
 
   const missingRequiredFields = useMemo(() => {
     const mappedFieldNames = new Set(Object.values(initialMapping))

@@ -72,7 +72,7 @@ export function UnitForm({ propertyId, initialData, onSuccess, onCancel }: UnitF
           onSuccess?.()
         }
       }
-    } catch (error) {
+    } catch {
       toast.error("Ocorreu um erro inesperado.")
     } finally {
       setLoading(false)

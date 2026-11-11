@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect } from 'react'
 import { updateProfile } from './actions'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { UserProfile } from '@/types'

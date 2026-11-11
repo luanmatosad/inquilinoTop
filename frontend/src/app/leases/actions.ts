@@ -12,13 +12,10 @@ import {
   toLeaseUpdatePayload,
   type LeaseEditValues,
   type EndFormValues,
-  renewSchema,
   readjustSchema,
   toLeasePayload,
-  toRenewPayload,
   toReadjustPayload,
   type LeaseFormValues,
-  type RenewFormValues,
   type ReadjustFormValues,
 } from "@/lib/lease-schemas"
 
@@ -132,35 +129,6 @@ export async function endLease(id: string, values: EndFormValues, unitId?: strin
     return { success: true, data: lease }
   } catch (error) {
     return mapLeaseError(error, "Erro ao encerrar contrato.")
-  }
-}
-
-export async function renewLease(id: string, values: RenewFormValues): Promise<LeaseActionResponse> {
-  const validated = renewSchema.safeParse(values)
-  if (!validated.success) {
-    return { error: "Erro de validação. Verifique os campos.", fieldErrors: validated.error.flatten().fieldErrors }
-  }
-
-  try {
-    await goFetch<Lease>("/api/v1/leases/" + id + "/renew", {
-      method: "POST",
-      body: JSON.stringify(toRenewPayload(validated.data)),
-    })
-    revalidatePath("/leases")
-    revalidatePath("/leases/" + id)
-    return { success: true }
-  } catch (error) {
-    const { code } = goErrorInfo(error)
-    // Na renovação o campo afetado é a nova data final, e o texto muda em relação à criação.
-    if (code === "INVALID_DATES") {
-      const message = "A nova data final deve ser posterior ao fim atual do contrato."
-      return { error: message, fieldErrors: { new_end_date: [message] } }
-    }
-    if (code === "LEASE_OVERLAP") {
-      const message = "Esta renovação invade o período de outro contrato ativo da unidade."
-      return { error: message, fieldErrors: { new_end_date: [message] } }
-    }
-    return mapLeaseError(error, "Erro ao renovar contrato.")
   }
 }
 

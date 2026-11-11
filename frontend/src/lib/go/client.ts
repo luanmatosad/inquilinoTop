@@ -4,7 +4,6 @@ export {
   register,
   logout,
   goFetch,
-  getCurrentUser,
   type AuthUser,
   type AuthResponse,
   type GoError,

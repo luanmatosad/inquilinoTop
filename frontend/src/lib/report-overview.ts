@@ -3,7 +3,7 @@
 import { MONTHS } from './date-format'
 import { todaySaoPaulo } from './lease-overview'
 
-export const FIRST_YEAR = 2020
+const FIRST_YEAR = 2020
 
 export type MonthRow = { month: string; received: number; expenses: number }
 export type Totals = { received: number; expenses: number; result: number; payments_count?: number }

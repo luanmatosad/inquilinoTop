@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export const LEASE_STATUS_FILTERS = [
+const LEASE_STATUS_FILTERS = [
   { value: 'ACTIVE', label: 'Ativos' },
   { value: 'ENDED', label: 'Encerrados' },
   { value: 'CANCELED', label: 'Cancelados' },

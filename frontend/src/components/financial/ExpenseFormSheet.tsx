@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 
-export type ExpenseUnitOption = { id: string; label: string; propertyName: string }
+type ExpenseUnitOption = { id: string; label: string; propertyName: string }
 
 type Props = {
   /** Vem da URL (`?novo=1`). */

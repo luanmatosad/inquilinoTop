@@ -65,7 +65,7 @@ export function ExpenseList({ expenses, unitId }: ExpenseListProps) {
         toast.success('Despesa marcada como paga!')
         router.refresh()
       }
-    } catch (error) {
+    } catch {
       toast.error('Erro ao processar.')
     } finally {
       setLoadingId(null)
@@ -83,7 +83,7 @@ export function ExpenseList({ expenses, unitId }: ExpenseListProps) {
         setDeletingId(null)
         router.refresh()
       }
-    } catch (error) {
+    } catch {
       toast.error('Erro ao excluir.')
     }
   }

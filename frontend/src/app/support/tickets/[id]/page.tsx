@@ -27,10 +27,10 @@ const statusColors: Record<string, string> = {
 }
 
 const tipoLabels: Record<string, string> = {
-  duvida: "Dúvida",
-  sugestao: "Sugestão",
-  reclamacao: "Reclamação",
-  outro: "Outro",
+  DOUBT: "Dúvida",
+  FEATURE: "Sugestão",
+  BUG: "Problema",
+  PAYMENT: "Pagamento",
 }
 
 export default async function TicketDetailPage({
@@ -43,7 +43,7 @@ export default async function TicketDetailPage({
 
   try {
     ticket = await goFetch<Ticket>(`/api/v1/tickets/${id}`, {})
-  } catch (error) {
+  } catch {
     return (
       <div className="max-w-2xl mx-auto text-center py-12">
         <p className="text-muted-foreground">Ticket não encontrado.</p>

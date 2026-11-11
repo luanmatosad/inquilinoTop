@@ -1,4 +1,4 @@
-export type ValidationError = {
+type ValidationError = {
   field: string
   message: string
   row?: number
@@ -9,7 +9,7 @@ export type ValidationResult = {
   errors: ValidationError[]
 }
 
-export type FieldType = "string" | "number" | "cpf" | "cnpj" | "email" | "phone" | "date"
+type FieldType = "string" | "number" | "cpf" | "cnpj" | "email" | "phone" | "date"
 
 export interface FieldDefinition {
   name: string
@@ -58,7 +58,7 @@ function formatPhone(phone: string): string {
   return phone.replace(/\D/g, "")
 }
 
-export function validateCPF(cpf: string): boolean {
+function validateCPF(cpf: string): boolean {
   const cleaned = formatCPF(cpf)
   if (cleaned.length !== 11) return false
 
@@ -81,7 +81,7 @@ export function validateCPF(cpf: string): boolean {
   return cleaned[9] === String(digit1) && cleaned[10] === String(digit2)
 }
 
-export function validateCNPJ(cnpj: string): boolean {
+function validateCNPJ(cnpj: string): boolean {
   const cleaned = formatCNPJ(cnpj)
   if (cleaned.length !== 14) return false
 
@@ -106,22 +106,22 @@ export function validateCNPJ(cnpj: string): boolean {
   return cleaned[12] === String(digit1) && cleaned[13] === String(digit2)
 }
 
-export function validateEmail(email: string): boolean {
+function validateEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(email)
 }
 
-export function validatePhone(phone: string): boolean {
+function validatePhone(phone: string): boolean {
   const cleaned = formatPhone(phone)
   return cleaned.length >= 10 && cleaned.length <= 11
 }
 
-export function validateDate(date: string): boolean {
+function validateDate(date: string): boolean {
   const parsed = new Date(date)
   return !isNaN(parsed.getTime())
 }
 
-export function validateField(
+function validateField(
   value: string,
   field: FieldDefinition,
   rowIndex?: number
@@ -244,7 +244,7 @@ export function validateField(
   return null
 }
 
-export function validateRow(
+function validateRow(
   row: Record<string, string>,
   fields: FieldDefinition[],
   rowIndex?: number

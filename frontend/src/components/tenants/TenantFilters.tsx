@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export const BILLING_FILTERS = [
+const BILLING_FILTERS = [
   { value: 'LATE', label: 'Atrasado' },
   { value: 'PENDING', label: 'Previsto' },
   { value: 'PAID', label: 'Pago' },

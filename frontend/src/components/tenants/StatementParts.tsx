@@ -16,7 +16,7 @@ const DOT: Record<RowSituation, { text: string; dot: string }> = {
   PENDING: { text: 'Previsto', dot: 'bg-muted-foreground' },
 }
 
-export function RowBadge({ situation }: { situation: RowSituation }) {
+function RowBadge({ situation }: { situation: RowSituation }) {
   const { text, dot } = DOT[situation]
   return (
     <Badge variant="outline">

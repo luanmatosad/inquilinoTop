@@ -5,7 +5,7 @@ import { ParsedSpreadsheet } from "@/components/import/FileUpload"
 import { ColumnMapping } from "@/components/import/ColumnMapper"
 import { validateDataset, ValidationResult } from "@/data/import/validation"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, CheckCircle2, Filter, FileText, ArrowLeft, ArrowRight, Download } from "lucide-react"
+import { AlertCircle, CheckCircle2, Filter, FileText, ArrowLeft, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
@@ -13,7 +13,6 @@ interface ImportPreviewProps {
   spreadsheet: ParsedSpreadsheet
   entityType: "property" | "tenant" | "lease"
   mapping: ColumnMapping
-  onMappingChange: (mapping: ColumnMapping) => void
   onImport: () => void
   onBack: () => void
   isImporting: boolean
@@ -27,7 +26,6 @@ export function ImportPreview({
   spreadsheet,
   entityType,
   mapping,
-  onMappingChange,
   onImport,
   onBack,
   isImporting,

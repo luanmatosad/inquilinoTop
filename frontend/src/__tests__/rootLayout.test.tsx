@@ -11,6 +11,7 @@ vi.mock('@/components/AppSidebar', () => ({ default: () => null }))
 vi.mock('@/components/AppShell', () => ({ AppShell: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 vi.mock('@/components/theme-provider', () => ({ ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 vi.mock('@/components/ui/sonner', () => ({ Toaster: () => null }))
+vi.mock('@/components/OrganizationScope', () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 vi.mock('@/app/globals.css', () => ({}))
 
 import RootLayout from '@/app/layout'

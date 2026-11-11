@@ -6,7 +6,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/
 // Espelham os limites do backend (internal/inspection).
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024
 export const MAX_PHOTOS_PER_ITEM = 10
-export const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const
 
 export const CONDITIONS = ["GOOD", "FAIR", "POOR", "DAMAGED", "NOT_APPLICABLE"] as const
 export type Condition = (typeof CONDITIONS)[number]

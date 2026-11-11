@@ -62,12 +62,9 @@ export const payReceivableSchema = z.object({
   paid_date: z.string().regex(DATE, "Informe a data do recebimento"),
 })
 
-export type PayReceivableFormValues = z.infer<typeof payReceivableSchema>
-
 // ---------- Registrar pagamento (forma, desconto e observação) ----------
 
 export const PAYMENT_METHODS = ["PIX", "CASH", "TRANSFER", "BOLETO", "OTHER"] as const
-export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
 
 /** Schema do diálogo Registrar pagamento; `totalDue` é o valor devido hoje (limite do desconto). */
 export const registerPaymentSchemaFor = (totalDue: number) =>
@@ -122,8 +119,8 @@ export function toAgreementPayload(v: z.output<ReturnType<typeof agreementSchema
 
 // ---------- Filtros das telas ----------
 
-export const EXPENSE_STATUSES = ["PENDING", "LATE", "PAID"] as const
-export type FinancialStatus = (typeof EXPENSE_STATUSES)[number]
+const EXPENSE_STATUSES = ["PENDING", "LATE", "PAID"] as const
+type FinancialStatus = (typeof EXPENSE_STATUSES)[number]
 
 export interface FinancialFilters {
   status?: FinancialStatus

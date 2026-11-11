@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { MONTHS } from './date-format'
 import { parseDecimal } from './form-utils'
 
-export type PublicChargeStatus = 'PENDING' | 'LATE' | 'AWAITING_CONFIRMATION' | 'PAID'
+type PublicChargeStatus = 'PENDING' | 'LATE' | 'AWAITING_CONFIRMATION' | 'PAID'
 
 export type PublicCharge = {
   landlord_name: string
@@ -36,7 +36,7 @@ export type PublicReceipt = {
 }
 
 export const MAX_PROOF_BYTES = 5 * 1024 * 1024
-export const PROOF_TYPES = ['image/jpeg', 'image/png', 'application/pdf'] as const
+const PROOF_TYPES = ['image/jpeg', 'image/png', 'application/pdf'] as const
 const MAX_AGE_DAYS = 60
 
 /** "1.850,00", "1850,00" e "1850.00" valem; resto é NaN. */
@@ -63,8 +63,6 @@ export const reportSchemaFor = (today: string) =>
       .refine((d) => d <= today, 'A data não pode ser futura')
       .refine((d) => d >= addDays(today, -MAX_AGE_DAYS), 'A data é antiga demais (até 60 dias)'),
   })
-
-export type ReportValues = z.infer<ReturnType<typeof reportSchemaFor>>
 
 /** Valida o comprovante antes de enviar; o backend confere o tipo pelo conteúdo. Nulo = tudo certo. */
 export function validateProof(file: { size: number; type: string } | null): string | null {

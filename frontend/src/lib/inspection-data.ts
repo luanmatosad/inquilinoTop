@@ -34,7 +34,7 @@ export interface InspectionDetail extends Inspection {
   items: InspectionItem[]
 }
 
-export interface ComparisonRow {
+interface ComparisonRow {
   room: string
   item: string
   entry_condition: Condition | null

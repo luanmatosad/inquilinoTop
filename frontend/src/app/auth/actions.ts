@@ -6,6 +6,7 @@ import { login as goLogin, register as goRegister, logout as goLogout, setTokens
 import { z } from 'zod'
 
 import { authErrorMessage } from '@/lib/go/authErrors'
+import { safeNextPath } from '@/lib/safe-next'
 
 import { isRedirectError } from 'next/dist/client/components/redirect-error'
 
@@ -36,6 +37,7 @@ export type ActionState = {
 export async function login(prevState: ActionState, formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const next = safeNextPath(formData.get('next'))
 
   const result = authSchema.safeParse({ email, password })
   if (!result.success) {
@@ -56,7 +58,7 @@ export async function login(prevState: ActionState, formData: FormData) {
   }
 
   if (success) {
-    redirect('/')
+    redirect(next)
   }
 }
 
@@ -65,6 +67,7 @@ export async function signup(prevState: ActionState, formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const confirmPassword = formData.get('confirmPassword') as string
+  const next = safeNextPath(formData.get('next'))
 
   const result = registerSchema.safeParse({ fullName, email, password, confirmPassword })
   if (!result.success) {
@@ -85,7 +88,7 @@ export async function signup(prevState: ActionState, formData: FormData) {
   }
 
   if (success) {
-    redirect('/')
+    redirect(next)
   }
 }
 

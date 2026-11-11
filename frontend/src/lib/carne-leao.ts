@@ -6,8 +6,8 @@ import { labelUnits } from './report-overview'
 
 export { labelUnits }
 
-export type IncomeLine = { payer: string; unit_id: string; paid_date: string; amount: number }
-export type DeductionLine = { description: string; unit_id: string; category: string; amount: number }
+type IncomeLine = { payer: string; unit_id: string; paid_date: string; amount: number }
+type DeductionLine = { description: string; unit_id: string; category: string; amount: number }
 export type CarneLeao = {
   month: string
   due_date: string

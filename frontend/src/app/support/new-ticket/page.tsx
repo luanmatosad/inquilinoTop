@@ -4,13 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { createTicket } from '@/app/support/actions';
 
 const ticketTypes = [
-  { value: 'duvida', label: 'Dúvida' },
-  { value: 'sugestao', label: 'Sugestão' },
-  { value: 'reclamacao', label: 'Reclamação' },
-  { value: 'outro', label: 'Outro' },
+  { value: 'DOUBT', label: 'Dúvida' },
+  { value: 'FEATURE', label: 'Sugestão' },
+  { value: 'BUG', label: 'Problema' },
+  { value: 'PAYMENT', label: 'Pagamento' },
 ];
 
 export default function NewTicketPage() {
@@ -46,6 +47,7 @@ export default function NewTicketPage() {
     setLoading(false);
 
     if (result.success) {
+      toast.success('Chamado enviado com sucesso');
       router.push('/support/tickets');
     } else if (result.error) {
       setErrors({ submit: result.error });

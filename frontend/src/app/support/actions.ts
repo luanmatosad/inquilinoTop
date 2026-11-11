@@ -27,7 +27,7 @@ interface CreateTicketInput {
   descricao: string
 }
 
-const ticketTypes = ["duvida", "sugestao", "reclamacao", "outro"]
+const ticketTypes = ["DOUBT", "FEATURE", "BUG", "PAYMENT"]
 
 export async function createTicket(data: CreateTicketInput): Promise<ActionResponse<Ticket>> {
   if (!data.tipo || !ticketTypes.includes(data.tipo)) {
@@ -51,29 +51,5 @@ export async function createTicket(data: CreateTicketInput): Promise<ActionRespo
   } catch (error) {
     console.error("Erro ao criar ticket:", error)
     return { error: "Erro ao criar ticket" }
-  }
-}
-
-export async function getTickets(): Promise<ActionResponse<Ticket[]>> {
-  try {
-    const tickets = await goFetch<Ticket[]>("/api/v1/tickets", {
-      method: "GET",
-    })
-    return { success: true, data: tickets }
-  } catch (error) {
-    console.error("Erro ao listar tickets:", error)
-    return { error: "Erro ao listar tickets" }
-  }
-}
-
-export async function getTicketById(id: string): Promise<ActionResponse<Ticket>> {
-  try {
-    const ticket = await goFetch<Ticket>("/api/v1/tickets/" + id, {
-      method: "GET",
-    })
-    return { success: true, data: ticket }
-  } catch (error) {
-    console.error("Erro ao buscar ticket:", error)
-    return { error: "Erro ao buscar ticket" }
   }
 }

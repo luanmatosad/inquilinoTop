@@ -12,9 +12,19 @@ import { Mail, Lock, Eye, EyeOff, User } from 'lucide-react'
 
 type LoginFormProps = {
   mode: 'login' | 'signup'
+  /** Destino interno após entrar: volta à página que exigiu o login (ex.: aceite de convite). */
+  next?: string
 }
 
-export function LoginForm({ mode }: LoginFormProps) {
+function loginHref({ mode, next }: { mode?: 'signup'; next?: string }) {
+  const query = new URLSearchParams()
+  if (mode) query.set('mode', mode)
+  if (next) query.set('next', next)
+  const qs = query.toString()
+  return qs ? `/login?${qs}` : '/login'
+}
+
+export function LoginForm({ mode, next }: LoginFormProps) {
   const isLogin = mode === 'login'
   const [showPassword, setShowPassword] = useState(false)
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
@@ -54,6 +64,7 @@ export function LoginForm({ mode }: LoginFormProps) {
         </div>
 
         <form action={formAction} className="flex flex-col gap-3">
+          {next && <input type="hidden" name="next" value={next} />}
           {!isLogin && (
             <div className="space-y-2">
               <Label htmlFor="fullName">Nome Completo</Label>
@@ -137,7 +148,7 @@ export function LoginForm({ mode }: LoginFormProps) {
           </Button>
 
           <Button asChild variant="outline" className="w-full">
-            <Link href={isLogin ? '/login?mode=signup' : '/login'}>
+            <Link href={loginHref({ mode: isLogin ? 'signup' : undefined, next })}>
               {isLogin ? 'Não possui conta? Cadastra-se' : 'Já tem conta? Entrar'}
             </Link>
           </Button>

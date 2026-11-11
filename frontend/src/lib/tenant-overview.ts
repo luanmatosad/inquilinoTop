@@ -3,7 +3,7 @@
 // shortcut: junção no servidor Next porque /leases, /properties e /payments não paginam; se a base
 // passar de alguns milhares de registros, mover para o backend (ver design.md da change).
 
-export type OverviewTenant = { id: string }
+type OverviewTenant = { id: string }
 export type OverviewLease = {
   id: string
   tenant_id: string

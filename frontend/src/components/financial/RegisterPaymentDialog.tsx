@@ -83,13 +83,13 @@ export function RegisterPaymentDialog({ open, initialId, items, onClose, onDone 
           <DialogDescription>Para quem pagou fora do link ou em dinheiro. Multa, juros e IRRF são calculados pela data informada.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-w-0 flex-col gap-4">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium" htmlFor="payment-select">
                 Cobrança
               </label>
               <Select value={selected} onValueChange={setSelected}>
-                <SelectTrigger id="payment-select" aria-label="Cobrança">
+                <SelectTrigger id="payment-select" aria-label="Cobrança" className="w-full min-w-0 [&>span]:min-w-0 [&>span]:truncate">
                   <SelectValue placeholder="Escolha a cobrança" />
                 </SelectTrigger>
                 <SelectContent>
@@ -106,7 +106,7 @@ export function RegisterPaymentDialog({ open, initialId, items, onClose, onDone 
                 Atrasada: {item.amount} com multa e juros viram {item.updatedTotal}.
               </p>
             )}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="paid_date"

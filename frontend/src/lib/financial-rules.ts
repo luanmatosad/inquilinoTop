@@ -1,6 +1,6 @@
 // Regras financeiras da organização (spec financial-rules): padrões para novos contratos e janela do aviso de reajuste.
 // Os limites repetem os do backend (`internal/settings`); lá é que valem de verdade.
-export type AdjustmentIndex = 'IGP-M' | 'IPCA'
+type AdjustmentIndex = 'IGP-M' | 'IPCA'
 
 export type FinancialRules = {
   late_fee_percent: number
@@ -11,7 +11,7 @@ export type FinancialRules = {
 
 export const DEFAULT_RULES: FinancialRules = { late_fee_percent: 2, monthly_interest_percent: 1, default_adjustment_index: 'IGP-M', readjust_notice_days: 60 }
 
-export const RULE_LIMITS = { lateFee: 10, interest: 5, noticeMin: 1, noticeMax: 180 } as const
+const RULE_LIMITS = { lateFee: 10, interest: 5, noticeMin: 1, noticeMax: 180 } as const
 
 export type RulesFormInput = {
   late_fee_percent: string

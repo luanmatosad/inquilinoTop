@@ -12,6 +12,8 @@ function parseJwt(token: string) {
   }
 }
 
+const ZERO_UUID = '00000000-0000-0000-0000-000000000000'
+
 /** Header `cookie` do request sem os tokens de sessão, mais `extra` ao final. */
 function cookieHeader(request: NextRequest, extra: string[]) {
   return request.cookies
@@ -38,7 +40,7 @@ export async function middleware(request: NextRequest) {
     if (!isPublicRoute) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
-      url.searchParams.set('next', pathname)
+      url.searchParams.set('next', pathname + request.nextUrl.search)
       return NextResponse.redirect(url)
     }
     return response
@@ -122,6 +124,27 @@ export async function middleware(request: NextRequest) {
       redirectRes.cookies.set('refresh_token', refreshToken, authCookieOptions())
     }
     return redirectRes
+  }
+
+  // Sem organização: o owner precisa criar a empresa antes de usar o app. Usa a claim do access
+  // token atual (já renovado acima quando foi preciso). Sem chamada de rede.
+  const redirectTo = (path: string) => {
+    const url = request.nextUrl.clone()
+    url.pathname = path
+    url.search = ''
+    const res = NextResponse.redirect(url)
+    if (needsRefresh && accessToken && refreshToken) {
+      res.cookies.set('access_token', accessToken, authCookieOptions())
+      res.cookies.set('refresh_token', refreshToken, authCookieOptions())
+    }
+    return res
+  }
+  if (sessionConfirmed && accessToken && isNavigation) {
+    const claims = parseJwt(accessToken)
+    const hasOrg = typeof claims?.organization_id === 'string' && claims.organization_id !== ZERO_UUID
+    const exempt = pathname === '/onboarding' || pathname === '/login' || pathname.startsWith('/auth/callback') || pathname === '/p' || pathname.startsWith('/p/') || pathname === '/invite/accept'
+    if (!hasOrg && !exempt) return redirectTo('/onboarding')
+    if (hasOrg && pathname === '/onboarding') return redirectTo('/')
   }
 
   return response

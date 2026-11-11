@@ -8,7 +8,6 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -44,7 +43,7 @@ export function DeletePropertyButton({ id, name }: DeletePropertyButtonProps) {
         router.push("/properties")
         router.refresh()
       }
-    } catch (error) {
+    } catch {
       toast.error("Erro ao desativar imóvel.")
       setLoading(false)
       setOpen(false)

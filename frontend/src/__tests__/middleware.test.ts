@@ -13,7 +13,7 @@ import { middleware } from '@/middleware'
 import { SESSION_EXPIRED_LOGIN_URL } from '@/lib/session'
 
 function jwt(expOffsetSec: number) {
-  const payload = Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + expOffsetSec })).toString('base64')
+  const payload = Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + expOffsetSec, organization_id: '11111111-1111-1111-1111-111111111111' })).toString('base64')
   return `h.${payload}.s`
 }
 
@@ -298,10 +298,11 @@ describe('middleware', () => {
     }
 
     it('grava tokens com os mesmos atributos de setTokens e repassa ao downstream', async () => {
-      fetchMock.mockResolvedValue(ok)
+      const newAccess = jwt(3600)
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({ data: { access_token: newAccess, refresh_token: 'new-r' } }) })
       const res = await middleware(req('/', { theme: 'dark', access_token: jwt(-100), refresh_token: 'r' }))
       const cookies = setCookies(res)
-      for (const name of ['access_token=new-a', 'refresh_token=new-r']) {
+      for (const name of [`access_token=${newAccess}`, 'refresh_token=new-r']) {
         const c = cookies.find((x) => x.startsWith(name))!
         expect(c).toBeDefined()
         expect(c).toMatch(/HttpOnly/i)
@@ -311,7 +312,7 @@ describe('middleware', () => {
         expect(c).not.toMatch(/Secure/i)
       }
       expect(overridden(res)).toContain('cookie')
-      expect(forwardedCookie(res)).toBe('theme=dark; access_token=new-a; refresh_token=new-r')
+      expect(forwardedCookie(res)).toBe(`theme=dark; access_token=${newAccess}; refresh_token=new-r`)
     })
 
     it('em produção os cookies saem Secure', async () => {

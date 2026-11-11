@@ -21,6 +21,8 @@ vi.mock('@/app/auth/actions', () => ({
 
 import { Sidebar, getInitials, FALLBACK_ORGANIZATION_NAME } from '@/components/Sidebar'
 import { SidebarProvider } from '@/components/ui/sidebar'
+import { OrganizationProvider } from '@/contexts/OrganizationContext'
+import type { MyMembership } from '@/lib/go/organization'
 
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -37,19 +39,29 @@ beforeAll(() => {
   })
 })
 
+const VELA: MyMembership = {
+  organization: { id: 'org-1', name: 'Vela Imóveis', plan: 'enterprise' },
+  role: 'owner',
+  permissions: [],
+}
+
 function renderSidebar(
   pathname: string,
-  props: Partial<React.ComponentProps<typeof Sidebar>> = {},
+  {
+    membership = VELA,
+    user = { name: 'Luan Matos', email: 'luan@example.com' },
+  }: {
+    membership?: MyMembership | null
+    user?: { name?: string | null; email?: string | null }
+  } = {},
 ) {
   pathnameMock.value = pathname
   return render(
-    <SidebarProvider open onOpenChange={() => {}}>
-      <Sidebar
-        organization={{ name: 'Vela Imóveis', plan: 'enterprise' }}
-        user={{ name: 'Luan Matos', email: 'luan@example.com' }}
-        {...props}
-      />
-    </SidebarProvider>,
+    <OrganizationProvider membership={membership}>
+      <SidebarProvider open onOpenChange={() => {}}>
+        <Sidebar user={user} />
+      </SidebarProvider>
+    </OrganizationProvider>,
   )
 }
 
@@ -109,7 +121,7 @@ describe('Sidebar', () => {
   })
 
   it('usa texto neutro quando não há organização', () => {
-    renderSidebar('/', { organization: null })
+    renderSidebar('/', { membership: null })
     expect(screen.getByText(FALLBACK_ORGANIZATION_NAME)).toBeInTheDocument()
   })
 

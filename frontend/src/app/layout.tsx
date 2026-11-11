@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import Header from "@/components/Header";
 import AppSidebar from "@/components/AppSidebar";
 import { AppShell } from "@/components/AppShell";
+import OrganizationScope from "@/components/OrganizationScope";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -51,9 +52,11 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${urbanist.variable} ${spaceMono.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased min-h-screen flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
-          <AppShell sidebar={<AppSidebar />} header={<Header />}>
-            {children}
-          </AppShell>
+          <OrganizationScope>
+            <AppShell sidebar={<AppSidebar />} header={<Header />}>
+              {children}
+            </AppShell>
+          </OrganizationScope>
           <Toaster />
         </ThemeProvider>
       </body>

@@ -36,8 +36,8 @@ export function headline(count: number): string {
 
 // ---------- Listas do dia ----------
 
-export const COLLECT_WINDOW_DAYS = 7
-export const ENDING_WINDOW_DAYS = 60
+const COLLECT_WINDOW_DAYS = 7
+const ENDING_WINDOW_DAYS = 60
 
 const day = (iso: string) => iso.slice(0, 10)
 const diffDays = (from: string, to: string) => Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000)
@@ -166,7 +166,7 @@ export function buildToday(input: {
 
 // ---------- Primeiros passos ----------
 
-export type ChecklistStep = {
+type ChecklistStep = {
   key: 'account' | 'property' | 'tenant' | 'lease' | 'pix'
   title: string
   hint: string

@@ -1,7 +1,4 @@
-export type TransactionStatus = 'PAID' | 'PENDING' | 'OVERDUE'
-
-/** Status devolvido pelo backend: PENDING (a vencer), LATE (vencida) ou PAID. */
-export type LedgerStatus = 'PENDING' | 'LATE' | 'PAID'
+type TransactionStatus = 'PAID' | 'PENDING' | 'OVERDUE'
 
 export interface Receivable {
   id: string
@@ -49,18 +46,6 @@ export interface Transfer {
   netAmount: number
   status: 'PENDING' | 'PROCESSED' | 'TRANSFERRED'
   transferredAt: string | null
-}
-
-export interface Commission {
-  id: string
-  broker: string
-  type: 'SALE' | 'LEASE'
-  baseValue: number
-  percentage: number
-  taxRetentionISS: number
-  taxRetentionIRRF: number
-  amountToPay: number
-  property: string
 }
 
 export interface DashboardMetrics {

@@ -25,10 +25,10 @@ const statusColors: Record<string, string> = {
 }
 
 const tipoLabels: Record<string, string> = {
-  duvida: "Dúvida",
-  sugestao: "Sugestão",
-  reclamacao: "Reclamação",
-  outro: "Outro",
+  DOUBT: "Dúvida",
+  FEATURE: "Sugestão",
+  BUG: "Problema",
+  PAYMENT: "Pagamento",
 }
 
 export default async function TicketsPage() {

@@ -12,8 +12,8 @@ export const PIX_KEY_TYPES: { value: PixKeyType; label: string; placeholder: str
   { value: 'RANDOM', label: 'Chave aleatória', placeholder: '123e4567-e89b-12d3-a456-426614174000' },
 ]
 
-export const MAX_RECEIVER_NAME = 25
-export const MAX_PIX_CITY = 15
+const MAX_RECEIVER_NAME = 25
+const MAX_PIX_CITY = 15
 
 const digits = (s: string) => s.replace(/\D/g, '')
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
@@ -90,7 +90,7 @@ export function inferKeyType(key: string): PixKeyType | null {
 }
 
 export type PixFormInput = { key_type: string; key: string; receiver_name: string; city: string }
-export type PixFormValue = { key_type: PixKeyType; key: string; receiver_name: string; city: string }
+type PixFormValue = { key_type: PixKeyType; key: string; receiver_name: string; city: string }
 export type PixParseResult = { ok: true; value: PixFormValue } | { ok: false; errors: Partial<Record<keyof PixFormInput, string>> }
 
 export function parsePixForm(raw: PixFormInput): PixParseResult {

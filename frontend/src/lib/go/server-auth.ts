@@ -158,7 +158,7 @@ export async function logout(): Promise<void> {
   await clearTokens()
 }
 
-async function refreshAccessToken(): Promise<boolean> {
+export async function refreshAccessToken(): Promise<boolean> {
   const refreshToken = await getRefreshToken()
   if (!refreshToken) return false
 
@@ -176,17 +176,5 @@ async function refreshAccessToken(): Promise<boolean> {
     return true
   } catch {
     return false
-  }
-}
-
-export async function getCurrentUser(): Promise<AuthUser | null> {
-  const token = await getToken()
-  if (!token) return null
-
-  try {
-    const res = await doFetch<AuthUser>('/api/v1/auth/me', { skipAuth: true })
-    return res
-  } catch {
-    return null
   }
 }

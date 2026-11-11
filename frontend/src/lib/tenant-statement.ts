@@ -121,7 +121,7 @@ export function oldestOpen(rows: StatementRow[]): StatementRow | null {
 
 // ---------- Linhas visíveis ----------
 
-export const VISIBLE_ROWS = 6
+const VISIBLE_ROWS = 6
 
 export function visibleRows(rows: StatementRow[], all: boolean) {
   const shown = all ? rows : rows.slice(0, VISIBLE_ROWS)

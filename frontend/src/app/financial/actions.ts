@@ -17,16 +17,12 @@ import {
   type RegisterPaymentValues,
   type AgreementFormValues,
 } from '@/lib/financial-schemas'
-import { toRfc3339 } from '@/lib/form-utils'
 export type {
   DashboardMetrics,
   Receivable,
   Payable,
   Transfer,
-  Commission,
   BankRecord,
-  TransactionStatus,
-  LedgerStatus,
 } from '@/data/financial/dal'
 
 import type {
@@ -34,7 +30,6 @@ import type {
   Receivable,
   Payable,
   Transfer,
-  Commission,
   BankRecord,
 } from '@/data/financial/dal'
 
@@ -241,11 +236,6 @@ export async function getTransfers(): Promise<Transfer[]> {
     console.error(e)
     return []
   }
-}
-
-// MVP: o backend ainda não tem origem de comissões e devolve lista vazia.
-export async function getCommissions(): Promise<Commission[]> {
-  return []
 }
 
 export async function getBankRecords(filter: { from?: string; to?: string } = {}): Promise<BankRecord[]> {
