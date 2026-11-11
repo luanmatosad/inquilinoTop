@@ -27,6 +27,7 @@ import (
 	"github.com/inquilinotop/api/internal/dashboard"
 	"github.com/inquilinotop/api/internal/document"
 	"github.com/inquilinotop/api/internal/expense"
+	"github.com/inquilinotop/api/internal/financial"
 	"github.com/inquilinotop/api/internal/fiscal"
 	"github.com/inquilinotop/api/internal/identity"
 	"github.com/inquilinotop/api/internal/importexport"
@@ -137,6 +138,10 @@ func main() {
 	dashboardRepo := dashboard.NewRepository(database)
 	dashboardSvc := dashboard.NewService(dashboardRepo, appLoc)
 	dashboardHandler := dashboard.NewHandler(dashboardSvc)
+
+	financialRepo := financial.NewRepository(database)
+	financialSvc := financial.NewService(financialRepo)
+	financialHandler := financial.NewHandler(financialSvc)
 
 	expenseRepo := expense.NewRepository(database)
 	expenseSvc := expense.NewService(expenseRepo).WithAuditor(auditSvc).WithLocation(appLoc)
@@ -251,6 +256,7 @@ func main() {
 	// Laudos pertencem ao contrato: reaproveitam as permissões de lease.
 	inspectionHandler.Register(r, authMW, leaseReadMw, leaseWriteMw)
 	dashboardHandler.Register(r, authMW, paymentReadMw)
+	financialHandler.Register(r, authMW, paymentReadMw, paymentWriteMw)
 	fiscalHandler.Register(r, authMW, orgReadMw)
 	supportHandler.Register(r, authMW, orgReadMw, orgReadMw)
 	auditHandler.Register(r, authMW)
