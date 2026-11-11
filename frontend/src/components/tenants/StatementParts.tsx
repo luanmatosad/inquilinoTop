@@ -45,7 +45,7 @@ export function StatementKpis({ k }: { k: Kpis }) {
       {k.overdueNow ? (
         <Card className="gap-1 p-4">
           <div className="text-sm font-medium text-muted-foreground">Em atraso agora</div>
-          <div className="text-[22px] font-semibold text-destructive md:text-[28px]">{formatCurrency(k.overdueNow.total)}</div>
+          <div className="text-[22px] font-semibold text-destructive dark:text-red-400 md:text-[28px]">{formatCurrency(k.overdueNow.total)}</div>
           <div className="text-sm text-muted-foreground">
             {plural(k.overdueNow.days, 'dia', 'dias')} · {k.overdueNow.month}
           </div>

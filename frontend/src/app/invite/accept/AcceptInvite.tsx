@@ -28,7 +28,7 @@ export function AcceptInvite({ token }: { token: string }) {
   if (error) {
     return (
       <div className="flex flex-col gap-4">
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive dark:text-red-400">
           {error}
         </p>
         <Button asChild className="w-full">

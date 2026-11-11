@@ -29,7 +29,8 @@
   --success: #16a34a;
   --warning: #d97706;
   --border: #e5e5e5;
-  --input: #fefefc;
+  /* Borda de controle: 3:1 contra o fundo (WCAG 1.4.11). */
+  --input: #8f8f96;
   --ring: #4f46e5;
 
   --chart-1: #4f46e5;
@@ -70,9 +71,10 @@
   --success: #15803d;
   --warning: #b45309;
   --border: #3f3f46;
-  --input: #242427;
-  /* TODO(design): #4f46e5 sobre #18181b dá 2,8:1, abaixo dos 3:1 de indicador de foco. Valor exato do kit. */
-  --ring: #4f46e5;
+  /* Borda de controle: 3:1 contra fundo e card (WCAG 1.4.11). */
+  --input: #8f8f96;
+  /* Foco do teclado: 3:1 contra o fundo (WCAG 2.4.7). */
+  --ring: #818cf8;
 
   --chart-1: #4f46e5;
   --chart-2: #e6ef60;

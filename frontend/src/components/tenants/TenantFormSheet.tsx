@@ -86,7 +86,7 @@ export function TenantFormSheet({ open, tenant }: TenantFormSheetProps) {
               <Button
                 type="button"
                 variant="ghost"
-                className="self-start text-destructive hover:text-destructive"
+                className="self-start text-destructive dark:text-red-400 hover:text-destructive dark:hover:text-red-300"
                 onClick={() => setConfirming(true)}
               >
                 Excluir inquilino

@@ -58,7 +58,7 @@ export function PasswordForm() {
         <Input id="confirm_password" type="password" autoComplete="new-password" value={values.confirm_password} onChange={set('confirm_password')} />
       </div>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive dark:text-red-400">
           {error}
         </p>
       )}

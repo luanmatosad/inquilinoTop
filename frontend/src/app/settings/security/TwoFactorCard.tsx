@@ -135,7 +135,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
       )}
 
       {error && !disabling && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive dark:text-red-400">
           {error}
         </p>
       )}
@@ -151,7 +151,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             <Input id="disable-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive dark:text-red-400">
               {error}
             </p>
           )}

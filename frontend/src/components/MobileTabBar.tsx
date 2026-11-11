@@ -109,7 +109,7 @@ export function MobileTabBar({ user }: MobileTabBarProps) {
               </div>
             </div>
             <form action={logout}>
-              <Button type="submit" variant="outline" className="w-full text-destructive">
+              <Button type="submit" variant="outline" className="w-full text-destructive dark:text-red-400">
                 Sair
               </Button>
             </form>

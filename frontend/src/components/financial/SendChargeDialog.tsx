@@ -160,7 +160,7 @@ export function SendChargeDialog(p: Props) {
           </div>
 
           {!p.pix && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive dark:text-red-400">
               Chave Pix não cadastrada: a mensagem sai sem o código Pix.{' '}
               <Link href="/settings/pix" className="underline">
                 Cadastrar chave

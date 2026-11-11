@@ -179,7 +179,7 @@ export default function RepassesProprietarios() {
                 <th className="px-6 py-3 font-medium">Rec. Bruto</th>
                 <th className="px-6 py-3 font-medium">Taxa ADM</th>
                 <th className="px-6 py-3 font-medium">Descontos</th>
-                <th className="px-6 py-3 font-medium text-success">Valor Líquido</th>
+                <th className="px-6 py-3 font-medium text-green-700 dark:text-green-400">Valor Líquido</th>
                 <th className="px-6 py-3 font-medium">Status</th>
                 <th className="px-6 py-3 font-medium text-right">Ação</th>
               </tr>

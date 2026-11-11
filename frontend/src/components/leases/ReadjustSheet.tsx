@@ -105,12 +105,12 @@ export function ReadjustSheet({ open, leaseId, currentRent, defaultIndex, defaul
                 {done.result.payments_updated ? `${done.result.payments_updated} cobrança(s) futura(s) atualizada(s).` : 'Nenhuma cobrança futura para atualizar.'}
               </p>
               {!!done.result.payments_need_review && (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className="text-sm text-destructive dark:text-red-400">
                   {done.result.payments_need_review} cobrança(s) já emitida(s) ficaram no valor antigo e precisam de revisão.
                 </p>
               )}
               {done.result.payments_error && (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className="text-sm text-destructive dark:text-red-400">
                   O aluguel do contrato foi reajustado, mas não foi possível atualizar as cobranças futuras.
                 </p>
               )}

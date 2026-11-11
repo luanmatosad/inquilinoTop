@@ -187,7 +187,7 @@ function ReminderSheet({ index, list, onClose, onSaved }: { index: number | null
           </div>
 
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive dark:text-red-400">
               {error}
             </p>
           )}

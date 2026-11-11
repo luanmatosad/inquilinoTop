@@ -65,13 +65,13 @@ export function ReportForm({ token, today, defaultAmount, landlordFirstName }: P
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="report-amount">Valor que você pagou</Label>
         <Input id="report-amount" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} aria-invalid={!!errors.amount} />
-        {errors.amount && <p className="text-xs text-destructive">{errors.amount}</p>}
+        {errors.amount && <p className="text-xs text-destructive dark:text-red-400">{errors.amount}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="report-date">Data do pagamento</Label>
         <Input id="report-date" type="date" value={paidDate} max={today} onChange={(e) => setPaidDate(e.target.value)} aria-invalid={!!errors.paid_date} />
-        {errors.paid_date && <p className="text-xs text-destructive">{errors.paid_date}</p>}
+        {errors.paid_date && <p className="text-xs text-destructive dark:text-red-400">{errors.paid_date}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -90,11 +90,11 @@ export function ReportForm({ token, today, defaultAmount, landlordFirstName }: P
           className="sr-only"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
-        {errors.proof && <p className="text-xs text-destructive">{errors.proof}</p>}
+        {errors.proof && <p className="text-xs text-destructive dark:text-red-400">{errors.proof}</p>}
       </div>
 
       {errors.form && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive dark:text-red-400">
           {errors.form}
         </p>
       )}

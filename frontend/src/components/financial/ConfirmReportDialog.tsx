@@ -83,7 +83,7 @@ export function ConfirmReportDialog({ open, info, onClose, onDone }: Props) {
         </dl>
 
         {info.differsFromDue && (
-          <p role="status" className="text-sm text-destructive">
+          <p role="status" className="text-sm text-destructive dark:text-red-400">
             O valor devido hoje é {info.dueTotal}, diferente do informado. Se houver desconto, use Registrar pagamento.
           </p>
         )}

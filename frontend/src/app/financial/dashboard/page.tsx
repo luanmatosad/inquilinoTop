@@ -88,7 +88,7 @@ export default async function FinancialDashboard() {
               {/* Placeholder for chart */}
               {[40, 60, 45, 80, 55, 90].map((h, i) => (
                 <div key={i} className="w-full flex flex-col justify-end gap-1 group relative">
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-background text-foreground text-xs p-1 rounded shadow-sm whitespace-nowrap transition-opacity z-10 border border-input">
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-background text-foreground text-xs p-1 rounded shadow-sm whitespace-nowrap transition-opacity z-10 border border-border">
                     {formatBRL(h * 1000)}
                   </div>
                   <div className="bg-primary/20 hover:bg-primary/40 rounded-t-sm w-full transition-colors" style={{ height: `${h}%` }}></div>
@@ -109,7 +109,7 @@ export default async function FinancialDashboard() {
               {overdue.length === 0 ? (
                 <div className="text-sm text-center py-4 text-muted-foreground">Nenhum atraso registrado</div>
               ) : overdue.map((item) => (
-                <div key={item.id} className="flex items-center justify-between border-b border-input pb-2 last:border-0 last:pb-0">
+                <div key={item.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0 last:pb-0">
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none">{item.payer}</p>
                     <p className="text-xs text-muted-foreground">

@@ -18,9 +18,9 @@ const statusLabels: Record<string, string> = {
 }
 
 const statusColors: Record<string, string> = {
-  open: "bg-warning/10 text-warning",
-  in_progress: "bg-primary/10 text-primary",
-  resolved: "bg-success/10 text-success",
+  open: "bg-warning/10 text-amber-700 dark:text-amber-400",
+  in_progress: "bg-primary/10 text-primary dark:text-indigo-400",
+  resolved: "bg-success/10 text-green-700 dark:text-green-400",
   closed: "bg-muted-foreground/10 text-muted-foreground",
 }
 
@@ -72,7 +72,7 @@ export default async function TicketsPage() {
           <Link
             key={ticket.id}
             href={`/support/tickets/${ticket.id}`}
-            className="block bg-background p-4 rounded-lg border border-input hover:border-primary hover:shadow-md transition-all"
+            className="block bg-background p-4 rounded-lg border border-border hover:border-primary hover:shadow-md transition-all"
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">

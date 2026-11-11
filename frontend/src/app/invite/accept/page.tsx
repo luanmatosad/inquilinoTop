@@ -15,7 +15,7 @@ export default async function InviteAcceptPage({ searchParams }: InviteAcceptPag
   if (typeof token !== 'string' || token === '') {
     return (
       <Frame>
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive dark:text-red-400">
           Link de convite inválido: o token não foi informado.
         </p>
       </Frame>

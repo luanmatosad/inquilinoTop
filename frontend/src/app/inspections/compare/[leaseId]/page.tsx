@@ -73,7 +73,7 @@ export default async function ComparePage({ params }: { params: Promise<{ leaseI
                     <TableCell>{r.room}</TableCell>
                     <TableCell className="font-medium">{r.item}</TableCell>
                     <TableCell>{cond(r.entry_condition)}</TableCell>
-                    <TableCell className={cn(r.worsened && "font-semibold text-destructive")}>
+                    <TableCell className={cn(r.worsened && "font-semibold text-destructive dark:text-red-400")}>
                       {cond(r.exit_condition)}{r.worsened && <span className="sr-only"> (piorou)</span>}
                     </TableCell>
                     <TableCell className="max-w-xs text-sm text-muted-foreground">

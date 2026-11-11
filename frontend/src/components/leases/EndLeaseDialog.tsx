@@ -130,7 +130,7 @@ export function EndLeaseDialog({ open, leaseId, unitId, title }: Props) {
                 : 'Informe a data de saída.'}
             </p>
             {past && (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="text-sm text-destructive dark:text-red-400">
                 A data está no passado: cobranças com vencimento depois dela também serão canceladas.
               </p>
             )}

@@ -16,7 +16,7 @@ type Props = {
 }
 
 const select =
-  'flex h-11 w-full rounded-md border bg-background px-3 text-sm shadow-xs md:h-9'
+  'flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs md:h-9'
 
 export function PixDefaultForm({ value, legacy }: Props) {
   const suggested = !value.configured && !!legacy
@@ -60,7 +60,7 @@ export function PixDefaultForm({ value, legacy }: Props) {
 
   const err = (k: keyof PixFormInput) =>
     errors[k] ? (
-      <p id={`pix-${k}-error`} role="alert" className="text-xs text-destructive">
+      <p id={`pix-${k}-error`} role="alert" className="text-xs text-destructive dark:text-red-400">
         {errors[k]}
       </p>
     ) : null
@@ -108,7 +108,7 @@ export function PixDefaultForm({ value, legacy }: Props) {
         {err('city')}
       </div>
       {formError && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive dark:text-red-400">
           {formError}
         </p>
       )}

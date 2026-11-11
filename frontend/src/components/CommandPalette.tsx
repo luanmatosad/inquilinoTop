@@ -47,7 +47,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       description="Navegue entre as páginas do sistema."
     >
       <Command>
-        <CommandInput placeholder="Ir para..." />
+        <CommandInput placeholder="Ir para..." className="focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-ring" />
         <CommandList>
           <CommandEmpty>Nenhuma página encontrada.</CommandEmpty>
           {commandGroups.map((group) => (

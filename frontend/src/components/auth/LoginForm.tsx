@@ -132,7 +132,7 @@ export function LoginForm({ mode, next }: LoginFormProps) {
           )}
 
           {state?.error && (
-            <div role="alert" className="text-destructive text-sm font-medium">
+            <div role="alert" className="text-destructive dark:text-red-400 text-sm font-medium">
               {state.error}
             </div>
           )}

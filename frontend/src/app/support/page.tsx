@@ -36,7 +36,7 @@ export default function SupportCentral() {
             <Link
               key={category.id}
               href="#"
-              className="group bg-background p-6 rounded-xl border border-input hover:border-primary hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+              className="group bg-background p-6 rounded-xl border border-border hover:border-primary hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer"
             >
               <IconComponent className="w-8 h-8 text-primary mb-4 group-hover:scale-110 transition-transform" />
               <h3 className="text-lg font-semibold text-foreground">{category.label}</h3>
@@ -46,7 +46,7 @@ export default function SupportCentral() {
         })}
       </div>
 
-      <div className="bg-background p-6 rounded-xl border border-input">
+      <div className="bg-background p-6 rounded-xl border border-border">
         <h2 className="text-lg font-semibold text-foreground mb-4">Meus Chamados</h2>
         <div className="space-y-3">
           <Link

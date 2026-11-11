@@ -58,7 +58,7 @@ export function LeaseTable({ rows }: { rows: LeaseTableRow[] }) {
                 <TableCell className="text-muted-foreground">{r.start}</TableCell>
                 <TableCell className="text-muted-foreground">{r.end}</TableCell>
                 <TableCell>{r.rent}</TableCell>
-                <TableCell className={r.readjustPending ? 'text-destructive' : 'text-muted-foreground'}>{r.readjust}</TableCell>
+                <TableCell className={r.readjustPending ? 'text-destructive dark:text-red-400' : 'text-muted-foreground'}>{r.readjust}</TableCell>
                 <TableCell className="pr-4">
                   <Badge variant={VARIANT[r.status] ?? 'secondary'}>{r.statusLabel}</Badge>
                 </TableCell>

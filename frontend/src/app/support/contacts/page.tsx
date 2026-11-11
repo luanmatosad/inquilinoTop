@@ -55,7 +55,7 @@ export default function ContactsPage() {
           return (
             <div
               key={contact.id}
-              className="bg-background p-6 rounded-xl border border-input hover:border-primary hover:shadow-md transition-all duration-200"
+              className="bg-background p-6 rounded-xl border border-border hover:border-primary hover:shadow-md transition-all duration-200"
             >
               <div className={`w-12 h-12 ${contact.bgColor} rounded-lg flex items-center justify-center mb-4`}>
                 <IconComponent className={`w-6 h-6 ${contact.color}`} />
@@ -63,7 +63,7 @@ export default function ContactsPage() {
               <h3 className="text-lg font-semibold text-foreground">{contact.title}</h3>
               <p className="text-sm text-muted-foreground mt-1">{contact.description}</p>
               {contact.action && (
-                <span className="mt-4 text-sm font-medium text-primary">
+                <span className="mt-4 text-sm font-medium text-primary dark:text-indigo-400">
                   {contact.action}
                 </span>
               )}

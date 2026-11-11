@@ -10,7 +10,7 @@ const navItems = [
 export default function SupportLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="space-y-6">
-      <nav aria-label="Suporte" className="flex flex-wrap gap-2 border-b border-input pb-3">
+      <nav aria-label="Suporte" className="flex flex-wrap gap-2 border-b border-border pb-3">
         {navItems.map((item) => (
           <Link
             key={item.href}

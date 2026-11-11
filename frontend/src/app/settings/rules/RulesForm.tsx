@@ -51,7 +51,7 @@ export function RulesForm({ rules }: { rules: FinancialRules }) {
 
   const err = (k: keyof FinancialRules) =>
     errors[k] ? (
-      <p id={`${k}-error`} role="alert" className="text-xs text-destructive">
+      <p id={`${k}-error`} role="alert" className="text-xs text-destructive dark:text-red-400">
         {errors[k]}
       </p>
     ) : null
@@ -77,7 +77,7 @@ export function RulesForm({ rules }: { rules: FinancialRules }) {
           id="default_adjustment_index"
           value={values.default_adjustment_index}
           onChange={set('default_adjustment_index')}
-          className="flex h-11 w-full rounded-md border bg-background px-3 text-sm shadow-xs md:h-9 md:max-w-60"
+          className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs md:h-9 md:max-w-60"
         >
           <option value="IGP-M">IGP-M</option>
           <option value="IPCA">IPCA</option>
@@ -94,7 +94,7 @@ export function RulesForm({ rules }: { rules: FinancialRules }) {
       </div>
 
       {formError && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive dark:text-red-400">
           {formError}
         </p>
       )}

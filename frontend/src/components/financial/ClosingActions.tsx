@@ -70,7 +70,7 @@ export function ClosingActions({ month, monthLabel, mode, pendingText }: Props) 
             </label>
           )}
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive dark:text-red-400">
               {error}
             </p>
           )}

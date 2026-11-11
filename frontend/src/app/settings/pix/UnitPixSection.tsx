@@ -15,7 +15,7 @@ export type UnitRow = { id: string; label: string }
 
 type Props = { units: UnitRow[]; accounts: UnitPix[]; defaultAccount: PixDefault }
 
-const select = 'flex h-11 w-full rounded-md border bg-background px-3 text-sm shadow-xs md:h-9'
+const select = 'flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs md:h-9'
 
 export function UnitPixSection({ units, accounts, defaultAccount }: Props) {
   const [editing, setEditing] = useState<UnitRow | null>(null)
@@ -136,7 +136,7 @@ function UnitPixSheet({ unit, current, onClose }: { unit: UnitRow; current?: Uni
               ))}
             </select>
             {errors.key_type && (
-              <p role="alert" className="text-xs text-destructive">
+              <p role="alert" className="text-xs text-destructive dark:text-red-400">
                 {errors.key_type}
               </p>
             )}
@@ -145,7 +145,7 @@ function UnitPixSheet({ unit, current, onClose }: { unit: UnitRow; current?: Uni
             <Label htmlFor="unit-key">Chave Pix</Label>
             <Input id="unit-key" value={form.key} onChange={set('key')} placeholder={placeholder} aria-invalid={!!errors.key} />
             {errors.key && (
-              <p role="alert" className="text-xs text-destructive">
+              <p role="alert" className="text-xs text-destructive dark:text-red-400">
                 {errors.key}
               </p>
             )}
@@ -157,7 +157,7 @@ function UnitPixSheet({ unit, current, onClose }: { unit: UnitRow; current?: Uni
               Precisa ser o titular da conta. O inquilino vê esse nome antes de pagar.
             </p>
             {errors.receiver_name && (
-              <p role="alert" className="text-xs text-destructive">
+              <p role="alert" className="text-xs text-destructive dark:text-red-400">
                 {errors.receiver_name}
               </p>
             )}
@@ -173,7 +173,7 @@ function UnitPixSheet({ unit, current, onClose }: { unit: UnitRow; current?: Uni
           </label>
 
           {formError && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive dark:text-red-400">
               {formError}
             </p>
           )}

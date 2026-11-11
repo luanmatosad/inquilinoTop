@@ -64,7 +64,7 @@ export default async function TicketDetailPage({
         <span>Voltar</span>
       </Link>
 
-      <div className="bg-background p-6 rounded-xl border border-input">
+      <div className="bg-background p-6 rounded-xl border border-border">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
             <Tag className="w-5 h-5 text-muted-foreground" />
@@ -89,7 +89,7 @@ export default async function TicketDetailPage({
           <p className="text-muted-foreground whitespace-pre-wrap">{ticket.descricao}</p>
         </div>
 
-        <div className="flex items-center gap-4 mt-6 pt-4 border-t border-input text-sm text-muted-foreground">
+        <div className="flex items-center gap-4 mt-6 pt-4 border-t border-border text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4" />
             <span>Criado em {new Date(ticket.created_at).toLocaleString("pt-BR")}</span>
