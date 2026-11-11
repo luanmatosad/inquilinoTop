@@ -4,7 +4,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Tokens do canvas "ImoviFlow — Telas" (project/ds/imoviflow/tokens.json) */
+/* Fonte da verdade: Figma UI Kit ImoviFlow, node 5984:59776. */
 :root,
 [data-theme="light"] {
   --radius: 0.5rem;
@@ -71,17 +71,19 @@
   --success: #15803d;
   --warning: #b45309;
   --border: #3f3f46;
-  /* Borda de controle: 3:1 contra fundo e card (WCAG 1.4.11). */
+  /* Borda de controle: 3:1 (WCAG 1.4.11). Figma dark é #242427, que dá 1.14:1; desvio aceito. */
   --input: #8f8f96;
-  /* Foco do teclado: 3:1 contra o fundo (WCAG 2.4.7). */
+  /* Foco do teclado: 3:1 (WCAG 2.4.7). Figma dark é #4f46e5, que dá 2.82:1; desvio aceito. */
   --ring: #818cf8;
 
+  /* Figma (dark): chart 1-5 */
   --chart-1: #4f46e5;
   --chart-2: #e6ef60;
   --chart-3: #d670ef;
   --chart-4: #eda372;
   --chart-5: #ea7474;
 
+  /* Figma (dark): sidebar-* */
   --sidebar: #242427;
   --sidebar-foreground: #e4e4e7;
   --sidebar-primary: #4f46e5;
@@ -130,13 +132,45 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  /* Tipografia (Figma: Typography/Font Size). text-xs = 14px por decisão, Figma tinha 12px. */
+  --text-xs: 0.875rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+  --text-7xl: 4.5rem;
+  --text-9xl: 8rem;
+
+  /* Pesos (Figma: Typography/Font Weight) */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Line-height (Figma: Typography/Line Height) */
+  --leading-4: 1rem;
+  --leading-5: 1.25rem;
+  --leading-6: 1.5rem;
+  --leading-7: 1.75rem;
+
+  /* Radius (Figma: Borders/Border Radius). --radius-lg segue --radius. */
+  --radius-none: 0px;
+  --radius-sm: 2px;
+  --radius-md: 6px;
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
   --radius-4xl: calc(var(--radius) + 16px);
+  --radius-full: 9999px;
+
+  /* Sombras (Figma: shadow/xs e shadow/base, Effects convertidos para box-shadow) */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-base: 0 1px 2px 0 rgb(0 0 0 / 0.06), 0 1px 3px 0 rgb(0 0 0 / 0.1);
 }
 
 @layer base {
