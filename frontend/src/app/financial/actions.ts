@@ -51,6 +51,7 @@ interface GoPayment {
   type: 'RENT' | 'DEPOSIT' | 'EXPENSE' | 'OTHER'
   charge_method?: string
   description?: string
+  tenant_name?: string
   competency?: string
 }
 
@@ -145,7 +146,7 @@ export async function getReceivables(): Promise<Receivable[]> {
     .map(p => ({
       id: p.id,
       dueDate: p.due_date,
-      payer: p.description ?? `Lease ${p.lease_id.slice(0, 8)}`,
+      payer: p.tenant_name ?? p.description ?? `Lease ${p.lease_id.slice(0, 8)}`,
       property: p.competency ?? '—',
       amount: p.gross_amount,
       paymentMethod: mapChargeMethod(p.charge_method),
@@ -173,16 +174,198 @@ export async function getPayables(): Promise<Payable[]> {
   }))
 }
 
-export async function getTransfers(): Promise<Transfer[]> {
-  return []
+interface GoTransfer {
+  id: string
+  property_id: string
+  property_name: string
+  owner_name: string
+  period: string
+  gross_amount: number
+  admin_fee_percent: number
+  admin_fee_amount: number
+  discounts: number
+  net_amount: number
+  status: Transfer['status']
+  transferred_at?: string | null
 }
 
+interface GoBankRecord {
+  id: string
+  date: string
+  description: string
+  amount: number
+  type: BankRecord['type']
+  payment_id?: string | null
+}
+
+interface GoImportResult {
+  imported: number
+  duplicate: number
+  matched: number
+  unmatched: GoBankRecord[] | null
+}
+
+function mapTransfer(t: GoTransfer): Transfer {
+  return {
+    id: t.id,
+    propertyId: t.property_id,
+    propertyName: t.property_name,
+    ownerName: t.owner_name,
+    period: t.period,
+    grossAmount: t.gross_amount,
+    adminFeePercent: t.admin_fee_percent,
+    adminFeeAmount: t.admin_fee_amount,
+    discounts: t.discounts,
+    netAmount: t.net_amount,
+    status: t.status,
+    transferredAt: t.transferred_at ?? null,
+  }
+}
+
+function mapBankRecord(r: GoBankRecord): BankRecord {
+  return {
+    id: r.id,
+    date: r.date.slice(0, 10),
+    description: r.description,
+    amount: r.amount,
+    type: r.type,
+    paymentId: r.payment_id ?? null,
+  }
+}
+
+export async function getTransfers(): Promise<Transfer[]> {
+  try {
+    const list = await goFetch<GoTransfer[] | null>('/api/v1/financial/transfers')
+    return (list ?? []).map(mapTransfer)
+  } catch (e) {
+    console.error(e)
+    return []
+  }
+}
+
+// MVP: o backend ainda não tem origem de comissões e devolve lista vazia.
 export async function getCommissions(): Promise<Commission[]> {
   return []
 }
 
-export async function getBankRecords(): Promise<BankRecord[]> {
-  return []
+export async function getBankRecords(filter: { from?: string; to?: string } = {}): Promise<BankRecord[]> {
+  const params = new URLSearchParams()
+  if (filter.from) params.set('from', filter.from)
+  if (filter.to) params.set('to', filter.to)
+  const qs = params.toString()
+  try {
+    const list = await goFetch<GoBankRecord[] | null>(`/api/v1/financial/bank-records${qs ? `?${qs}` : ''}`)
+    return (list ?? []).map(mapBankRecord)
+  } catch (e) {
+    console.error(e)
+    return []
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Repasses a proprietários, taxa administrativa e extrato bancário
+// ---------------------------------------------------------------------------
+
+export type FinancialResult = { success: true } | { error: string }
+
+const TRANSFER_ERRORS: Record<string, string> = {
+  INVALID_PERIOD: 'Período inválido. Use o formato AAAA-MM.',
+  INVALID_TRANSITION: 'Transição de status inválida para este repasse.',
+  TRANSFER_LOCKED: 'Repasse já processado: os descontos não podem mais ser alterados.',
+  INVALID_DISCOUNTS: 'Descontos inválidos. Informe um valor igual ou maior que zero.',
+  DISCOUNTS_EXCEED_GROSS: 'Os descontos não podem ultrapassar o valor bruto do repasse.',
+  CONCURRENT_UPDATE: 'O repasse foi alterado por outro usuário. Atualize a página.',
+  INVALID_ADMIN_FEE: 'Taxa administrativa inválida. Informe um valor entre 0 e 100.',
+  INVALID_CSV_FORMAT: 'Arquivo inválido. Use CSV com as colunas date, description, amount, type.',
+}
+
+function financialError(error: unknown, fallback: string): { error: string } {
+  const { code } = goErrorInfo(error)
+  if (code && TRANSFER_ERRORS[code]) return { error: TRANSFER_ERRORS[code] }
+  console.error(fallback, error)
+  return { error: fallback }
+}
+
+/** Gera os repasses do mês (AAAA-MM) por imóvel; imóveis já processados no mês são ignorados. */
+export async function generateTransfers(period: string): Promise<{ created: number } | { error: string }> {
+  try {
+    const res = await goFetch<{ created: number }>('/api/v1/financial/transfers/generate', {
+      method: 'POST',
+      body: JSON.stringify({ period }),
+    })
+    revalidatePath('/financial/transfers')
+    return { created: res.created }
+  } catch (error) {
+    return financialError(error, 'Erro ao processar os repasses do mês.')
+  }
+}
+
+export async function updateTransferStatus(id: string, status: Transfer['status']): Promise<FinancialResult> {
+  try {
+    await goFetch(`/api/v1/financial/transfers/${id}`, { method: 'PUT', body: JSON.stringify({ status }) })
+    revalidatePath('/financial/transfers')
+    return { success: true }
+  } catch (error) {
+    return financialError(error, 'Erro ao atualizar o status do repasse.')
+  }
+}
+
+/** Descontos manuais só são aceitos enquanto o repasse está PENDING. */
+export async function updateTransferDiscounts(id: string, discounts: number): Promise<FinancialResult> {
+  try {
+    await goFetch(`/api/v1/financial/transfers/${id}`, { method: 'PUT', body: JSON.stringify({ discounts }) })
+    revalidatePath('/financial/transfers')
+    return { success: true }
+  } catch (error) {
+    return financialError(error, 'Erro ao salvar os descontos.')
+  }
+}
+
+export async function getAdminFee(): Promise<number> {
+  try {
+    const res = await goFetch<{ admin_fee_percent: number }>('/api/v1/financial/admin-fee')
+    return res.admin_fee_percent
+  } catch (e) {
+    console.error(e)
+    return 0
+  }
+}
+
+/** A taxa vale para os repasses gerados a partir de agora; repasses já gerados mantêm a taxa gravada. */
+export async function setAdminFee(percent: number): Promise<FinancialResult> {
+  try {
+    await goFetch('/api/v1/financial/admin-fee', {
+      method: 'PUT',
+      body: JSON.stringify({ admin_fee_percent: percent }),
+    })
+    revalidatePath('/financial/transfers')
+    return { success: true }
+  } catch (error) {
+    return financialError(error, 'Erro ao salvar a taxa administrativa.')
+  }
+}
+
+export type ImportBankRecordsResult =
+  | { imported: number; duplicate: number; matched: number; unmatched: number }
+  | { error: string }
+
+/** Importa o extrato CSV (date,description,amount,type) e concilia créditos automaticamente. */
+export async function importBankRecords(formData: FormData): Promise<ImportBankRecordsResult> {
+  try {
+    const res = await goFetch<GoImportResult>('/api/v1/financial/bank-records/import', {
+      method: 'POST',
+      body: formData,
+    })
+    revalidatePath('/financial/reconciliation')
+    return {
+      imported: res.imported,
+      duplicate: res.duplicate,
+      matched: res.matched,
+      unmatched: res.unmatched?.length ?? 0,
+    }
+  } catch (error) {
+    return financialError(error, 'Erro ao importar o extrato.')
+  }
 }
 
 // ---------------------------------------------------------------------------

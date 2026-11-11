@@ -26,21 +26,29 @@ export interface Payable {
 
 export interface BankRecord {
   id: string
+  /** Data do lançamento em AAAA-MM-DD. */
   date: string
   description: string
   amount: number
+  type: 'CREDIT' | 'DEBIT'
+  /** Pagamento conciliado com este lançamento; null quando não conciliado. */
+  paymentId: string | null
 }
 
 export interface Transfer {
   id: string
-  owner: string
-  properties: string
-  grossReceipt: number
-  adminFeePerc: number
+  propertyId: string
+  propertyName: string
+  ownerName: string
+  /** Competência do repasse em AAAA-MM. */
+  period: string
+  grossAmount: number
+  adminFeePercent: number
   adminFeeAmount: number
   discounts: number
-  netValue: number
+  netAmount: number
   status: 'PENDING' | 'PROCESSED' | 'TRANSFERRED'
+  transferredAt: string | null
 }
 
 export interface Commission {

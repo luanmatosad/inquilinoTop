@@ -69,7 +69,7 @@ export default function ComissoesCorretores() {
               {loading ? (
                 <tr><td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">Nenhuma comissão encontrada.</td></tr>
+                <tr><td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">Comissões ainda não disponíveis nesta versão (MVP).</td></tr>
               ) : filtered.map(item => (
                 <tr key={item.id} className="hover:bg-muted transition-colors">
                   <td className="px-6 py-4 font-medium text-foreground">
