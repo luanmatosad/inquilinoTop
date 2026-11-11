@@ -431,7 +431,7 @@ func setupLeaseIPTUMissing(svc *testService, leaseID, ownerID uuid.UUID) {
 		ID:               leaseID,
 		OrganizationID:   ownerID,
 		TenantID:         uuid.New(),
-		StartDate:        time.Now().AddDate(0, -6, 0),
+		StartDate:        time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
 		RentAmount:       2000,
 		Status:           "ACTIVE",
 		IPTUReimbursable: true,

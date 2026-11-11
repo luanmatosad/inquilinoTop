@@ -779,4 +779,23 @@ func TestPaymentRepository_List_FiltroAguardandoConfirmação(t *testing.T) {
 	assert.Equal(t, a.ID, list[0].ID)
 }
 
+func TestPaymentRepository_List_ExpoeNomeDoInquilino(t *testing.T) {
+	ctx := context.Background()
+	database := testDB(t)
+	orgID, ownerID, leaseID := seedLease(t, database)
+	repo := payment.NewRepository(database)
+	today := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
+
+	_, err := repo.Create(ctx, ownerID, orgID, payment.CreatePaymentInput{
+		LeaseID: leaseID, DueDate: today, GrossAmount: 1000, Type: "RENT",
+	})
+	require.NoError(t, err)
+
+	list, err := repo.List(ctx, orgID, payment.PaymentFilter{}, today)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	require.NotNil(t, list[0].TenantName)
+	assert.Equal(t, "Inquilino", *list[0].TenantName)
+}
+
 func strptr(s string) *string { return &s }

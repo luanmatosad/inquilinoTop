@@ -42,20 +42,22 @@ const paymentCols = `id, organization_id, lease_id, due_date, paid_date,
   payment_method, discount_amount, payment_note, original_due_date, receipt_number, receipt_year,
   reported_at, reported_amount, reported_date, proof_path`
 
-func scanPayment(row pgx.Row, p *Payment) error {
-	return row.Scan(&p.ID, &p.OrganizationID, &p.LeaseID, &p.DueDate, &p.PaidDate,
+func paymentDest(p *Payment) []any {
+	return []any{
+		&p.ID, &p.OrganizationID, &p.LeaseID, &p.DueDate, &p.PaidDate,
 		&p.GrossAmount, &p.LateFeeAmount, &p.InterestAmount, &p.IRRFAmount, &p.NetAmount,
 		&p.Competency, &p.Description, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt,
 		&p.PaymentMethod, &p.DiscountAmount, &p.PaymentNote, &p.OriginalDueDate, &p.ReceiptNumber, &p.ReceiptYear,
-		&p.ReportedAt, &p.ReportedAmount, &p.ReportedDate, &p.ProofPath)
+		&p.ReportedAt, &p.ReportedAmount, &p.ReportedDate, &p.ProofPath,
+	}
+}
+
+func scanPayment(row pgx.Row, p *Payment) error {
+	return row.Scan(paymentDest(p)...)
 }
 
 func scanPaymentRows(rows pgx.Rows, p *Payment) error {
-	return rows.Scan(&p.ID, &p.OrganizationID, &p.LeaseID, &p.DueDate, &p.PaidDate,
-		&p.GrossAmount, &p.LateFeeAmount, &p.InterestAmount, &p.IRRFAmount, &p.NetAmount,
-		&p.Competency, &p.Description, &p.Status, &p.Type, &p.CreatedAt, &p.UpdatedAt,
-		&p.PaymentMethod, &p.DiscountAmount, &p.PaymentNote, &p.OriginalDueDate, &p.ReceiptNumber, &p.ReceiptYear,
-		&p.ReportedAt, &p.ReportedAmount, &p.ReportedDate, &p.ProofPath)
+	return rows.Scan(paymentDest(p)...)
 }
 
 func (r *pgRepository) Create(ctx context.Context, userID, orgID uuid.UUID, in CreatePaymentInput) (*Payment, error) {
@@ -145,7 +147,7 @@ func (r *pgRepository) ListByLease(ctx context.Context, leaseID, orgID uuid.UUID
 // com vencimento futuro seria dado inconsistente, então "vencida" é sempre decidida pela data.
 func (r *pgRepository) List(ctx context.Context, orgID uuid.UUID, f PaymentFilter, today time.Time) ([]Payment, error) {
 	// "$2::date IS NOT NULL" mantém $2 referenciado em qualquer filtro (o Postgres rejeita parâmetro sobrando).
-	query := `SELECT ` + paymentCols + ` FROM payments WHERE organization_id=$1 AND is_active=true AND $2::date IS NOT NULL`
+	query := `SELECT ` + paymentCols + `, (SELECT t.name FROM leases l JOIN tenants t ON t.id = l.tenant_id WHERE l.id = payments.lease_id) AS tenant_name FROM payments WHERE organization_id=$1 AND is_active=true AND $2::date IS NOT NULL`
 	args := []interface{}{orgID, today}
 	switch f.Status {
 	case "PENDING":
@@ -179,7 +181,7 @@ func (r *pgRepository) List(ctx context.Context, orgID uuid.UUID, f PaymentFilte
 	var list []Payment
 	for rows.Next() {
 		var p Payment
-		if err := scanPaymentRows(rows, &p); err != nil {
+		if err := rows.Scan(append(paymentDest(&p), &p.TenantName)...); err != nil {
 			return nil, fmt.Errorf("payment.repo: list scan: %w", err)
 		}
 		list = append(list, p)

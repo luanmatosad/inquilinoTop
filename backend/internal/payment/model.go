@@ -44,6 +44,7 @@ type Payment struct {
 	NetAmount      *float64   `json:"net_amount,omitempty"`
 	Competency     *string    `json:"competency,omitempty"`
 	Description    *string    `json:"description,omitempty"`
+	TenantName     *string    `json:"tenant_name,omitempty"`
 	Status         string     `json:"status"`
 	Type           string     `json:"type"`
 	ChargeID       *string    `json:"charge_id,omitempty"`
