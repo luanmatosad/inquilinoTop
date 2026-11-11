@@ -64,5 +64,5 @@
 
 - [x] 12.1 `make frontend-lint`, suíte Vitest completa e suíte Go (`-p 1`) verdes
 - [x] 12.2 Reconstruir e conferir pela API com o usuário de `make seed-dev-user`: Pix gerado (validar o código num app bancário ou decodificador), envio registrado, baixa com forma e desconto, recibo numerado, acordo e volta a atrasar; limpar os dados
-- [ ] 12.3 Percorrer no navegador, desktop e 390px: detalhe, enviar, registrar, negociar e recibo (imprimir em PDF); registrar o que não foi visto
+- [x] 12.3 Percorrer no navegador, desktop e 390px: detalhe, enviar, registrar, negociar e recibo (imprimir em PDF); registrar o que não foi visto. Visto: desktop e 390px em detalhe, enviar, negociar, registrar e recibo. Bug achado e corrigido em 390px: botão "Confirmar pagamento" estourava o diálogo (`RegisterPaymentDialog.tsx`). Não visto: conteúdo do PDF ("Baixar PDF" abre o diálogo de impressão), "Marcar como enviada" e "Salvar acordo" (não executados)
 - [x] 12.4 Atualizar `frontend/CLAUDE.md`, `backend/CLAUDE.md` (migration) e a tabela de páginas

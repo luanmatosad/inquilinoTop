@@ -11,7 +11,7 @@
 - [x] Criar middleware chi para rate limiting
 - [x] Adicionar headers X-RateLimit-* às respostas
 - [x] Configurar via env vars: `RATE_LIMIT_IP`, `RATE_LIMIT_USER`
-- [ ] Criar teste unitário para rate limiter
+- [x] Criar teste unitário para rate limiter
 
 ### Tarefa 2: CORS Whitelist
 
@@ -28,9 +28,9 @@
 
 - [x] Criar tabela `audit_logs` no migrations
 - [x] Criar pacote `internal/audit/` com service e repository
-- [ ] Implementar logging de login/logout
+- [x] Implementar logging de login/logout
 - [ ] Implementar logging de mutações (create/update/delete)
-- [ ] Adicionar query endpoint para audit logs
+- [x] Adicionar query endpoint para audit logs
 - [x] Criar endpoint `/api/v1/audit-logs` (owner-only)
 
 ## Fase 2 - Autenticação Semanas 3-4
@@ -39,24 +39,24 @@
 
 **Módulo:** `internal/rbac/`
 
-- [ ] Criar tabela `user_roles` no migrations
-- [ ] Criar pacote `internal/rbac/` (model, repository, service)
+- [x] Criar tabela `user_roles` no migrations
+- [x] Criar pacote `internal/rbac/` (model, repository, service)
 - [ ] Adicionar campo `role` no model de User
-- [ ] Criar middleware de autorização chi
-- [ ] Implementar check de permissão por role
+- [x] Criar middleware de autorização chi
+- [x] Implementar check de permissão por role
 - [ ] Atualizar handlers existentes com autorização
 
 ### Tarefa 5: Two-Factor Auth
 
 **Módulo:** adjustments em `internal/identity/`
 
-- [ ] Adicionar campos 2FA no User (totp_secret, backup_codes, 2fa_enabled)
-- [ ] Implementar TOTP generation (usar library `github.com/pquer/otpgenerate` ou similar)
+- [x] Adicionar campos 2FA no User (totp_secret, backup_codes, 2fa_enabled)
+- [x] Implementar TOTP generation (usar library `github.com/pquer/otpgenerate` ou similar)
 - [ ] Criar endpoint `/api/v1/auth/2fa/enable`
-- [ ] Criar endpoint `/api/v1/auth/2fa/verify`
-- [ ] Criar endpoint `/api/v1/auth/2fa/disable`
-- [ ] Implementar backup codes (10 códigos únicos)
-- [ ] Atualizar login para requerer 2FA quando habilitado
+- [x] Criar endpoint `/api/v1/auth/2fa/verify`
+- [x] Criar endpoint `/api/v1/auth/2fa/disable`
+- [x] Implementar backup codes (10 códigos únicos)
+- [x] Atualizar login para requerer 2FA quando habilitado
 
 ## Fase 3 - Funcionalidades Semanas 5-6
 
@@ -64,22 +64,22 @@
 
 **Módulo:** `internal/document/`
 
-- [ ] Criar tabela `documents` no migrations
-- [ ] Criar pacote `internal/document/`
+- [x] Criar tabela `documents` no migrations
+- [x] Criar pacote `internal/document/`
 - [ ] Implementar upload com validação (PDF, max 10MB)
-- [ ] Implementar download
-- [ ] Implementar delete
-- [ ] Criar endpoints REST
-- [ ] Configurar storage path via env var
+- [x] Implementar download
+- [x] Implementar delete
+- [x] Criar endpoints REST
+- [x] Configurar storage path via env var
 
 ### Tarefa 7: Notifications
 
 **Módulo:** `internal/notification/`
 
-- [ ] Criar tabela `notifications` no migrations
-- [ ] Criar pacote `internal/notification/` com interface
-- [ ] Implementar EmailService (SMTP)
-- [ ] Implementar schedule/queue system
+- [x] Criar tabela `notifications` no migrations
+- [x] Criar pacote `internal/notification/` com interface
+- [x] Implementar EmailService (SMTP)
+- [x] Implementar schedule/queue system
 - [ ] Implementar retry logic (3 tentativas)
 - [ ] Criar templates de email (payment reminder, contract expiring)
 - [ ] Criar scheduling cron job
@@ -90,28 +90,28 @@
 
 **Módulo:** adjustments em `internal/lease/`
 
-- [ ] Adicionar tabela `index_values` no migrations
+- [x] Adicionar tabela `index_values` no migrations
 - [ ] Criar endpoint para buscar índices (IPCA, IGP-M)
 - [ ] Implementar cálculo de correção monetária
 - [ ] Criar lógica de aviso 30 dias antes
-- [ ] Implementar confirmação manual
+- [x] Implementar confirmação manual
 - [ ] Adicionar scheduler para verificação anual
 
 ### Tarefa 9: Graceful Shutdown
 
 **Módulo:** adjustments em `cmd/api/main.go`
 
-- [ ] Adicionar signal handling (SIGINT, SIGTERM)
-- [ ] Implementar context timeout para shutdown
-- [ ] Adicionar timeout para conexões ativas
-- [ ] Logging de shutdown
+- [x] Adicionar signal handling (SIGINT, SIGTERM)
+- [x] Implementar context timeout para shutdown
+- [x] Adicionar timeout para conexões ativas
+- [x] Logging de shutdown
 
 ### Tarefa 10: API v2
 
 **Módulo:** novo roteamento
 
 - [ ] Criar grupo de rotas `/api/v2/`
-- [ ] Manter `/api/v1/` funcionando (deprecated warnings)
+- [x] Manter `/api/v1/` funcionando (deprecated warnings)
 - [ ] Documentar breaking changes
 - [ ] Adicionar version header nas respostas
 
@@ -142,3 +142,8 @@ Novas tabelas necessárias:
 - [ ] Testes de integração para endpoints
 - [ ] Testes E2E para fluxos 2FA
 - [ ] Testes de stress para rate limiting
+
+## Estado revisado
+
+Checkboxes corrigidos em 2026-11-11 por auditoria de código. Itens não marcados ficam em aberto e viram nova mudança (ver `openspec/changes/`).
+
